@@ -5,7 +5,10 @@
     "auto": true,
     "prune": true
   },
-  "instructions": ["AGENTS.md", ".opencode/base-AGENTS.md"],
+  "instructions": [
+    "AGENTS.md",
+    ".opencode/base-AGENTS.md"
+  ],
   "permission": {
     "websearch": "deny",
     "external_directory": {

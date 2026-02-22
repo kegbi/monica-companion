@@ -43,16 +43,16 @@ Interactive phased migration, then pilot.
    - patch only incompatible terms/tools,
    - avoid semantic drift in command behavior.
 6. Keep AWOS as one shared core usable by Claude and OpenCode via thin wrapper layers.
-7. Keep runtime wrapper files separate from `.opencode`; bind them through config.
+7. Keep runtime wrapper files in runtime-owned directories (`.claude/...` and `.opencode/...`), not in `.awos`.
 
 ## 3. Compatibility Baseline
 
 ## 3.1 Confirmed OpenCode capabilities
-- OpenCode has first-class custom commands in `opencode.jsonc` via `command` map (`template`, `description`, optional `agent`, `subtask`).
+- OpenCode supports file-based custom commands in `.opencode/commands/*.md`.
 - OpenCode supports project command files in `.opencode/commands/*.md`.
 - OpenCode supports agents and subagents, so AWOS delegation model is implementable.
 - OpenCode has a native `question` tool for structured user input prompts.
-- OpenCode reads `.claude/agents` and `.claude/skills` for compatibility, but commands are documented under `.opencode/commands`/`opencode.jsonc`.
+- OpenCode reads `.claude/agents` and `.claude/skills` for compatibility; command registration can be file-driven via `.opencode/commands`.
 - Source references:
   - OpenCode commands docs: `https://opencode.ai/docs/commands/`
   - OpenCode agents docs: `https://opencode.ai/docs/agents/`
@@ -64,7 +64,7 @@ Interactive phased migration, then pilot.
 
 | Claude AWOS Assumption | OpenCode Reality | Parity Adaptation |
 | --- | --- | --- |
-| `.claude/commands/awos/*` wrapper commands | OpenCode command discovery is documented via `.opencode/commands` and `opencode.jsonc` | Keep OpenCode command wrappers in separate files outside `.opencode` and bind them in `opencode.jsonc` via inline templates + `@file` references |
+| `.claude/commands/awos/*` wrapper commands | OpenCode supports command files in `.opencode/commands/*.md` | Keep OpenCode wrappers in `.opencode/commands/awos/*.md` and register commands via frontmatter (`name: awos:*`) |
 | `AskUserQuestion` tool | OpenCode has native `question` tool | Use native `question` tool in OpenCode command templates/bindings for interactive sections |
 | Task-tool wording around `subagent_type` | OpenCode uses its own subagent routing model | Normalize delegation instructions to OpenCode agent IDs |
 | Bash helper script only (`create-spec-directory.sh`) | Windows-heavy environment | Add cross-platform script (`.py`) and keep `.sh` as optional |
@@ -81,7 +81,7 @@ Interactive phased migration, then pilot.
   opencode/
     commands/
       awos/
-        product.md               # OpenCode wrapper templates (not in .opencode)
+        product.md               # OpenCode wrapper templates (source)
         roadmap.md
         architecture.md
         spec.md
@@ -103,32 +103,36 @@ Interactive phased migration, then pilot.
       verify.md
 
 .opencode/
-  # No awos command markdown files required here
-  # OpenCode command bindings live in opencode.jsonc -> command
+  commands/
+    awos/
+      product.md                 # OpenCode runtime command files (name: awos:product)
+      roadmap.md
+      architecture.md
+      spec.md
+      tech.md
+      tasks.md
+      implement.md
+      verify.md
   agents/
     awos-orchestrator.md         # optional primary runtime router
     awos-implement-manager.md    # optional helper for strict delegation semantics
 ```
 
 ## 4.2 Command registry strategy
-- Register commands in `opencode.jsonc` under `command`.
-- For each command, keep the template inline in config and include command text via documented file-reference syntax:
-  - `"template": "Use native question tool for choices.\n@.awos/opencode/commands/awos/spec.md"`.
-- Primary target names: `/awos:product`, `/awos:roadmap`, etc (Claude parity).
-- If parser or UX rejects colon names, fallback aliases:
-  - `/awos-product`, `/awos-roadmap`, etc
-  - keep mapping documented and deterministic.
+- Register commands via command files in `.opencode/commands/awos/*.md`.
+- Use frontmatter `name: awos:<command>` to preserve Claude-like command naming.
+- Keep wrappers lightweight and delegating to `.awos/commands/<command>.md`.
 
 ## 4.3 Wrapper pattern (Claude-like)
 - Keep wrapper files in two runtime folders:
   - `.claude/commands/awos/*.md` for Claude runtime.
-  - `.awos/opencode/commands/awos/*.md` for OpenCode runtime (outside `.opencode`).
-- Bind OpenCode commands with `template` strings in `opencode.jsonc` that use `@file` references.
+  - `.opencode/commands/awos/*.md` for OpenCode runtime.
+- Rely on OpenCode file-based command loading (no AWOS command block injection into `opencode.jsonc`).
 
 This preserves AWOS layering:
 - framework core in `.awos`
-- runtime adapters in `.claude/commands/awos` and `.awos/opencode/commands/awos`
-- runtime binding in `opencode.jsonc`
+- runtime adapters in `.claude/commands/awos` and `.opencode/commands/awos`
+- runtime binding from command file frontmatter
 
 ## 4.4 Native ask-question behavior
 - In OpenCode command templates, explicitly require native `question` tool for structured choices and clarification loops.
@@ -178,12 +182,12 @@ This preserves AWOS layering:
 ## Phase 2: Separate runtime command bindings
 ### Goals
 - Keep `.claude/commands/awos/*.md` for Claude runtime.
-- Keep `.awos/opencode/commands/awos/*.md` for OpenCode runtime (separate files, not `.opencode`).
-- Bind all OpenCode commands in `opencode.jsonc` using inline templates plus `@file` references.
-- Add native `question` instruction in OpenCode command templates/bindings.
+- Keep `.opencode/commands/awos/*.md` for OpenCode runtime.
+- Register OpenCode commands through command file frontmatter (`name: awos:*`).
+- Add native `question` instruction in OpenCode command templates.
 ### Deliverables
 - 8 Claude command files + 8 OpenCode command files.
-- 8 OpenCode command entries in `opencode.jsonc` with optional alias set.
+- 8 OpenCode command files in `.opencode/commands/awos` with explicit `name: awos:*`.
 ### Exit Criteria
 - `/awos:*` (or approved alias set) appears in OpenCode command list.
 
@@ -236,7 +240,7 @@ This preserves AWOS layering:
 | --- | --- |
 | Command UX | Users can run all 8 AWOS commands via OpenCode custom commands |
 | Cross-tool parity | Same AWOS core prompts produce equivalent behavior in Claude and OpenCode |
-| Ask flow parity | OpenCode command bindings use native `question` tool and preserve AWOS interactive intent |
+| Ask flow parity | OpenCode command files use native `question` tool and preserve AWOS interactive intent |
 | Prompt parity | No unnecessary semantic drift from Claude AWOS prompts |
 | Document lifecycle | Product -> verify workflow works with generated files |
 | Delegation parity | `implement` delegates coding work and tracks progress correctly |
@@ -248,7 +252,7 @@ This preserves AWOS layering:
 | Risk | Impact | Mitigation |
 | --- | --- | --- |
 | Colon command names unsupported in runtime UX | Cannot perfectly mirror `/awos:*` | Add deterministic aliases and map both in docs |
-| No native setting to treat `.claude/commands` as command directory in OpenCode | Hidden runtime mismatch | Use explicit `opencode.jsonc` command bindings with inline templates and `@.awos/opencode/commands/awos/*.md` references |
+| OpenCode/Claude runtime folder mismatch | Hidden runtime mismatch | Keep dedicated OpenCode wrappers in `.opencode/commands/awos/*.md` with `name: awos:*` frontmatter |
 | Over-adaptation of prompts | Drift from Claude behavior | Enforce minimal-delta reviews per command |
 | Delegation mismatch in `implement` | Command may code directly or stall | Add strict delegation checks and tests |
 | Markdown mutation errors | Broken task/status tracking | Use parser utility + snapshot tests |
@@ -258,8 +262,8 @@ This preserves AWOS layering:
 
 1. Finalize command naming strategy with live smoke check in OpenCode runtime.
 2. Import AWOS core assets into `.awos/` from pinned upstream commit.
-3. Keep separate runtime command files in `.claude/commands/awos/*` and `.awos/opencode/commands/awos/*` referencing shared `.awos/commands/*`.
-4. Bind OpenCode commands in `opencode.jsonc` with inline templates that include `@.awos/opencode/commands/awos/*.md`, and apply native `question` instruction there.
+3. Keep separate runtime command files in `.claude/commands/awos/*` and `.opencode/commands/awos/*` referencing shared `.awos/commands/*`.
+4. Register OpenCode commands from `.opencode/commands/awos/*.md` frontmatter (`name: awos:*`) and apply native `question` instruction there.
 5. Patch mandatory incompatibilities in each AWOS core command only when wrapper-layer adaptation is insufficient.
 6. Port `create-spec-directory` to cross-platform runtime.
 7. Add parity smoke tests for all 8 commands across both runtimes.
