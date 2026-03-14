@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(grep:*)",
+      "Bash(where:*)",
+      "Bash(sed:*)",
+      "Bash(certutil:*)",
+      "Bash(powershell:*)",
+      "Bash(git fetch:*)",
+      "Bash(find:*)",
+      "Read(//tmp/**)"
+    ]
+  },
+  "enableAllProjectMcpServers": true
+}
