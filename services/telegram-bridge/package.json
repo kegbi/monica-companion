@@ -11,6 +11,7 @@
 		"check": "biome check ."
 	},
 	"dependencies": {
+		"@monica-companion/auth": "workspace:*",
 		"hono": "catalog:",
 		"@hono/node-server": "catalog:",
 		"zod": "catalog:"

@@ -3,6 +3,7 @@ packages:
   - services/*
 
 catalog:
+  '@types/node': 24.12.0
   typescript: 5.9.3
   tsx: 4.21.0
   tsup: 8.5.1
@@ -10,6 +11,7 @@ catalog:
   zod: 4.3.6
   hono: 4.12.8
   '@hono/node-server': 1.19.11
+  jose: 6.2.1
 
 onlyBuiltDependencies:
   - esbuild

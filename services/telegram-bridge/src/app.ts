@@ -1,3 +1,4 @@
+import { correlationId, serviceAuth } from "@monica-companion/auth";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { Config } from "./config";
@@ -7,7 +8,7 @@ import { webhookSecret } from "./middleware/webhook-secret";
 export function createApp(config: Config) {
 	const app = new Hono();
 
-	app.get("/health", (c) => c.json({ status: "ok", service: "telegram-bridge" }));
+	app.get("/health", correlationId(), (c) => c.json({ status: "ok", service: "telegram-bridge" }));
 
 	const webhook = new Hono();
 	webhook.use(
@@ -21,6 +22,18 @@ export function createApp(config: Config) {
 	webhook.post("/telegram", (c) => c.json({ ok: true }));
 
 	app.route("/webhook", webhook);
+
+	const internal = new Hono();
+	internal.use(
+		serviceAuth({
+			audience: "telegram-bridge",
+			secrets: config.auth.jwtSecrets,
+			allowedCallers: ["delivery"],
+		}),
+	);
+	internal.post("/send", (c) => c.json({ ok: true }));
+
+	app.route("/internal", internal);
 
 	return app;
 }

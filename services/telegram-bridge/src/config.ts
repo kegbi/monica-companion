@@ -1,3 +1,4 @@
+import { type AuthConfig, loadAuthConfig } from "@monica-companion/auth";
 import { z } from "zod/v4";
 
 const configSchema = z.object({
@@ -12,14 +13,17 @@ export interface Config {
 	telegramWebhookSecret: string;
 	rateLimitWindowMs: number;
 	rateLimitMaxRequests: number;
+	auth: AuthConfig;
 }
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
 	const parsed = configSchema.parse(env);
+	const auth = loadAuthConfig(env);
 	return {
 		port: parsed.PORT,
 		telegramWebhookSecret: parsed.TELEGRAM_WEBHOOK_SECRET,
 		rateLimitWindowMs: parsed.RATE_LIMIT_WINDOW_MS,
 		rateLimitMaxRequests: parsed.RATE_LIMIT_MAX_REQUESTS,
+		auth,
 	};
 }

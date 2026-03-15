@@ -11,10 +11,18 @@
 	},
 	"scripts": {
 		"build": "tsup",
-		"check": "biome check ."
+		"check": "biome check .",
+		"test": "vitest run --passWithNoTests"
+	},
+	"dependencies": {
+		"hono": "catalog:",
+		"jose": "catalog:",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
+		"@types/node": "catalog:",
 		"typescript": "catalog:",
-		"tsup": "catalog:"
+		"tsup": "catalog:",
+		"vitest": "catalog:"
 	}
 }

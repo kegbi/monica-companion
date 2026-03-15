@@ -19,10 +19,10 @@ _Lock down ingress, identity, and operational safety before building the Monica 
   - [x] Keep internal APIs and `/health` endpoints private to the internal network.
   - [x] Require `X-Telegram-Bot-Api-Secret-Token` on Telegram webhook ingress and enforce request-size limits plus ingress rate limiting.
 
-- [ ] **Inter-Service Security**
-  - [ ] Implement signed JWT-based service auth with per-endpoint caller allowlists.
-  - [ ] Propagate user identity and correlation IDs across all service boundaries.
-  - [ ] Define secret-rotation procedures for JWT signing keys and encryption master keys.
+- [x] **Inter-Service Security**
+  - [x] Implement signed JWT-based service auth with per-endpoint caller allowlists.
+  - [x] Propagate user identity and correlation IDs across all service boundaries.
+  - [x] Define secret-rotation procedures for JWT signing keys and encryption master keys.
 
 - [ ] **Setup-Link Authentication**
   - [ ] Implement one-time setup tokens bound to Telegram user identity and onboarding step.

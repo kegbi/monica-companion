@@ -27,7 +27,11 @@
 			"WebFetch(domain:github.com)",
 			"WebFetch(domain:hub.docker.com)",
 			"WebFetch(domain:grafana.com)",
-			"Bash(docker:*)"
+			"Bash(docker:*)",
+			"Bash(pnpm ls:*)",
+			"Bash(cd:*)",
+			"Bash(npx biome:*)",
+			"Bash(cat:*)"
 		]
 	},
 	"disabledMcpjsonServers": ["awos-recruitment"]
