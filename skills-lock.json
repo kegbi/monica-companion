@@ -6,6 +6,11 @@
 			"sourceType": "github",
 			"computedHash": "ab44e2f297b232ff433e219664ee7df199bd8dd1dff4b8ee42408b880e8d7359"
 		},
+		"hono": {
+			"source": "yusukebe/hono-skill",
+			"sourceType": "github",
+			"computedHash": "8ed1510d7e5cebe8b93717870ccd9ca0d6190335f06ff89b3454e7a3f1afd23d"
+		},
 		"langgraph-fundamentals": {
 			"source": "langchain-ai/langchain-skills",
 			"sourceType": "github",
