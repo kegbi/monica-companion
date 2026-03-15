@@ -13,7 +13,7 @@ Enable MonicaHQ (v4) users to capture and retrieve relationship information effo
 
 ### 1.2. Target Audience
 
-Individuals who use MonicaHQ v4 (self-hosted or the hosted instance at app.monicahq.com) as a personal CRM to manage relationships with friends, family, colleagues, and professional contacts. Each user connects to their own MonicaHQ instance or the official hosted service (different server URLs supported). These users value maintaining meaningful relationships but find it tedious to manually log notes, activities, and contact details after every interaction.
+Individuals who use MonicaHQ v4 (self-hosted or the hosted instance at app.monicahq.com) as a personal CRM to manage relationships with friends, family, colleagues, and professional contacts. Each user connects to their own MonicaHQ instance or the official hosted service through a supported public HTTPS base URL. These users value maintaining meaningful relationships but find it tedious to manually log notes, activities, and contact details after every interaction.
 
 ### 1.3. User Personas
 
@@ -29,9 +29,10 @@ Individuals who use MonicaHQ v4 (self-hosted or the hosted instance at app.monic
 
 ### 1.4. Success Metrics
 
-- **Speed of capture:** Users can log a contact note in under 30 seconds via voice message, compared to several minutes of manual typing in the MonicaHQ UI.
+- **Speed of capture:** Users can complete a confirmed note capture in under 30 seconds end-to-end, with a median time to first actionable response of 5 seconds for text and 12 seconds for voice in the staging benchmark.
 - **Data completeness:** Users who adopt Monica Companion log at least 3x more notes and activities than they did with manual entry alone.
-- **Action accuracy:** The AI correctly identifies the intended contact and proposes the right action (add note, update field, log activity, query info) at least 90% of the time.
+- **Evaluation corpus:** Release decisions use a labeled benchmark of at least 200 utterances (100 write intents, 60 read/query intents, 40 clarification/disambiguation turns), including at least 50 voice samples across supported languages.
+- **Quality gate:** On that benchmark, read/query accuracy is at least 92%, write intent/action proposal accuracy is at least 90%, unambiguous contact-resolution precision is at least 95%, and false-positive mutating executions stay below 1%.
 
 ---
 
@@ -40,23 +41,24 @@ Individuals who use MonicaHQ v4 (self-hosted or the hosted instance at app.monic
 ### 2.1. Core Features
 
 - **Voice & Text Message Processing:** Accept voice messages and text commands via Telegram in any language. Transcribe voice to text using AI (OpenAI Whisper), then parse the intent. Multi-language support is built-in from day one — the AI detects the user's language and responds accordingly.
-- **Smart Contact Resolution:** AI identifies the target contact from the user's MonicaHQ data. Handles ambiguity via Telegram inline keyboards (clickable buttons) — if there are multiple "Sherry"s, presents buttons to choose. Users can also reply via text or voice message (voice is always transcribed and handled as text throughout the entire flow, including disambiguations and confirmations). Skips confirmation when the match is unambiguous (full name, unique relationship like "my brother").
-- **Basic CRUD Operations:** Create new contacts, add notes, log activities, update contact details (birthday, phone, email), and query information. V1 supports simple direct lookups only ("What's Sarah's birthday?", "What's Alex's phone number?"). Complex queries ("who haven't I talked to in 3 months") are deferred to a future version.
-- **Configurable Confirmation Flow:** Users can configure whether actions require explicit approval or execute automatically. AI always asks for clarification when information is ambiguous, regardless of setting. Confirmations use Telegram inline keyboards (Yes/No/Cancel buttons). Users can also reply via text or voice message — the Telegram bridge always transcribes voice to text before processing.
-- **Daily/Weekly Event Reminders:** A configurable cron job that sends the user a summary of today's or this week's events (birthdays, reminders) at a user-chosen time via Telegram. When reminder delivery fails (e.g., MonicaHQ unreachable), retries automatically with backoff and notifies the user via Telegram if retries are exhausted.
+- **Smart Contact Resolution:** AI identifies the target contact from a minimized internal contact projection rather than raw Monica records. The projection includes display name, aliases/nicknames, relationship labels, and key dates needed for matching. Ambiguity is handled via Telegram inline keyboards (clickable buttons) — if there are multiple "Sherry"s, the system presents buttons to choose. Users can also reply via text or voice message (voice is always transcribed and handled as text throughout the entire flow, including disambiguations and confirmations). Skips confirmation when the match is unambiguous (full name, unique relationship like "my brother").
+- **Basic Create/Update/Query Operations:** Create new contacts, add notes, log activities, update contact details (birthday, phone, email), and query information. V1 supports simple direct lookups only ("What's Sarah's birthday?", "What's Alex's phone number?"). Contact or activity deletion flows are not part of V1. Complex queries ("who haven't I talked to in 3 months") are deferred to a future version.
+- **Configurable Confirmation Flow:** Users can configure whether actions require explicit approval or execute automatically. AI always asks for clarification when information is ambiguous, regardless of setting. Confirmations use Telegram inline keyboards (Yes/Edit/Cancel buttons). Users can also reply via text or voice message — the Telegram bridge always transcribes voice to text before processing.
+- **Versioned Pending Action Lifecycle:** Every mutating command is tracked as a versioned pending action with the lifecycle `draft -> pending_confirmation -> confirmed -> executed -> expired/cancelled`. Clarifications and edits update the draft version, and stale confirmations are rejected instead of executing the wrong action.
+- **Daily/Weekly Event Reminders:** A configurable cron job sends the user a summary of today's or this week's events (birthdays, reminders) at a user-chosen local wall-clock time in an IANA timezone. DST follows local wall-clock behavior, duplicate sends are prevented per schedule window, and missed runs send at most one catch-up digest if the scheduler recovers within 6 hours. When reminder delivery fails (e.g., MonicaHQ unreachable), retries automatically with backoff and notifies the user via Telegram if retries are exhausted.
 - **Multi-User / Multi-Account Support:** Multiple users can connect their own MonicaHQ v4 instances (each with a different server URL and API key) and Telegram accounts independently. Each user's data and configuration is fully isolated.
-- **Web-Based Onboarding:** Users set up their account via a secure Astro-based web page (linked from the Telegram bot) where they enter their MonicaHQ instance URL, API key, and configure preferences. Credentials are never sent through Telegram chat. The web frontend is designed to be extended into a full management dashboard (per-user settings, activity logs, login) in future versions.
+- **Web-Based Onboarding:** Users set up their account via a secure Astro-based web page (linked from the Telegram bot) using a short-lived, one-time, signed setup token bound to their Telegram user ID. The page collects MonicaHQ instance URL, API key, language, confirmation mode, timezone, and reminder schedule. Credentials are never sent through Telegram chat. Form submission is protected with HTTPS, CSRF/origin checks, replay-safe token consumption, and audit logging. The web frontend is designed to be extended into a full management dashboard (per-user settings, activity logs, login) in future versions.
 - **Modular Connector Architecture:** The system is designed with a pluggable connector layer so that new messaging platforms (Matrix, Discord, etc.) can be added without changing the core logic.
 
 ### 2.2. User Journey
 
-1. **Setup:** User starts the Monica Companion Telegram bot and receives a unique setup link. They open the web setup page in their browser, enter their MonicaHQ instance URL and API key over HTTPS, choose their preferred language and confirmation mode, and set their reminder schedule. Credentials never pass through Telegram chat.
+1. **Setup:** User starts the Monica Companion Telegram bot and receives a one-time setup link valid for 15 minutes. The signed token is bound to that Telegram user, consumed on successful setup, and rejected if replayed or expired. The user opens the web setup page in their browser, enters their MonicaHQ instance URL and API key over HTTPS, chooses language, confirmation mode, timezone, and reminder schedule. Credentials never pass through Telegram chat.
 2. **Capture:** User finishes a phone call with their mom. They open Telegram and send a voice message: *"Talked with Mom today, she mentioned she's starting a garden project and wants help picking tomato plants next weekend."*
 3. **Processing:** The AI transcribes the voice message, identifies "Mom" as a unique contact in the user's MonicaHQ, and sends a message with inline keyboard buttons: *"Add note to **Maria (Mom)**: Talked today — she's starting a garden project, wants help picking tomato plants next weekend."* **[Yes] [Edit] [Cancel]**
-4. **Confirmation:** User taps "Yes" (or the AI auto-executes if configured). The note is saved to MonicaHQ.
-5. **Disambiguation:** User says *"Add a note to Sherry."* The AI finds two Sherrys and presents inline buttons: *"Which Sherry?"* **[Sherry Miller — friend] [Sherry Chen — colleague]**. User taps one, then continues.
+4. **Confirmation:** User taps "Yes" (or the AI auto-confirms if configured). The pending action is checked by correlation ID and version before execution. If the confirmation arrives after expiry, the system rejects it as stale and asks the user to resubmit.
+5. **Disambiguation:** User says *"Add a note to Sherry."* The AI finds two Sherrys and presents inline buttons: *"Which Sherry?"* **[Sherry Miller — friend] [Sherry Chen — colleague]**. The choice updates the existing draft action rather than creating a new unrelated command.
 6. **Query:** Later, user texts: *"When is Uncle Jorge's birthday?"* — the AI looks it up and responds: *"Jorge's birthday is April 12th — that's in 28 days!"*
-7. **Reminders:** Every morning at 8am, the bot sends: *"Good morning! Today's events: Sarah's birthday. This week: dinner with Alex (Thursday)."* If MonicaHQ is unreachable, the bot retries and eventually notifies: *"Couldn't fetch your reminders — MonicaHQ appears to be down. I'll keep trying."*
+7. **Reminders:** Every morning at 8am in the user's selected timezone, the bot sends: *"Good morning! Today's events: Sarah's birthday. This week: dinner with Alex (Thursday)."* If MonicaHQ is unreachable, the bot retries and eventually notifies: *"Couldn't fetch your reminders — MonicaHQ appears to be down. I'll keep trying."* If the scheduler recovers later the same morning, it sends at most one catch-up digest for that schedule window.
 
 ---
 
@@ -65,24 +67,26 @@ Individuals who use MonicaHQ v4 (self-hosted or the hosted instance at app.monic
 ### 3.1. What's In-Scope for V1
 
 - MonicaHQ v4 (latest OSS) as the sole supported CRM backend.
-- Each user connects to their own MonicaHQ instance (custom server URL + API key).
+- Each user connects to their own MonicaHQ instance (custom server URL + API key) at a canonical public HTTPS base URL. Loopback, RFC1918, link-local, and redirect targets into blocked networks are rejected by default. Trusted single-tenant deployments may opt into a narrowly scoped local-network override outside the hosted default.
 - Telegram bot as the sole messaging connector.
-- Web-based setup page for secure credential entry and preference configuration (never via Telegram chat).
+- Web-based setup page for secure credential entry and preference configuration (never via Telegram chat), protected by short-lived one-time setup links plus CSRF/origin checks.
 - Voice message transcription (via OpenAI Whisper API) with multi-language support from day one.
 - Natural language understanding to parse user intent and extract contact references, in any language.
 - Smart contact disambiguation via Telegram inline keyboards (buttons). Voice and text replies accepted at every stage — voice is always transcribed first.
-- Basic CRUD: create contacts, add notes, log activities, update key fields (birthday, phone, email, address).
+- Basic create/update/query operations: create contacts, add notes, log activities, update key fields (birthday, phone, email, address), and run simple field lookups.
 - Simple direct queries only (field lookups like birthday, phone, last note). Complex/aggregation queries deferred.
 - Configurable auto/manual action confirmation per user.
-- One configurable cron job per user: daily or weekly event summary (birthdays, reminders) at a user-selected time. Telegram error notification when retries are exhausted.
+- Versioned pending-action handling with correlation IDs, optimistic version checks, TTLs, and stale-confirmation rejection.
+- One configurable cron job per user: daily or weekly event summary (birthdays, reminders) at a user-selected time in an IANA timezone. DST follows local wall-clock behavior, duplicate sends are deduped per schedule window, and downtime triggers at most one catch-up run inside a 6-hour grace window.
 - Multi-user support with isolated accounts and MonicaHQ credentials.
-- Shared OpenAI API key (operator-provided), no per-user rate limits in v1 — monitor via observability.
+- Shared OpenAI API key (operator-provided) with V1 guardrails: per-user request size limits, per-user concurrency caps, soft budget alarms, and an operator kill switch/degraded-mode path when quota is exhausted.
 - Private-chat-only policy — bot rejects group messages. Telegram-only in v1.
 - Typing indicators shown while AI processes requests.
-- Dedicated voice-transcription service (connector-agnostic, reusable by future connectors).
-- Dedicated delivery service for outbound message routing (connector-agnostic — routes structured payloads to the right connector; the connector owns platform-specific formatting).
-- Dedicated Monica Integration service as a clean gateway to MonicaHQ (handles retries, timeouts, pagination, payload validation).
-- All commands (real-time and scheduled) execute through a unified scheduler with idempotency enforcement.
+- Dedicated voice-transcription service (connector-agnostic, reusable by future connectors) with a normalized media contract: binary upload or short-lived fetch URL plus media metadata. Connector-specific file IDs stay inside the connector.
+- Dedicated delivery service for outbound message routing (connector-agnostic — routes structured message intents to the right connector; the connector owns platform-specific formatting).
+- Dedicated Monica Integration service as a clean gateway to MonicaHQ (handles timeouts, quick transport retries, pagination, payload validation, Monica URL normalization, and SSRF/redirect protections).
+- AI contact resolution consumes a minimized internal contact projection exposed by Monica Integration rather than Monica-specific raw payloads.
+- All commands (real-time and scheduled) execute through a unified scheduler with idempotency enforcement. Scheduler owns business/job retries; transport-level quick retries stay in the edge client for the relevant external dependency.
 - Delivery audit records — what was sent, when, to whom, success/failure.
 - Caller allowlists — each service only accepts calls from expected callers.
 - Secret rotation policy for JWT signing keys and encryption master keys.
@@ -90,10 +94,12 @@ Individuals who use MonicaHQ v4 (self-hosted or the hosted instance at app.monic
 - Strict payload validation (Zod schemas) on all inbound/outbound requests.
 - Alerting rules for repeated failures and high latency.
 - Idempotency/dedupe to prevent duplicate command execution from Telegram retries.
-- Log redaction to sanitize sensitive data (API keys, personal info) from logs.
-- Per-service `/health` endpoints for Docker readiness/liveness probes.
+- Log redaction to sanitize sensitive data (API keys, personal info) from logs, traces, queue payloads, dead letters, and support tooling.
+- Data retention and deletion rules for conversation history, command logs, delivery audits, traces, and dead letters.
+- Per-service `/health` endpoints for Docker readiness/liveness probes on the internal network only.
+- Public ingress limited to the Telegram webhook and onboarding web UI. Telegram webhook requests must pass authenticity checks and ingress rate/body-size controls.
 - Modular architecture with a clear connector interface for future platforms.
-- Each service runs as a separate Docker container (9 app containers, 17 total with infra + observability).
+- Each service runs as a separate Docker container (8 app containers, 16 total with infra + observability).
 
 ### 3.2. What's Out-of-Scope (Non-Goals)
 
@@ -104,6 +110,7 @@ Individuals who use MonicaHQ v4 (self-hosted or the hosted instance at app.monic
 - **Complex queries:** No aggregation queries like "who haven't I talked to recently" — only simple direct lookups in v1.
 - **Matrix / Discord / other connectors:** Architecture supports them, but only Telegram ships in v1.
 - **Multiple cron jobs per user:** V1 supports a single daily-or-weekly reminder; more complex scheduling is deferred.
-- **Full MonicaHQ feature parity:** Only core CRUD and query operations are supported — advanced features like gift tracking, debt management, or journal entries are out of scope.
+- **Private-network or insecure Monica targets in the hosted default:** Centrally hosted V1 does not support `http://`, localhost, RFC1918, link-local, or other non-public Monica endpoints unless the operator explicitly enables a trusted single-tenant override.
+- **Full MonicaHQ feature parity:** Only core create/update/query operations are supported — advanced features like gift tracking, debt management, or journal entries are out of scope.
 - **MonicaHQ versions other than v4:** Only v4 API is supported in v1. Multi-version support (different API payload types/available commands per version) may be added later.
-- **Per-user rate limiting or BYOK (bring your own key):** Deferred to a future version. V1 uses a shared operator-provided OpenAI key.
+- **Customer-configurable quotas or BYOK (bring your own key):** Deferred to a future version. V1 uses a shared operator-provided OpenAI key with operator-defined guardrails.

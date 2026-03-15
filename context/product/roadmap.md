@@ -1,96 +1,131 @@
 # Product Roadmap: Monica Companion
 
-_This roadmap outlines our strategic direction based on customer needs and business goals. Each phase builds upon the previous one, ensuring a solid foundation before adding intelligence and delivery layers._
+_This roadmap is an execution plan for the already-selected V1 architecture. It prioritizes security contracts and core behavior before optimization or future connector expansion._
 
 ---
 
-### Phase 1: Foundation & Infrastructure
+### Phase 1: Security Baseline & Platform Skeleton
 
-_Establish the architectural backbone — modular service design, observability, and secure inter-service communication._
+_Lock down ingress, identity, and operational safety before building the Monica workflow._
 
-- [ ] **Multi-Service Architecture Design**
-  - [ ] **Modular Service Blueprint:** Draft a multi-service architecture covering all planned functionality with clear boundaries and extension points, following DRY and SOLID principles.
-  - [ ] **Technology & Language Selection:** Pick languages, frameworks, and runtimes for each service based on requirements (performance, ecosystem, team expertise).
-  - [ ] **Test Framework & Auto-Verification:** Select test frameworks and set up automated verification pipelines (unit, integration, e2e) from day one.
+- [ ] **Monorepo & Runtime Baseline**
+  - [ ] Bootstrap the pnpm workspace layout for shared packages and the 8 service packages.
+  - [ ] Wire Biome, Vitest, `tsx`, and `tsup` into a repeatable local and CI workflow.
+  - [ ] Stand up Docker Compose for app services, PostgreSQL, Redis, and observability.
 
-- [ ] **Observability Layer**
-  - [ ] **Logging, Metrics & Tracing:** Implement structured logging, metrics collection, and distributed tracing across services.
-  - [ ] **Presentation & Dashboards:** Set up observability dashboards for monitoring service health, errors, and performance. Configure alerting rules for repeated failures and high latency.
+- [ ] **Public Ingress Hardening**
+  - [ ] Expose only the Telegram webhook and onboarding web UI through Caddy.
+  - [ ] Keep internal APIs and `/health` endpoints private to the internal network.
+  - [ ] Enforce Telegram webhook authenticity checks, request-size limits, and ingress rate limiting.
 
-- [ ] **Inter-Service Security & User Identification**
-  - [ ] **Service-to-Service Communication Layer:** Implement secure communication between services (authentication, authorization, encryption in transit). Shared `@monica-companion/auth` package for JWT signing/verification.
-  - [ ] **User Identity Propagation:** Ensure user identity is securely passed and verified across service boundaries so each service knows which user's data it's operating on.
-  - [ ] **Caller Allowlists:** Each service explicitly allows only expected callers. Internal endpoints are closed to anonymous traffic. Security checks enforced per endpoint, not only at the edge.
-  - [ ] **Idempotency & Dedupe:** Shared `@monica-companion/idempotency` package to prevent duplicate command execution from Telegram retries or message replays. Dedup keys stored in PostgreSQL/Redis.
-  - [ ] **Log Redaction:** Shared `@monica-companion/redaction` package to sanitize sensitive data (API keys, personal contact info, credentials) from structured logs before they reach the observability stack.
-  - [ ] **Secret Rotation Policy:** Define and document a rotation schedule for JWT signing keys and encryption master keys.
-  - [ ] **Health Check Endpoints:** Every application service exposes a `/health` endpoint for Docker Compose readiness/liveness probes and dependency ordering.
+- [ ] **Inter-Service Security**
+  - [ ] Implement signed JWT-based service auth with per-endpoint caller allowlists.
+  - [ ] Propagate user identity and correlation IDs across all service boundaries.
+  - [ ] Define secret-rotation procedures for JWT signing keys and encryption master keys.
 
----
+- [ ] **Setup-Link Authentication**
+  - [ ] Implement one-time setup tokens bound to Telegram user identity and onboarding step.
+  - [ ] Define token TTL, consume-on-use semantics, replay rejection, cancellation, and reissue flow.
+  - [ ] Add CSRF/origin protections and audit logging to onboarding submission.
 
-### Phase 2: MonicaHQ Integration
-
-_Build a robust, typed interface to MonicaHQ and the multi-user management layer that sits on top of it._
-
-- [ ] **Monica API Library & Integration Service**
-  - [ ] **Typed API Client:** Build a MonicaHQ v4 API client library (`monica-api-lib` shared package) with properly typed request/response contracts for all needed endpoints (contacts, notes, activities, reminders). API scope documented in `context/product/monica-api-scope.md`.
-  - [ ] **Monica Integration Service:** Dedicated service wrapping `monica-api-lib` as a clean gateway to Monica. Handles timeout handling on all Monica API calls, retry with exponential backoff for transient failures, safe pagination for large datasets, and payload standardization/validation.
-  - [ ] **Multi-Instance Support:** Support multiple API keys and base URLs so different users can authenticate against different MonicaHQ v4 instances (self-hosted or app.monicahq.com).
-  - [ ] **Integration Testing:** Test the library and service against a real MonicaHQ v4 test account to verify typed contracts match actual API behavior.
-
-- [ ] **Multi-User Management Service**
-  - [ ] **User Registration & Configuration:** Allow multiple users to register, each with their own MonicaHQ v4 instance URL and API key.
-  - [ ] **Isolated User Contexts:** Ensure each user's MonicaHQ connection, data, and configuration are fully isolated from other users.
-  - [ ] **Credential Management:** Securely store and manage MonicaHQ API keys per user (AES-256 encrypted at rest).
-
-- [ ] **Web UI (Astro)**
-  - [ ] **Onboarding Web Page:** An Astro-based frontend service serving a secure web page where users enter their MonicaHQ instance URL, API key, preferred language, confirmation mode, and reminder schedule. Designed to be extensible into a full management dashboard (per-user settings, activity logs, login) in future versions.
-  - [ ] **Telegram Deep Link Integration:** Telegram bot generates a unique setup link per user. User opens link in browser, completes setup, and is redirected back to Telegram.
-  - [ ] **Credential Security:** Credentials are submitted over HTTPS directly to the user-management service API — never sent through Telegram chat.
+- [ ] **Observability & Governance Baseline**
+  - [ ] Instrument all services with OpenTelemetry.
+  - [ ] Define redaction, retention, and deletion rules for logs, traces, queue payloads, dead letters, and conversation state.
+  - [ ] Create dashboards and alerts for failures, latency, quota exhaustion, and scheduler misfires.
 
 ---
 
-### Phase 3: Intelligence Layer
+### Phase 2: Monica Integration & Account Linking
 
-_Define the command vocabulary, build the AI-powered command router, and implement conversation context for multi-turn interactions._
+_Finish the Monica boundary and credential model before broader AI behavior depends on it._
 
-- [ ] **Structured Command Payloads**
-  - [ ] **Command Schema Definition:** Define structured payloads for every supported command (create contact, add note, update field, query info, set reminder, etc.).
-  - [ ] **Supported Commands Catalog:** Document the concrete list of supported commands with their parameters, validation rules, and expected outcomes.
+- [ ] **Monica Contract Completion**
+  - [ ] Finish `context/product/monica-api-scope.md` so fixtures, schemas, and tests stop depending on guesswork.
+  - [ ] Document the Monica fields and endpoints needed to build the internal contact-resolution projection.
 
-- [ ] **AI Command Router**
-  - [ ] **Natural Language Parsing:** Parse free-form text/voice transcriptions into structured command intents using AI. Multi-language support from day one — detect language and process accordingly.
-  - [ ] **Smart Disambiguation & Clarification:** When the AI can't confidently resolve a contact or action, present Telegram inline keyboard buttons for selection (e.g., [Sherry Miller — friend] [Sherry Chen — colleague]). Users can reply via buttons, text, or voice message — voice is always transcribed and handled as text at every stage.
-  - [ ] **Standard Format Serialization:** Serialize parsed intents into the structured command payloads defined above for downstream execution.
+- [ ] **Typed Monica Integration**
+  - [ ] Build `@monica-companion/monica-api-lib` with typed contracts and validation for all V1 operations.
+  - [ ] Implement `monica-integration` as the only Monica-facing service.
+  - [ ] Add transport-level timeouts, capped quick retries, pagination handling, and Monica-specific error mapping.
 
-- [ ] **Conversation History & Context**
-  - [ ] **History State Preservation:** Implement strategies to persist conversation history so the AI can reference previous messages.
-  - [ ] **Context-Based Execution:** Enable the AI to resolve references like "add a note to her" based on the contact mentioned in the previous message.
+- [ ] **Safe Multi-Instance Support**
+  - [ ] Normalize and persist canonical Monica base URLs.
+  - [ ] Reject insecure or blocked Monica targets (`http://`, loopback, RFC1918, link-local, blocked redirects) in the hosted default.
+  - [ ] Support a documented operator override only for trusted single-tenant deployments that intentionally allow local-network Monica targets.
+
+- [ ] **Least-Privilege User Management**
+  - [ ] Keep Monica credentials encrypted at rest in `user-management`.
+  - [ ] Expose audited credential access only to `monica-integration`.
+  - [ ] Expose separate non-secret preference and schedule endpoints to `telegram-bridge`, `ai-router`, and `scheduler`.
+
+- [ ] **Testing Strategy Split**
+  - [ ] Use mocked Monica contract tests in CI.
+  - [ ] Stand up a controlled real-Monica smoke suite outside normal CI.
+  - [ ] Make the smoke suite a release gate for production.
 
 ---
 
-### Phase 4: Connectors & Delivery
+### Phase 3: Command Intelligence & Safe Interaction Flow
 
-_Wire everything together — scheduling, Telegram integration, and voice transcription — with a modular connector design for future platforms._
+_Define the user-facing AI contract and make interactive mutations safe before scaling connector or scheduling behavior._
 
-- [ ] **Scheduler & Command Dispatch**
-  - [ ] **Unified Command Execution:** ALL commands (real-time interactive and scheduled cron jobs) flow through the scheduler via BullMQ. ai-router enqueues structured payloads; scheduler executes them against MonicaHQ via the monica-integration service.
-  - [ ] **Retry & Error Handling:** Add retry logic with exponential backoff for transient failures. When retries are exhausted, route error notification to delivery service for user-facing message via Telegram.
-  - [ ] **Idempotency Enforcement:** Apply idempotency checks at scheduler ingress to prevent duplicate command execution.
-  - [ ] **Cron Job Support:** Enable per-user configurable cron jobs (daily/weekly event summaries) with results routed through delivery service.
+- [ ] **Command Contract & Lifecycle**
+  - [ ] Define structured command schemas for all supported create/update/query actions.
+  - [ ] Implement pending-command storage with `pendingCommandId`, versioning, source-message references, and TTL.
+  - [ ] Enforce lifecycle transitions `draft -> pending_confirmation -> confirmed -> executed -> expired/cancelled`.
 
-- [ ] **Delivery Service**
-  - [ ] **Outbound Message Routing:** Receive formatted results from scheduler and route to the originating connector (Telegram in v1). Decouples message generation from delivery.
-  - [ ] **Connector-Agnostic Routing:** Route structured payloads to the correct connector based on message origin. The connector (telegram-bridge) owns platform-specific formatting (inline keyboards, markdown). Designed for future multi-connector support (Matrix, Discord).
-  - [ ] **Error Notification Delivery:** Deliver user-facing error messages (e.g., "MonicaHQ appears to be down") when command retries are exhausted.
-  - [ ] **Delivery Audit Records:** Log what was sent, when, to whom, and whether delivery succeeded or failed. Visible in observability stack.
+- [ ] **Contact Resolution Boundary**
+  - [ ] Implement the Monica-agnostic `ContactResolutionSummary` projection.
+  - [ ] Ensure `ai-router` consumes only the projection, not raw Monica payloads or credentials.
+  - [ ] Define deterministic ranking and ambiguity thresholds for kinship, nickname, and duplicate-name scenarios.
+
+- [ ] **Benchmark & Quality Gates**
+  - [ ] Build the labeled benchmark set for read intents, write intents, and clarification turns.
+  - [ ] Track read accuracy, write accuracy, contact-resolution precision, false-positive mutation rate, and latency.
+  - [ ] Block release if the benchmark thresholds in `acceptance-criteria.md` are not met.
+
+- [ ] **Shared-Model Guardrails**
+  - [ ] Enforce per-user request-size limits and concurrency caps for GPT/Whisper usage.
+  - [ ] Add budget alarms and an operator kill switch/degraded-mode path.
+  - [ ] Define user-facing behavior when OpenAI quota or budget is exhausted.
+
+---
+
+### Phase 4: Scheduling, Delivery, and Telegram Workflow
+
+_Finish the end-to-end runtime behavior for confirmations, reminders, and message delivery._
 
 - [ ] **Telegram Bridge**
-  - [ ] **Bot Setup & User Identification:** Implement the Telegram bot with user registration, linking Telegram accounts to Monica Companion user accounts. Private-chat-only policy enforced (group messages rejected).
-  - [ ] **Message Ingress Pipeline:** Receive user text/voice messages, detect content type, route voice to voice-transcription service, forward transcribed/text to ai-router. Show typing indicators while AI processes.
-  - [ ] **Error Handling & Edge Cases:** Handle Telegram API errors, rate limits, message format edge cases, and user-facing error messages gracefully.
+  - [ ] Implement webhook ingestion, private-chat-only enforcement, connector event normalization, and Telegram file retrieval.
+  - [ ] Route voice input through `voice-transcription` using the connector-neutral transcription contract.
+  - [ ] Support buttons, text replies, and voice replies for confirmation and clarification flows.
 
-- [ ] **Voice Transcription Service**
-  - [ ] **Dedicated Transcription Service:** Standalone service wrapping OpenAI Whisper API. Receives audio from any connector, returns transcribed text. Connector-agnostic from day one.
-  - [ ] **Multi-Language Transcription:** Support transcription in any language natively via Whisper.
-  - [ ] **Telegram Integration:** Wire telegram-bridge to route voice messages to voice-transcription service and receive text back before forwarding to ai-router.
+- [ ] **Voice Transcription**
+  - [ ] Accept binary upload or short-lived fetch URL plus media metadata.
+  - [ ] Return normalized transcript output and user-safe failure states.
+  - [ ] Keep connector-specific file handles inside the connector.
+
+- [ ] **Scheduler**
+  - [ ] Accept only confirmed commands for execution.
+  - [ ] Own idempotency, job-level retries, dead-letter handling, and execution observability.
+  - [ ] Implement daily/weekly reminder scheduling using IANA timezones, DST-aware local wall-clock semantics, and a bounded catch-up window.
+
+- [ ] **Delivery**
+  - [ ] Route all outbound connector-neutral message intents through `delivery`.
+  - [ ] Keep formatting in the connector, not in `delivery` or `scheduler`.
+  - [ ] Persist delivery audits and expose failure visibility in observability.
+
+---
+
+### Phase 5: Hardening & Scope Review
+
+_Use real usage data to decide whether the documented service split is justified for V1 or should stay modular-but-collapsed in deployment._
+
+- [ ] **Operational Review**
+  - [ ] Measure queue latency, retry amplification, OpenAI spend, and reminder reliability under load.
+  - [ ] Revisit whether `delivery` and `voice-transcription` need to remain separate deployables for the Telegram-only release.
+  - [ ] Revisit whether all read-only interactions need the full queued execution path.
+
+- [ ] **Connector-Ready Contracts**
+  - [ ] Keep connector-neutral contracts clean without leaking Telegram-specific assumptions.
+  - [ ] Add future-connector work only after the Telegram workflow meets the acceptance criteria.

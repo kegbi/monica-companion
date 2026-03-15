@@ -1,6 +1,6 @@
 # Service Architecture: Monica Companion
 
-Total: **17 containers** — 9 application + 3 infrastructure + 5 observability.
+Total: **16 containers** — 8 application + 3 infrastructure + 5 observability.
 
 ---
 
@@ -12,19 +12,18 @@ Total: **17 containers** — 9 application + 3 infrastructure + 5 observability.
 
 **Purpose:** Connect to Telegram, accept user input, and return replies. All Telegram-specific behavior is isolated here.
 
-**Why separate:** Telegram-specific concerns (API, message formats, inline keyboards) should not leak into business logic. Makes it easy to add other channels later without touching core services.
+**Why separate:** Telegram API details, inline keyboards, webhook handling, and file retrieval should not leak into business logic.
 
 **Responsibilities:**
-- Private-chat-only policy — reject or leave group chats.
-- Receive text and voice messages via Telegram webhook (through Caddy).
-- Detect content type — route voice to voice-transcription service, forward text directly to ai-router.
-- Show typing indicators while AI processes.
-- Own all Telegram-specific formatting — render inline keyboards for confirmations/disambiguation, markdown for responses, error messages.
-- Receive structured outbound payloads from delivery service and format them for Telegram before sending.
-- Return clear user guidance when input cannot be parsed.
-- Forward voice audio references to voice-transcription service and await text result.
+- Enforce private-chat-only policy and reject group messages.
+- Receive Telegram webhook traffic through Caddy and verify Telegram authenticity headers/secrets.
+- Enforce ingress request-size limits and connector-level rate limiting.
+- Detect content type and normalize inbound text, callback, and voice interactions into internal envelopes with correlation metadata.
+- Resolve Telegram file IDs, fetch the actual media, and send a connector-neutral transcription request to `voice-transcription`.
+- Render Telegram-specific outbound formatting (inline keyboards, markdown, typing indicators, error phrasing).
+- Accept connector-neutral outbound intents from `delivery` and send them via the Telegram Bot API.
 
-**Allowed callers:** Caddy (inbound webhook), delivery service (outbound messages).
+**Allowed callers:** Caddy (public webhook only), `delivery`.
 
 ---
 
@@ -32,20 +31,21 @@ Total: **17 containers** — 9 application + 3 infrastructure + 5 observability.
 
 **Container:** `ai-router`
 
-**Purpose:** Handle natural language understanding, contact resolution, and command intent parsing. Central place for AI logic, conversation context, and disambiguation flows.
+**Purpose:** Handle natural language understanding, contact resolution, conversation context, and pending-command orchestration.
 
-**Why separate:** Keeps AI/NLU behavior independent from Telegram APIs and Monica APIs. Can evolve AI capabilities without touching connectors or data layers.
+**Why separate:** AI prompting, conversation state, and command synthesis evolve independently from connector and Monica integration concerns.
 
 **Responsibilities:**
-- Parse free-form text (from voice transcription or direct text) into structured command intents using LangGraph TS + OpenAI GPT.
-- Multi-language support from day one — detect language and process accordingly.
-- Smart contact disambiguation — present options when ambiguous, skip when unambiguous.
-- Manage conversation context — resolve references like "add a note to her" based on previous messages.
-- Serialize parsed intents into structured command payloads (Zod-validated).
-- Enqueue ALL command payloads to scheduler via BullMQ — ai-router does NOT execute commands directly.
-- Build user-facing response text and disambiguation prompts.
+- Parse free-form text into structured command drafts using LangGraph TS plus OpenAI GPT.
+- Detect language and generate user-facing copy in the same language.
+- Resolve contacts against the minimized `ContactResolutionSummary` projection exposed by `monica-integration`.
+- Own pending-command state in PostgreSQL, including correlation IDs, version numbers, source message references, TTL, and the lifecycle `draft -> pending_confirmation -> confirmed -> executed -> expired/cancelled`.
+- Handle clarifications, edits, and disambiguation by updating the existing draft version instead of creating unrelated commands.
+- Auto-confirm drafts only when user preferences and confidence thresholds allow it.
+- Emit connector-neutral outbound message intents to `delivery` for clarification prompts, confirmation prompts, query responses, and stale-action rejections.
+- Enqueue only confirmed execution payloads to `scheduler`.
 
-**Allowed callers:** telegram-bridge (and future connectors).
+**Allowed callers:** `telegram-bridge` and future connectors.
 
 ---
 
@@ -53,18 +53,18 @@ Total: **17 containers** — 9 application + 3 infrastructure + 5 observability.
 
 **Container:** `voice-transcription`
 
-**Purpose:** Convert audio messages into text that the AI router can process.
+**Purpose:** Convert audio input into text that the AI router can process.
 
-**Why separate:** Speech handling is a distinct concern with its own reliability and cost profile. Can be swapped between providers (Whisper, Deepgram, etc.) without touching any other service. Connector-agnostic — reusable by future Matrix/Discord connectors.
+**Why separate:** Speech handling has its own cost, latency, and provider lifecycle.
 
 **Responsibilities:**
-- Accept audio file reference from any connector.
-- Transcribe via OpenAI Whisper API. Multi-language transcription supported natively.
-- Return transcribed text.
-- Return clear user-facing error messages if transcription fails (audio too short, unsupported format, API error).
-- Timeout handling for Whisper API calls.
+- Accept a connector-neutral transcription request consisting of either binary audio upload or a short-lived fetch URL plus media metadata.
+- Never accept Telegram-specific file IDs or connector-native handles directly.
+- Transcribe through OpenAI Whisper API with timeout handling.
+- Return normalized text plus confidence/error metadata.
+- Return clear user-safe failures when transcription cannot complete.
 
-**Allowed callers:** telegram-bridge (and future connectors).
+**Allowed callers:** `telegram-bridge` and future connectors.
 
 ---
 
@@ -72,19 +72,20 @@ Total: **17 containers** — 9 application + 3 infrastructure + 5 observability.
 
 **Container:** `monica-integration`
 
-**Purpose:** Act as a clean gateway to Monica v4 API. All Monica-specific complexity is isolated here.
+**Purpose:** Act as the anti-corruption layer for MonicaHQ v4. All Monica-specific behavior and outbound egress risk is isolated here.
 
-**Why separate:** External API complexity (retries, timeouts, pagination, payload validation, version differences) should be isolated. Easier to change Monica usage, swap versions, or adapt to API changes without affecting scheduler or ai-router.
+**Why separate:** Monica API contracts, retries, pagination, and user-supplied base URLs are all high-risk external integration concerns.
 
 **Responsibilities:**
-- Perform contact, reminder, note, and activity operations against MonicaHQ v4 API.
-- Handle reliability concerns: timeout handling on all Monica API calls, retry with exponential backoff for transient failures, safe pagination for large datasets.
-- Standardize and validate inbound/outbound payloads (Zod schemas matching Monica v4 API contracts).
-- Support multiple MonicaHQ instances — resolve the correct base URL and API key per user (via user-management service).
-- Uses `monica-api-lib` shared package for typed API client, but owns the operational layer (retries, pagination, error mapping).
-- Architecture accommodates future multi-version support (different API payload types per Monica version).
+- Perform contact, note, activity, reminder, and lookup operations against MonicaHQ v4.
+- Resolve Monica credentials only through the audited credential port exposed by `user-management`.
+- Normalize and persist canonical Monica base URLs.
+- Require HTTPS by default and reject loopback, RFC1918, link-local, and blocked redirect targets after DNS resolution. Trusted single-tenant deployments may opt into a documented override outside the hosted default.
+- Own transport-level retries, timeout handling, pagination, and Monica-specific error mapping. Quick retries are capped here; scheduler does not duplicate them.
+- Expose a minimized Monica-agnostic contact projection to `ai-router` for contact matching and disambiguation.
+- Validate all Monica-facing payloads against typed contracts from `@monica-companion/monica-api-lib`.
 
-**Allowed callers:** scheduler only.
+**Allowed callers:** `scheduler` for execution endpoints, `ai-router` for read-only contact-resolution endpoints.
 
 ---
 
@@ -92,22 +93,21 @@ Total: **17 containers** — 9 application + 3 infrastructure + 5 observability.
 
 **Container:** `scheduler`
 
-**Purpose:** Unified execution engine for ALL commands — both real-time interactive and scheduled cron jobs. Provides a single execution path with built-in retry, idempotency, and error handling.
+**Purpose:** Execute confirmed commands and scheduled reminder jobs through one reliable path.
 
-**Why separate:** Scheduled work should be reliable even when bot traffic is low/high. Uniform execution path gives consistent retry, idempotency, and audit behavior regardless of whether the command came from a user message or a cron trigger.
+**Why separate:** Job execution, retries, and schedule handling should be isolated from live conversational traffic.
 
 **Responsibilities:**
-- Receive structured command payloads from ai-router (real-time) and from cron triggers (scheduled).
-- Execute commands against MonicaHQ via monica-integration service.
-- Retry failed commands with exponential backoff.
-- Enforce idempotency at ingress — prevent duplicate execution from Telegram retries or message replays.
-- Run daily/weekly reminder digest cron jobs per user.
-- Prevent duplicate sends for the same schedule window.
-- Route results to delivery service for outbound formatting and sending.
-- Track job status, timing, and failure reasons — expose job run history via observability.
-- Dead-letter handling for permanently failed jobs.
+- Accept confirmed execution payloads from `ai-router`.
+- Execute Monica-backed actions through `monica-integration`.
+- Own business/job retries, exponential backoff ceilings, dead-letter handling, and idempotency enforcement.
+- Run daily and weekly reminder jobs using the user's stored IANA timezone and configured local wall-clock time.
+- Compute schedule-window dedupe keys and prevent duplicate sends for the same user/window.
+- Apply downtime catch-up rules: if recovery happens within 6 hours of the scheduled local time, send one catch-up digest; otherwise skip that window.
+- Emit connector-neutral outbound result intents and failure notifications to `delivery`.
+- Track execution status, timing, retry count, and terminal outcome for observability.
 
-**Allowed callers:** ai-router (enqueue commands), internal cron triggers.
+**Allowed callers:** `ai-router` (confirmed commands), internal cron triggers.
 
 ---
 
@@ -115,19 +115,18 @@ Total: **17 containers** — 9 application + 3 infrastructure + 5 observability.
 
 **Container:** `delivery`
 
-**Purpose:** Route structured outbound message payloads to the correct connector. Connector-agnostic — knows nothing about Telegram-specific formatting.
+**Purpose:** Route connector-neutral outbound message intents to the correct connector.
 
-**Why separate:** Keeps scheduler and ai-router simpler and easier to test. Isolates sending failures from command processing. Provides a single outbound routing layer that future connectors (Matrix, Discord) plug into.
+**Why separate:** Outbound delivery routing, auditing, and connector selection should be isolated from both AI logic and job execution.
 
 **Responsibilities:**
-- Receive structured result payloads from scheduler.
-- Resolve which connector the message should be routed to (based on where the original request came from).
-- Forward the structured payload to the correct connector (telegram-bridge in v1).
-- The connector is responsible for platform-specific formatting (inline keyboards, markdown, etc.).
-- Deliver error notification payloads when command retries are exhausted.
-- Maintain delivery audit records (what was sent, when, to whom, which connector, success/failure).
+- Receive connector-neutral outbound message intents from `ai-router` and `scheduler`.
+- Resolve the destination connector and account routing metadata.
+- Forward the payload to the correct connector service (`telegram-bridge` in V1).
+- Never own platform-specific formatting.
+- Persist delivery audit records with correlation ID, connector, recipient routing metadata, status, and failure reason.
 
-**Allowed callers:** scheduler only.
+**Allowed callers:** `ai-router`, `scheduler`.
 
 ---
 
@@ -135,19 +134,20 @@ Total: **17 containers** — 9 application + 3 infrastructure + 5 observability.
 
 **Container:** `user-management`
 
-**Purpose:** Manage user accounts, credentials, and per-user configuration. Central source of truth for who the users are and how they connect to MonicaHQ.
+**Purpose:** Act as the security boundary for user identity, setup flow, credential custody, and non-secret configuration.
 
-**Why separate:** Credential management and user config are a distinct security boundary. Other services query user-management to resolve user context.
+**Why separate:** Monica credentials, Telegram linkage, onboarding authentication, and per-user preferences need narrow, auditable access patterns.
 
 **Responsibilities:**
-- User registration and account creation.
-- Store MonicaHQ instance URL + API key per user (AES-256 encrypted at rest).
-- Store per-user preferences: language, confirmation mode, reminder schedule.
-- Link Telegram accounts to Monica Companion user accounts.
-- Expose API for web-ui (onboarding form submission).
-- Expose API for other services to resolve user context (credentials, config).
+- Create and manage user accounts plus Telegram account linkage.
+- Store MonicaHQ base URL and API key per user with AES-256 encryption at rest.
+- Store non-secret preferences: language, confirmation mode, reminder cadence, IANA timezone, and connector routing metadata.
+- Issue, validate, consume, reissue, and cancel one-time setup tokens bound to Telegram user identity and onboarding step.
+- Expose onboarding APIs for `web-ui`.
+- Expose non-secret preference/schedule APIs to `telegram-bridge`, `ai-router`, and `scheduler`.
+- Expose a narrow audited credential-resolution API only to `monica-integration`.
 
-**Allowed callers:** web-ui, telegram-bridge, scheduler, monica-integration, ai-router.
+**Allowed callers:** `web-ui` (setup submit/validate), `telegram-bridge` (setup-link issue/cancel and Telegram linkage), `ai-router` (non-secret preferences only), `scheduler` (schedule and routing metadata only), `monica-integration` (credential-resolution only).
 
 ---
 
@@ -155,29 +155,29 @@ Total: **17 containers** — 9 application + 3 infrastructure + 5 observability.
 
 **Container:** `web-ui`
 
-**Purpose:** Serve the web-based onboarding page and (in future versions) a full management dashboard.
+**Purpose:** Serve the onboarding page and future account-management UI.
 
-**Why separate:** Web frontend concerns should be isolated from backend services. Astro app with its own build/deploy lifecycle.
+**Why separate:** Frontend concerns, session handling, and browser protections differ from backend service concerns.
 
 **Responsibilities:**
-- V1: Serve secure onboarding page where users enter MonicaHQ instance URL, API key, preferred language, confirmation mode, and reminder schedule.
-- Communicate with user-management service API over HTTPS.
-- Telegram bot generates unique deep links to this page per user.
-- Future: full management dashboard with per-user settings, activity logs, login/authentication.
+- Serve the onboarding page behind a signed one-time setup token.
+- Collect MonicaHQ base URL, API key, language, confirmation mode, reminder cadence, and IANA timezone.
+- Enforce CSRF/origin protections and submit onboarding data to `user-management` over HTTPS.
+- Present replay/expiry failures clearly and direct the user back to Telegram to reissue a setup link.
 
-**Allowed callers:** End users via browser (through Caddy).
+**Allowed callers:** End users via browser through Caddy.
 
 ---
 
-## Shared Concerns (cross-cutting, implemented as shared packages)
+## Shared Concerns
 
 | Concern | Package | Scope |
 |---|---|---|
-| **Monica API Client** | `@monica-companion/monica-api-lib` | Typed MonicaHQ v4 API client with Zod-validated request/response contracts. Used by monica-integration service. |
-| **Idempotency / Dedupe** | `@monica-companion/idempotency` | Prevents duplicate command execution from Telegram retries or message replays. Dedup keys stored in PostgreSQL or Redis. Applied at scheduler ingress. |
-| **Log Redaction** | `@monica-companion/redaction` | Sanitizes sensitive data (API keys, personal contact info, credentials) from all structured logs before they reach the observability stack. Applied at the Pino/OTel logging layer. |
-| **Security / Auth** | `@monica-companion/auth` | JWT signing/verification for inter-service communication. User identity propagation across service boundaries. Caller allowlist enforcement — each service only accepts calls from expected callers. |
-| **Secret Rotation** | `@monica-companion/auth` | Secret rotation policy for JWT signing keys and encryption master keys. Rotation schedule defined and documented. |
+| Monica API client | `@monica-companion/monica-api-lib` | Typed MonicaHQ v4 client and validation schemas used by `monica-integration`. |
+| Idempotency / dedupe | `@monica-companion/idempotency` | Prevents duplicate confirmed-command execution and duplicate reminder sends. |
+| Log redaction | `@monica-companion/redaction` | Sanitizes secrets and personal data in logs, traces, dead letters, and support tooling. |
+| Security / auth | `@monica-companion/auth` | Signed JWTs, user identity propagation, and per-endpoint caller-allowlist enforcement. |
+| Shared types | `@monica-companion/types` | Connector-neutral command, delivery, and contact-projection contracts. |
 
 ---
 
@@ -185,85 +185,115 @@ Total: **17 containers** — 9 application + 3 infrastructure + 5 observability.
 
 | Service | Container Name | Role |
 |---|---|---|
-| **PostgreSQL** | `postgres` | Primary database — user accounts, configurations, conversation history, command logs, idempotency keys, delivery audit records. Credentials encrypted at rest (AES-256). |
-| **Redis** | `redis` | BullMQ backing store for job queues and cron scheduling. Optional caching for MonicaHQ API responses. |
-| **Caddy** | `caddy` | Reverse proxy — automatic HTTPS via Let's Encrypt, TLS termination. Routes to Telegram webhook endpoint, web-ui, and service health endpoints. Only truly client-facing entry points are exposed externally. |
+| PostgreSQL | `postgres` | Primary store for accounts, preferences, setup tokens, pending commands, command logs, idempotency keys, and delivery audits. |
+| Redis | `redis` | BullMQ backing store and optional short-lived cache. |
+| Caddy | `caddy` | Reverse proxy with automatic HTTPS. Public exposure is limited to the Telegram webhook and onboarding UI. |
 
 ## Observability Stack
 
 | Service | Container Name | Role |
 |---|---|---|
-| **OTel Collector** | `otel-collector` | Receives logs, metrics, and traces from all application services via OpenTelemetry SDK. Routes telemetry to Loki, Prometheus, and Tempo. |
-| **Grafana** | `grafana` | Unified dashboards for logs, metrics, and traces. Pre-built dashboards for service health, error rates, API latency, and job queue status. Alerting rules for repeated failures and high latency. |
-| **Loki** | `loki` | Log backend — receives structured JSON logs (with sensitive data redacted) from OTel Collector. |
-| **Prometheus** | `prometheus` | Metrics backend — scrapes metrics exported by OTel Collector. |
-| **Tempo** | `tempo` | Trace backend — receives distributed traces from OTel Collector. |
+| OTel Collector | `otel-collector` | Receives telemetry from all services and routes it downstream. |
+| Grafana | `grafana` | Dashboards and alerts. |
+| Loki | `loki` | Log backend. |
+| Prometheus | `prometheus` | Metrics backend. |
+| Tempo | `tempo` | Trace backend. |
 
 ---
 
 ## Service Communication
 
-```
+```text
 User (Telegram)
-    │
-    ▼
-┌──────────┐   webhook    ┌──────────────────┐
-│  Caddy   │─────────────▶│  telegram-bridge  │
-└──────────┘              └────────┬─────────┘
-                                   │
-                      ┌────────────┼────────────┐
-                      │ voice      │ text       │
-                      ▼            ▼            │
-            ┌───────────────┐                   │
-            │ voice-        │                   │
-            │ transcription │──── text ─────────┤
-            └───────────────┘                   │
-                                                ▼
-                                        ┌──────────────┐
-                                        │  ai-router   │
-                                        └──────┬───────┘
-                                               │ structured
-                                               │ command payload
-                                               │ (via BullMQ)
-                                               ▼
-                                        ┌──────────────┐
-                                        │  scheduler   │
-                                        └──────┬───────┘
-                                               │
-                                               ▼
-                                     ┌────────────────────┐
-                                     │ monica-integration  │
-                                     └────────┬───────────┘
-                                              │
-                                              ▼
-                                     ┌─────────────────┐
-                                     │  MonicaHQ API   │
-                                     └─────────────────┘
-                                              │ result
-                                              ▼
-                                        ┌──────────────┐
-                                        │  delivery    │
-                                        └──────┬───────┘
-                                               │
-                                               ▼
-                                      Telegram / future connectors
+    |
+    v
+  Caddy
+    |
+    v
+telegram-bridge --voice--> voice-transcription
+    |                          |
+    |<------ transcript -------|
+    |
+    v
+ ai-router ----contact lookup----> monica-integration
+    |                                 |
+    |<----- contact projection -------|
+    |
+    +---- clarification/query/result intents ----> delivery ----> telegram-bridge ----> Telegram Bot API
+    |
+    +---- confirmed commands ---------------------> scheduler ----> monica-integration ----> MonicaHQ API
+                                                     |
+                                                     +---- execution result intents -----> delivery
 ```
 
 ### Communication Rules
 
-- **Inter-service:** HTTP/REST with signed JWT tokens for user context propagation. Services communicate over Docker Compose internal network only.
-- **Caller allowlists:** Each service explicitly allows only expected callers. Internal endpoints are closed to anonymous traffic. Security checks enforced per endpoint, not only at the edge.
-- **Command execution:** ALL commands (real-time and scheduled) flow through `scheduler` → `monica-integration` → MonicaHQ API. Uniform path with retry, idempotency, and audit.
-- **Outbound delivery:** `scheduler` sends results to `delivery`, which formats and routes to the originating connector. Delivery keeps audit records.
-- **External ingress:** Caddy terminates TLS and routes to `telegram-bridge` (webhook) and `web-ui` (HTTPS). Only these two entry points are exposed externally.
-- **Telemetry:** All application services export to `otel-collector` via OTLP protocol. Logs are redacted before export.
-- **Health checks:** Every application service exposes a `/health` endpoint for readiness/liveness probes. Docker Compose health checks use these for dependency ordering and restart policies.
-- **Secret rotation:** JWT signing keys and encryption master keys follow a defined rotation schedule.
+- **Inter-service transport:** HTTP/REST over the internal Docker network with signed JWTs and per-endpoint caller allowlists.
+- **Public ingress:** Only the Telegram webhook and onboarding UI are publicly reachable. Internal APIs and `/health` endpoints are not exposed through Caddy.
+- **Webhook protection:** Telegram webhook requests must pass authenticity verification, rate limiting, and request-size limits before entering business logic.
+- **Credential access:** Only `monica-integration` may obtain decrypted Monica credentials, and only through a narrow audited endpoint in `user-management`.
+- **Outbound delivery:** `delivery` routes outbound intents; connectors format and send. Neither `ai-router` nor `scheduler` perform Telegram-specific formatting.
+- **Monica access:** `ai-router` may only call Monica through the read-only contact-projection endpoints on `monica-integration`; raw Monica payloads and API details stay behind the anti-corruption layer.
 
-### Reliability
+---
 
-- All external API calls (MonicaHQ, OpenAI, Telegram) have timeout handling.
-- Transient failures are retried with exponential backoff.
-- Large Monica datasets are handled with safe pagination.
-- Users receive graceful fallback messages when operations fail.
-- Strict payload validation (Zod schemas) on all inbound/outbound requests.
+## Command Lifecycle
+
+1. **Draft**
+   `ai-router` creates or updates a pending command with `pendingCommandId`, `version`, source-message references, proposed action, and a 30-minute inactivity TTL.
+2. **Pending confirmation**
+   When the draft is precise enough to execute but user approval is required, `ai-router` sends a confirmation prompt through `delivery`. Callback payloads and reply metadata carry the same `pendingCommandId` and `version`.
+3. **Confirmed**
+   When the user confirms, or when auto-confirmation rules allow it, `ai-router` freezes the command payload, derives an idempotency key, and sends the confirmed execution request to `scheduler`.
+4. **Executed**
+   `scheduler` executes the command through `monica-integration`, records the terminal outcome, and emits a success/failure delivery intent.
+5. **Expired or cancelled**
+   If the TTL expires, the user cancels, or the version in a reply no longer matches the current draft, the pending command becomes terminal and later replies are rejected as stale.
+
+**Additional rules:**
+- Edits and disambiguation choices update the same draft and increment `version`.
+- Voice confirmations and voice clarifications are treated exactly like text after transcription; they must still attach to an active `pendingCommandId`.
+- `scheduler` never executes a command that is not already in the `confirmed` state.
+
+---
+
+## Contact Resolution Contract
+
+`monica-integration` exposes a Monica-agnostic `ContactResolutionSummary` projection to `ai-router`. The projection contains only the fields required for matching and safe disambiguation:
+
+| Field | Purpose |
+|---|---|
+| `contactId` | Stable Monica contact identifier for downstream execution |
+| `displayName` | Primary user-facing label |
+| `aliases[]` | Nicknames, alternate names, family labels, user-defined aliases |
+| `relationshipLabels[]` | Deterministic relationship hints such as `mother`, `brother`, `colleague` |
+| `importantDates[]` | Birthday and reminder-relevant dates used for lookup/disambiguation |
+| `lastInteractionAt` | Optional recency hint for deterministic ranking |
+
+Rules:
+- `ai-router` does not receive Monica API keys, raw Monica payloads, or unrestricted note history.
+- Exact Monica field retrieval and mutation remain deterministic operations in `monica-integration` plus `scheduler`.
+- The detailed Monica endpoint mapping that produces this projection will be finished in `context/product/monica-api-scope.md`.
+
+---
+
+## Reliability & Scheduling
+
+- All external API calls (MonicaHQ, OpenAI, Telegram) have explicit timeout handling.
+- Transport-level quick retries belong to the edge client talking to the dependency (`monica-integration` for Monica, connector client for Telegram, transcription client for Whisper). Scheduler owns only job-level retries.
+- Reminder schedules are stored with an IANA timezone and executed against local wall-clock time.
+- If a configured local time does not exist because of DST spring-forward, the reminder fires at the next valid local minute.
+- If a local time repeats because of DST fall-back, dedupe keys ensure the reminder is sent only once for that schedule window.
+- Schedule-window dedupe keys are computed from user, schedule, cadence, and local date or ISO week.
+- Failed jobs are dead-lettered with redacted payloads after retry budget is exhausted.
+- Users receive graceful fallback messages instead of raw errors.
+- Strict schema validation applies to all inbound and outbound service contracts.
+
+---
+
+## Data Governance
+
+- Conversation storage is minimized to the state required for active workflows and recent context.
+- Delivery audits store routing metadata and outcome, not full raw Monica responses.
+- Trace attributes, logs, dead letters, and queue payloads follow the same redaction policy as application logs.
+- Support tooling must read the same redacted/audited records rather than raw secrets.

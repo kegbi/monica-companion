@@ -35,6 +35,41 @@ The most important issues are:
 - The Monica API contract document is still a placeholder even though multiple docs depend on it as a source of truth.
 - The confirmation/disambiguation lifecycle is not specified well enough to safely execute mutations.
 
+## Repair Status
+
+Status legend:
+- `[x]` addressed in the documentation pass completed on 2026-03-15
+- `[ ]` still open or intentionally deferred
+
+### High Severity
+
+- [x] H1. Public versus internal service exposure is contradictory
+- [x] H2. User-provided MonicaHQ base URLs create an SSRF and egress-control gap
+- [x] H3. The onboarding "unique setup link" is not specified as a secure authentication flow
+- [ ] H4. `monica-api-scope.md` is still a placeholder, but the rest of the system already depends on it as authoritative
+  Deferred by request. This still needs endpoint paths, headers, schemas, pagination semantics, error shapes, and fixtures.
+- [x] H5. The command confirmation and pending-action lifecycle is under-specified
+- [x] H6. `user-management` is over-privileged and violates least-privilege boundaries
+
+### Medium Severity
+
+- [x] M1. Retry ownership is duplicated across layers and will amplify failures
+- [x] M2. The "connector-agnostic" transcription API is not actually connector-agnostic yet
+- [ ] M3. Contact resolution requirements exceed the documented Monica data contract
+  Partially addressed. The internal contact projection is now documented, but the Monica source-of-truth field and endpoint mapping still depends on completing `context/product/monica-api-scope.md`.
+- [x] M4. Success metrics and acceptance criteria are not measurable as written
+- [x] M5. Reminder scheduling is missing timezone, DST, and misfire semantics
+- [x] M6. A shared OpenAI API key with no per-user controls is a cost and availability risk
+- [x] M7. Data governance is too narrow; only log redaction is specified
+- [x] M8. The testing strategy is ambiguous about real Monica integration tests
+- [x] M9. The outbound delivery boundary is inconsistent across the docs
+- [x] M10. The roadmap is partially stale relative to the chosen architecture
+
+### Low Severity
+
+- [x] L1. Application container counts are inconsistent and currently wrong
+- [x] L2. "Basic CRUD" is misleading because delete behavior is mostly not in scope
+
 ## Findings
 
 ### High Severity

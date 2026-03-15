@@ -5,65 +5,83 @@
 ## 1. Application & Technology Stack
 
 - **Language & Runtime:** TypeScript on Node.js
-- **Package Manager:** pnpm (with workspaces for monorepo)
-- **Monorepo Structure:** pnpm workspaces — shared packages (`types`, `utils`, `monica-api-lib`, `auth`, `idempotency`, `redaction`) + service packages (`ai-router`, `telegram-bridge`, `voice-transcription`, `monica-integration`, `scheduler`, `delivery`, `user-management`, `web-ui`). Each service runs as a separate Docker container (9 app containers total).
-- **AI Framework:** LangGraph TS — orchestrates LLM-powered command routing, disambiguation flows, and multi-turn conversation management
-- **LLM Provider:** OpenAI — GPT models for natural language understanding and command parsing. Shared operator-provided API key (no per-user keys in v1). Multi-language support from day one.
-- **Speech-to-Text:** OpenAI Whisper API — transcribes voice messages to text in any language. Runs as a dedicated `voice-transcription` service, connector-agnostic for future reuse by Matrix/Discord connectors
-- **Telegram Bot Framework:** grammY — TypeScript-first, modern middleware architecture, excellent plugin ecosystem
-- **Validation & Schemas:** Zod — runtime schema validation for API contracts, command payloads, and configuration. Shared Zod schemas across services for type-safe communication
-- **Build Tool:** tsx for development (fast TS execution, no build step), tsup (esbuild-based bundler) for production Docker builds
+- **Package Manager:** pnpm with workspaces for the monorepo
+- **Monorepo Structure:** Shared packages (`types`, `utils`, `monica-api-lib`, `auth`, `idempotency`, `redaction`) plus service packages (`ai-router`, `telegram-bridge`, `voice-transcription`, `monica-integration`, `scheduler`, `delivery`, `user-management`, `web-ui`). Each service runs as a separate Docker container (8 app containers total).
+- **AI Framework:** LangGraph TS orchestrates LLM-powered command routing, disambiguation flows, and multi-turn conversation management.
+- **LLM Provider:** OpenAI GPT models handle NLU and command parsing. V1 uses a shared operator-provided API key with per-user request-size limits, concurrency caps, budget alarms, and an operator kill switch.
+- **Speech-to-Text:** OpenAI Whisper API transcribes voice messages in any supported language through a dedicated `voice-transcription` service. The contract is connector-neutral: binary upload or short-lived fetch URL plus media metadata.
+- **Telegram Bot Framework:** grammY
+- **Validation & Schemas:** Zod runtime validation for API contracts, command payloads, and configuration
+- **Build Tooling:** `tsx` for development and `tsup` for production builds
 
 ---
 
 ## 2. Data & Persistence
 
-- **Primary Database:** PostgreSQL (self-hosted via Docker Compose) — stores user accounts, configurations, conversation history, command logs, idempotency keys, delivery audit records
-- **ORM:** Drizzle ORM — TypeScript-first, SQL-like query syntax, built-in migration system. Schemas defined in shared package for cross-service consistency
-- **Job Queue & Caching:** Redis (Docker Compose) — backing store for BullMQ job queues, optional caching for MonicaHQ API responses
-- **Job Scheduler:** BullMQ — production-grade job queue. ALL commands (real-time and scheduled) flow through scheduler for uniform execution with built-in retry, exponential backoff, idempotency, priority queues, and dead-letter handling
-- **Credential Storage:** AES-256 encryption at rest in PostgreSQL — MonicaHQ API keys encrypted using a master key sourced from environment variables
+- **Primary Database:** PostgreSQL stores user accounts, setup-token state, configurations, pending commands, conversation summaries, command logs, idempotency keys, and delivery audit records.
+- **ORM:** Drizzle ORM
+- **Job Queue & Caching:** Redis backs BullMQ queues and optional short-lived caches.
+- **Job Scheduler:** BullMQ runs confirmed commands and scheduled reminder jobs. Scheduler owns job-level retries, backoff ceilings, dead-letter handling, and schedule-window dedupe. Edge clients own only quick transport retries.
+- **Credential Storage:** MonicaHQ API keys are encrypted at rest with AES-256 in PostgreSQL. Only `monica-integration` may request decrypted credentials through an audited narrow port exposed by `user-management`.
+
+### 2.1. Data Governance
+
+- **Conversation state:** Store minimal turn summaries and pending-command metadata needed for multi-turn flows. Avoid storing raw Monica payloads in AI state.
+- **Retention:** Conversation summaries and pending-command records are retained for 30 days after completion. Command logs and delivery audits are retained for 90 days. Traces, logs, and dead-letter payloads are retained for 14 days unless security investigation policy requires a shorter emergency purge.
+- **Audio handling:** Voice audio is processed transiently for transcription and is not retained after transcription succeeds or fails, aside from minimal operational metadata.
+- **Deletion:** Disconnecting an account revokes setup tokens immediately, deletes Monica credentials immediately, and schedules user-specific conversational/audit data for purge within 30 days, excluding minimal security audit entries required for abuse or incident response.
+- **Redaction scope:** The same minimization and redaction policy applies to logs, traces, dead letters, queue payloads, and support tooling.
 
 ---
 
 ## 3. Infrastructure & Deployment
 
-- **Containerization:** Docker Compose — all services, PostgreSQL, Redis, and observability stack run as containers
-- **Service Communication:** HTTP/REST with internal APIs — user context propagated via signed JWT tokens between services. Each service enforces caller allowlists (only accepts calls from expected callers). Services communicate over Docker Compose private internal network only.
-- **Secret Rotation:** Defined rotation schedule for JWT signing keys and encryption master keys
-- **Reverse Proxy:** Caddy — automatic HTTPS with Let's Encrypt, zero-config TLS termination. Routes to Telegram webhook endpoint, web-ui, and internal service APIs
-- **CI/CD:** GitHub Actions — lint, test, build, and deploy on push. Automated verification pipeline from day one
-- **Environment Management:** `.env` files per environment, Docker secrets for production credentials
+- **Containerization:** Docker Compose runs all services, PostgreSQL, Redis, and the observability stack.
+- **Service Communication:** HTTP/REST over the Docker internal network with signed JWTs, user identity propagation, per-endpoint caller allowlists, and no anonymous access to internal APIs.
+- **Secret Rotation:** JWT signing keys and encryption master keys follow a documented rotation schedule.
+- **Reverse Proxy:** Caddy terminates TLS and exposes only the Telegram webhook and onboarding web UI. Internal service APIs and `/health` endpoints stay private to the internal network.
+- **CI/CD:** GitHub Actions runs lint, test, build, and deploy workflows.
+- **Environment Management:** `.env` files per environment plus Docker secrets for production credentials
+
+### 3.1. Public Ingress Matrix
+
+| Route | Public | Upstream | Required controls |
+|---|---|---|---|
+| Telegram webhook | Yes | `telegram-bridge` | TLS, Telegram secret-token verification, request body size limit, ingress rate limiting, private-chat-only enforcement |
+| Onboarding UI (`/setup/...`) | Yes | `web-ui` | TLS, signed one-time setup token, CSRF/origin checks, form rate limiting, audit logging |
+| Internal service APIs | No | Internal services only | Internal network only, signed JWT, per-endpoint caller allowlists |
+| `/health` endpoints | No | Each application service | Docker/internal probes only; not routed publicly |
 
 ---
 
 ## 4. External Services & APIs
 
-- **MonicaHQ v4 API:** REST API accessed through a dedicated `monica-integration` service that wraps the `monica-api-lib` shared package. The service handles retries, timeouts, pagination, and payload validation. Supports multiple API keys and base URLs per user (self-hosted instances or app.monicahq.com). Architecture accommodates future multi-version support (different API payload types/commands per version). Specific API scope documented in `context/product/monica-api-scope.md`.
-- **OpenAI API:** Chat completions (GPT) for NLU/command routing + Whisper API for speech-to-text
-- **Telegram Bot API:** Via grammY framework — webhook mode, handles text messages, voice messages, and inline keyboards for confirmations and disambiguation. The bridge detects content type and routes voice to the voice-transcription service. Private-chat-only policy enforced at the bridge level (group messages rejected). Shows typing indicators while AI processes. Voice is a first-class input at every stage (commands, clarifications, confirmations).
-- **Delivery Service:** Connector-agnostic outbound message routing — receives structured result payloads from scheduler and routes to the originating connector (telegram-bridge in v1). The connector owns platform-specific formatting (inline keyboards, markdown). Maintains delivery audit records. Decouples message generation from delivery for future multi-connector support.
-- **Web UI:** Astro framework — serves the web-based onboarding page where users enter MonicaHQ credentials and configure preferences over HTTPS. Communicates with user-management service API. Telegram bot generates unique deep links to this page. Extensible to a full management dashboard (per-user settings, logs, login) in future versions.
+- **MonicaHQ v4 API:** Accessed only through `monica-integration`, which wraps `monica-api-lib`. The service normalizes Monica base URLs, requires canonical HTTPS by default, rejects loopback/RFC1918/link-local/blocked redirect targets after DNS resolution, and exposes a Monica-agnostic internal contract to other services. The detailed endpoint contract remains in `context/product/monica-api-scope.md`.
+- **OpenAI API:** GPT handles intent parsing and Whisper handles transcription. If budget or quota is exhausted, the system raises alerts, stops new mutating AI work via operator kill switch, and returns a degraded user-facing failure message instead of silent timeouts.
+- **Telegram Bot API:** grammY webhook mode receives text, voice, and inline-keyboard interactions. `telegram-bridge` verifies webhook authenticity, enforces request-size/rate limits, and converts connector-specific events into internal command or reply envelopes.
+- **Delivery Service:** Receives connector-neutral message intents from `ai-router` and `scheduler`, resolves the target connector, and forwards the payload. Connector services own platform-specific formatting and transport calls.
+- **Web UI:** Astro serves the onboarding page. Setup access uses short-lived one-time signed tokens bound to Telegram user identity and step. Form submissions go to `user-management` over HTTPS with CSRF/origin protection and replay-safe token consumption.
 
 ---
 
 ## 5. Observability & Monitoring
 
-- **Instrumentation:** OpenTelemetry SDK — unified collection of logs, metrics, and traces from all services using `@opentelemetry/sdk-node`
-- **Log Backend:** Grafana Loki — receives structured JSON logs from OTel Collector
-- **Metrics Backend:** Prometheus — scrapes metrics exported by OTel Collector
-- **Trace Backend:** Grafana Tempo — receives distributed traces from OTel Collector
-- **Dashboards:** Grafana — unified dashboards for logs, metrics, and traces. Pre-built dashboards for service health, error rates, API latency, and job queue status. Alerting rules for repeated failures and high latency
-- **OTel Collector:** Runs as a Docker Compose service, receives telemetry from all services and routes to Loki/Prometheus/Tempo
-- **Health Checks:** Every application service exposes a `/health` endpoint for readiness/liveness probes. Docker Compose health checks use these for dependency ordering and restart policies
-- **Log Redaction:** Shared `@monica-companion/redaction` package sanitizes sensitive data (API keys, personal contact info, credentials) from structured logs before they reach the observability stack
+- **Instrumentation:** OpenTelemetry SDK across all services
+- **Log Backend:** Grafana Loki
+- **Metrics Backend:** Prometheus
+- **Trace Backend:** Grafana Tempo
+- **Dashboards:** Grafana dashboards cover service health, error rates, API latency, queue status, OpenAI budget burn, and reminder misfires.
+- **OTel Collector:** Receives telemetry from all services and routes it to Loki, Prometheus, and Tempo.
+- **Health Checks:** Every application service exposes an internal-only `/health` endpoint used by Docker readiness/liveness probes.
+- **Auditability:** Every user-facing command and delivery event carries a correlation ID spanning ingress, AI routing, scheduler execution, Monica calls, and outbound delivery.
+- **Redaction:** Sensitive data is sanitized before export to the observability stack.
 
 ---
 
 ## 6. Testing & Code Quality
 
-- **Test Framework:** Vitest — fast, native TypeScript/ESM support, Jest-compatible API, built-in coverage reporting
-- **Test Strategy:** Unit tests per service, integration tests against real PostgreSQL and Redis (via Docker Compose test profile), e2e tests for critical user journeys (voice → transcribe → command → MonicaHQ)
-- **Monica API Integration Tests:** Run against a dedicated MonicaHQ test account to verify typed contracts match real API behavior
-- **Linter & Formatter:** Biome — all-in-one Rust-based linter and formatter replacing ESLint + Prettier. Fast, opinionated, minimal config
-- **Pre-commit Hooks:** Husky + lint-staged — run Biome and Vitest on staged files before commit
+- **Test Framework:** Vitest
+- **CI Test Strategy:** Unit tests per service, integration tests against real PostgreSQL and Redis, mocked Monica contract tests using fixtures aligned to `context/product/monica-api-scope.md`, and end-to-end tests for critical user journeys.
+- **Controlled Real-Monica Verification:** Real Monica smoke tests run only in a gated environment outside normal CI, such as nightly or a release-candidate workflow. Production release requires the latest smoke run to pass.
+- **Linter & Formatter:** Biome
+- **Pre-commit Hooks:** Husky plus lint-staged
