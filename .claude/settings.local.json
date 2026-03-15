@@ -12,5 +12,8 @@
       "Bash(find:*)",
       "Read(//tmp/**)"
     ]
-  }
+  },
+  "disabledMcpjsonServers": [
+    "awos-recruitment"
+  ]
 }
