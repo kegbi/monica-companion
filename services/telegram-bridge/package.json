@@ -12,7 +12,8 @@
 	},
 	"dependencies": {
 		"hono": "catalog:",
-		"@hono/node-server": "catalog:"
+		"@hono/node-server": "catalog:",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"typescript": "catalog:",

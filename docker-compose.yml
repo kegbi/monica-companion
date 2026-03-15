@@ -16,6 +16,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - internal
 
   redis:
     image: redis:8.6.1-alpine
@@ -28,6 +30,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - internal
 
   caddy:
     image: caddy:2.11.2-alpine
@@ -38,6 +42,8 @@ services:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    networks:
+      - public
 
   # ── Dependency init (--profile app) ────────────────────────────────────
 
@@ -50,6 +56,8 @@ services:
     volumes:
       - .:/app
       - node_modules:/app/node_modules
+    networks:
+      - internal
 
   # ── Application services (--profile app) ───────────────────────────────
 
@@ -58,10 +66,13 @@ services:
     profiles: [app]
     working_dir: /app
     command: sh -c "./node_modules/.bin/tsx services/telegram-bridge/src/index.ts"
-    ports:
-      - "3001:3001"
+    expose:
+      - "3001"
     environment:
       PORT: 3001
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-60}
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -72,14 +83,17 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - public
+      - internal
 
   ai-router:
     image: node:24.14.0-slim
     profiles: [app]
     working_dir: /app
     command: sh -c "./node_modules/.bin/tsx services/ai-router/src/index.ts"
-    ports:
-      - "3002:3002"
+    expose:
+      - "3002"
     environment:
       PORT: 3002
     volumes:
@@ -92,14 +106,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - internal
 
   voice-transcription:
     image: node:24.14.0-slim
     profiles: [app]
     working_dir: /app
     command: sh -c "./node_modules/.bin/tsx services/voice-transcription/src/index.ts"
-    ports:
-      - "3003:3003"
+    expose:
+      - "3003"
     environment:
       PORT: 3003
     volumes:
@@ -112,14 +128,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - internal
 
   monica-integration:
     image: node:24.14.0-slim
     profiles: [app]
     working_dir: /app
     command: sh -c "./node_modules/.bin/tsx services/monica-integration/src/index.ts"
-    ports:
-      - "3004:3004"
+    expose:
+      - "3004"
     environment:
       PORT: 3004
     volumes:
@@ -132,14 +150,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - internal
 
   scheduler:
     image: node:24.14.0-slim
     profiles: [app]
     working_dir: /app
     command: sh -c "./node_modules/.bin/tsx services/scheduler/src/index.ts"
-    ports:
-      - "3005:3005"
+    expose:
+      - "3005"
     environment:
       PORT: 3005
     volumes:
@@ -152,14 +172,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - internal
 
   delivery:
     image: node:24.14.0-slim
     profiles: [app]
     working_dir: /app
     command: sh -c "./node_modules/.bin/tsx services/delivery/src/index.ts"
-    ports:
-      - "3006:3006"
+    expose:
+      - "3006"
     environment:
       PORT: 3006
     volumes:
@@ -172,14 +194,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - internal
 
   user-management:
     image: node:24.14.0-slim
     profiles: [app]
     working_dir: /app
     command: sh -c "./node_modules/.bin/tsx services/user-management/src/index.ts"
-    ports:
-      - "3007:3007"
+    expose:
+      - "3007"
     environment:
       PORT: 3007
     volumes:
@@ -192,14 +216,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - internal
 
   web-ui:
     image: node:24.14.0-slim
     profiles: [app]
     working_dir: /app
     command: sh -c "cd services/web-ui && ../../node_modules/.pnpm/node_modules/.bin/astro dev --host 0.0.0.0 --port 4321"
-    ports:
-      - "4321:4321"
+    expose:
+      - "4321"
     environment:
       PORT: 4321
     volumes:
@@ -208,6 +234,9 @@ services:
     depends_on:
       deps-init:
         condition: service_completed_successfully
+    networks:
+      - public
+      - internal
 
   # ── Observability (--profile observability) ────────────────────────────
 
@@ -223,6 +252,8 @@ services:
       - loki
       - tempo
       - prometheus
+    networks:
+      - internal
 
   grafana:
     image: grafana/grafana:12.4.1
@@ -236,6 +267,8 @@ services:
     volumes:
       - ./docker/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
       - grafana_data:/var/lib/grafana
+    networks:
+      - internal
 
   loki:
     image: grafana/loki:3.6.7
@@ -246,6 +279,8 @@ services:
       - ./docker/loki-config.yaml:/etc/loki/local-config.yaml:ro
       - loki_data:/loki
     command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - internal
 
   prometheus:
     image: prom/prometheus:v3.10.0
@@ -255,6 +290,8 @@ services:
     volumes:
       - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
+    networks:
+      - internal
 
   tempo:
     image: grafana/tempo:2.10.2
@@ -265,6 +302,8 @@ services:
       - ./docker/tempo-config.yaml:/etc/tempo/config.yaml:ro
       - tempo_data:/var/tempo
     command: -config.file=/etc/tempo/config.yaml
+    networks:
+      - internal
 
 volumes:
   postgres_data:
@@ -276,3 +315,9 @@ volumes:
   loki_data:
   prometheus_data:
   tempo_data:
+
+networks:
+  public:
+    driver: bridge
+  internal:
+    driver: bridge

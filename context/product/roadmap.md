@@ -14,10 +14,10 @@ _Lock down ingress, identity, and operational safety before building the Monica 
   - [x] Wire Biome, Vitest, `tsx`, and `tsup` into a repeatable local and CI workflow.
   - [x] Stand up Docker Compose for app services, PostgreSQL, Redis, and observability.
 
-- [ ] **Public Ingress Hardening**
-  - [ ] Expose only the Telegram webhook and onboarding web UI through Caddy.
-  - [ ] Keep internal APIs and `/health` endpoints private to the internal network.
-  - [ ] Require `X-Telegram-Bot-Api-Secret-Token` on Telegram webhook ingress and enforce request-size limits plus ingress rate limiting.
+- [x] **Public Ingress Hardening**
+  - [x] Expose only the Telegram webhook and onboarding web UI through Caddy.
+  - [x] Keep internal APIs and `/health` endpoints private to the internal network.
+  - [x] Require `X-Telegram-Bot-Api-Secret-Token` on Telegram webhook ingress and enforce request-size limits plus ingress rate limiting.
 
 - [ ] **Inter-Service Security**
   - [ ] Implement signed JWT-based service auth with per-endpoint caller allowlists.

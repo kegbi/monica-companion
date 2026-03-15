@@ -14,6 +14,12 @@
 - Maintain a separate controlled real-Monica smoke suite outside normal CI, such as nightly or release-candidate execution.
 - Production release requires the latest passing controlled real-Monica smoke suite.
 
+## Smoke Testing
+
+- After all unit/integration tests pass and infrastructure changes are applied, run a Docker Compose smoke test against the live stack before marking work complete.
+- Spin up only the services relevant to the change (`docker compose --profile app up -d <services>`), run curl/HTTP checks validating the real behavior, and tear down afterward.
+- Smoke tests must verify the actual network path (reverse proxy, middleware, port exposure) — not just in-process test helpers.
+
 ## Test Strategy
 
 - Unit tests per service using Vitest.
