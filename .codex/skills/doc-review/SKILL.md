@@ -186,7 +186,9 @@ Produce a structured markdown report with the following sections:
 ## Findings
 
 ### Critical Findings
-<numbered list with exact `path:line`, dimension, description, impact, and recommended action>
+<numbered list with exact `path:line`, dimension, description, impact, and proposal>
+
+Each finding MUST include a **Proposal** field: a concrete, specific recommendation for how to resolve the issue. Do not just restate the problem — describe the actual change you recommend (e.g., "Add a `retryPolicy` section to the scheduler contract in `scheduler-api.md` specifying max retries, backoff strategy, and DLQ routing" rather than "Document retry behavior").
 
 ### High Findings
 <same format>
@@ -221,7 +223,16 @@ Produce a structured markdown report with the following sections:
 
 ## Recommended Actions
 
-<prioritized list of concrete next steps, ordered by severity and effort>
+<prioritized list of concrete next steps, ordered by severity and effort — each item should reference the finding number and restate the proposal so this section is actionable standalone>
+
+## Resolution Checklist
+
+<GitHub-flavored markdown checkbox list of every actionable finding (Critical, High, Medium, Low), one item per finding. Each item includes the finding number, severity tag, short description, and the proposal. Use this checklist to track resolution progress.>
+
+- [ ] **#1 [CRITICAL]** Short description — proposal
+- [ ] **#2 [HIGH]** Short description — proposal
+- [ ] **#3 [MEDIUM]** Short description — proposal
+...
 ```
 
 ### Step 6: Save Report
@@ -235,7 +246,7 @@ Produce a structured markdown report with the following sections:
 
 - **Be specific**: "Section X in doc Y contradicts section Z in doc W" - not "some docs are inconsistent".
 - **Use exact evidence**: Include `path:line` references and quote only the minimum needed.
-- **Be actionable**: Every finding except INFO must have a recommended action.
+- **Be actionable**: Every finding except INFO must have a concrete proposal describing exactly what to change and where — not just "fix this" but the specific resolution you recommend.
 - **Be proportional**: Do not flag simple docs for lacking enterprise patterns.
 - **Respect intent**: Evaluate docs against their stated goals, not hypothetical ones.
 - **No false positives**: If you are unsure whether something is an issue, mark it INFO with your reasoning rather than inflating severity.
