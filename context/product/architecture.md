@@ -6,7 +6,7 @@
 
 - **Language & Runtime:** TypeScript on Node.js
 - **Package Manager:** pnpm (with workspaces for monorepo)
-- **Monorepo Structure:** pnpm workspaces — shared packages (`types`, `utils`, `monica-api-lib`, `auth`, `idempotency`, `redaction`) + service packages (`ai-router`, `telegram-bridge`, `voice-transcription`, `scheduler`, `delivery`, `user-management`, `web-ui`). Each service runs as a separate Docker container (8 app containers total).
+- **Monorepo Structure:** pnpm workspaces — shared packages (`types`, `utils`, `monica-api-lib`, `auth`, `idempotency`, `redaction`) + service packages (`ai-router`, `telegram-bridge`, `voice-transcription`, `monica-integration`, `scheduler`, `delivery`, `user-management`, `web-ui`). Each service runs as a separate Docker container (9 app containers total).
 - **AI Framework:** LangGraph TS — orchestrates LLM-powered command routing, disambiguation flows, and multi-turn conversation management
 - **LLM Provider:** OpenAI — GPT models for natural language understanding and command parsing. Shared operator-provided API key (no per-user keys in v1). Multi-language support from day one.
 - **Speech-to-Text:** OpenAI Whisper API — transcribes voice messages to text in any language. Runs as a dedicated `voice-transcription` service, connector-agnostic for future reuse by Matrix/Discord connectors
@@ -18,7 +18,7 @@
 
 ## 2. Data & Persistence
 
-- **Primary Database:** PostgreSQL (self-hosted via Docker Compose) — stores user accounts, configurations, conversation history, command logs, idempotency keys
+- **Primary Database:** PostgreSQL (self-hosted via Docker Compose) — stores user accounts, configurations, conversation history, command logs, idempotency keys, delivery audit records
 - **ORM:** Drizzle ORM — TypeScript-first, SQL-like query syntax, built-in migration system. Schemas defined in shared package for cross-service consistency
 - **Job Queue & Caching:** Redis (Docker Compose) — backing store for BullMQ job queues, optional caching for MonicaHQ API responses
 - **Job Scheduler:** BullMQ — production-grade job queue. ALL commands (real-time and scheduled) flow through scheduler for uniform execution with built-in retry, exponential backoff, idempotency, priority queues, and dead-letter handling
@@ -29,7 +29,8 @@
 ## 3. Infrastructure & Deployment
 
 - **Containerization:** Docker Compose — all services, PostgreSQL, Redis, and observability stack run as containers
-- **Service Communication:** HTTP/REST with internal APIs — user context propagated via signed JWT tokens between services
+- **Service Communication:** HTTP/REST with internal APIs — user context propagated via signed JWT tokens between services. Each service enforces caller allowlists (only accepts calls from expected callers). Services communicate over Docker Compose private internal network only.
+- **Secret Rotation:** Defined rotation schedule for JWT signing keys and encryption master keys
 - **Reverse Proxy:** Caddy — automatic HTTPS with Let's Encrypt, zero-config TLS termination. Routes to Telegram webhook endpoint, web-ui, and internal service APIs
 - **CI/CD:** GitHub Actions — lint, test, build, and deploy on push. Automated verification pipeline from day one
 - **Environment Management:** `.env` files per environment, Docker secrets for production credentials
@@ -38,10 +39,10 @@
 
 ## 4. External Services & APIs
 
-- **MonicaHQ v4 API:** REST API — typed client library built in-house (`monica-api-lib` shared package) with support for multiple API keys and base URLs per user (self-hosted instances or app.monicahq.com). Architecture should accommodate future multi-version support (different API payload types/commands per version)
+- **MonicaHQ v4 API:** REST API accessed through a dedicated `monica-integration` service that wraps the `monica-api-lib` shared package. The service handles retries, timeouts, pagination, and payload validation. Supports multiple API keys and base URLs per user (self-hosted instances or app.monicahq.com). Architecture accommodates future multi-version support (different API payload types/commands per version). Specific API scope documented in `context/product/monica-api-scope.md`.
 - **OpenAI API:** Chat completions (GPT) for NLU/command routing + Whisper API for speech-to-text
 - **Telegram Bot API:** Via grammY framework — webhook mode, handles text messages, voice messages, and inline keyboards for confirmations and disambiguation. The bridge detects content type and routes voice to the voice-transcription service. Private-chat-only policy enforced at the bridge level (group messages rejected). Shows typing indicators while AI processes. Voice is a first-class input at every stage (commands, clarifications, confirmations).
-- **Delivery Service:** Outbound message delivery — receives formatted results from scheduler, routes to the originating connector (Telegram in v1). Handles connector-specific formatting (inline keyboards, markdown). Decouples message generation from delivery for future multi-connector support.
+- **Delivery Service:** Connector-agnostic outbound message routing — receives structured result payloads from scheduler and routes to the originating connector (telegram-bridge in v1). The connector owns platform-specific formatting (inline keyboards, markdown). Maintains delivery audit records. Decouples message generation from delivery for future multi-connector support.
 - **Web UI:** Astro framework — serves the web-based onboarding page where users enter MonicaHQ credentials and configure preferences over HTTPS. Communicates with user-management service API. Telegram bot generates unique deep links to this page. Extensible to a full management dashboard (per-user settings, logs, login) in future versions.
 
 ---
@@ -52,7 +53,7 @@
 - **Log Backend:** Grafana Loki — receives structured JSON logs from OTel Collector
 - **Metrics Backend:** Prometheus — scrapes metrics exported by OTel Collector
 - **Trace Backend:** Grafana Tempo — receives distributed traces from OTel Collector
-- **Dashboards:** Grafana — unified dashboards for logs, metrics, and traces. Pre-built dashboards for service health, error rates, API latency, and job queue status
+- **Dashboards:** Grafana — unified dashboards for logs, metrics, and traces. Pre-built dashboards for service health, error rates, API latency, and job queue status. Alerting rules for repeated failures and high latency
 - **OTel Collector:** Runs as a Docker Compose service, receives telemetry from all services and routes to Loki/Prometheus/Tempo
 - **Health Checks:** Every application service exposes a `/health` endpoint for readiness/liveness probes. Docker Compose health checks use these for dependency ordering and restart policies
 - **Log Redaction:** Shared `@monica-companion/redaction` package sanitizes sensitive data (API keys, personal contact info, credentials) from structured logs before they reach the observability stack
