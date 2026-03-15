@@ -1,21 +1,34 @@
 {
-  "permissions": {
-    "allow": [
-      "WebSearch",
-      "WebFetch(domain:docs.anthropic.com)",
-      "Bash(grep:*)",
-      "Bash(where:*)",
-      "Bash(sed:*)",
-      "Bash(certutil:*)",
-      "Bash(powershell:*)",
-      "Bash(git fetch:*)",
-      "Bash(find:*)",
-      "Read(//tmp/**)",
-      "WebFetch(domain:www.monicahq.com)",
-      "Bash(curl:*)"
-    ]
-  },
-  "disabledMcpjsonServers": [
-    "awos-recruitment"
-  ]
+	"permissions": {
+		"allow": [
+			"WebSearch",
+			"WebFetch(domain:docs.anthropic.com)",
+			"Bash(grep:*)",
+			"Bash(where:*)",
+			"Bash(sed:*)",
+			"Bash(certutil:*)",
+			"Bash(powershell:*)",
+			"Bash(git fetch:*)",
+			"Bash(find:*)",
+			"Read(//tmp/**)",
+			"WebFetch(domain:www.monicahq.com)",
+			"Bash(curl:*)",
+			"Bash(ls:*)",
+			"Bash(npm view:*)",
+			"WebFetch(domain:registry.npmjs.org)",
+			"Bash(pnpm install:*)",
+			"Bash(echo:*)",
+			"Bash(npx esbuild:*)",
+			"Bash(pnpm exec:*)",
+			"Bash(pnpm check:*)",
+			"Bash(pnpm:*)",
+			"WebFetch(domain:registry.hub.docker.com)",
+			"WebFetch(domain:endoflife.date)",
+			"WebFetch(domain:github.com)",
+			"WebFetch(domain:hub.docker.com)",
+			"WebFetch(domain:grafana.com)",
+			"Bash(docker:*)"
+		]
+	},
+	"disabledMcpjsonServers": ["awos-recruitment"]
 }

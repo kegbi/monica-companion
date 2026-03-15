@@ -1,0 +1,26 @@
+{
+	"name": "monica-companion",
+	"private": true,
+	"packageManager": "pnpm@10.12.1",
+	"engines": {
+		"node": ">=24"
+	},
+	"scripts": {
+		"build": "pnpm -r run build",
+		"check": "biome check .",
+		"check:fix": "biome check --write .",
+		"dev": "pnpm -r --parallel run dev",
+		"test": "pnpm -r run test",
+		"prepare": "husky"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.7",
+		"husky": "9.1.7",
+		"lint-staged": "16.4.0",
+		"tsx": "catalog:",
+		"typescript": "5.9.3"
+	},
+	"lint-staged": {
+		"*.{ts,tsx,js,jsx,json}": "biome check --write --no-errors-on-unmatched"
+	}
+}

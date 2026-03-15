@@ -1,0 +1,23 @@
+{
+	"name": "@monica-companion/voice-transcription",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "tsx watch src/index.ts",
+		"build": "tsup",
+		"start": "node dist/index.js",
+		"test": "vitest run --passWithNoTests",
+		"check": "biome check ."
+	},
+	"dependencies": {
+		"hono": "catalog:",
+		"@hono/node-server": "catalog:"
+	},
+	"devDependencies": {
+		"typescript": "catalog:",
+		"tsx": "catalog:",
+		"tsup": "catalog:",
+		"vitest": "catalog:"
+	}
+}

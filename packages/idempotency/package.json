@@ -1,0 +1,20 @@
+{
+	"name": "@monica-companion/idempotency",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsup",
+		"check": "biome check ."
+	},
+	"devDependencies": {
+		"typescript": "catalog:",
+		"tsup": "catalog:"
+	}
+}

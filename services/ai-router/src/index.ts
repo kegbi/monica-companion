@@ -1,0 +1,10 @@
+import { serve } from "@hono/node-server";
+import { Hono } from "hono";
+
+const app = new Hono();
+
+app.get("/health", (c) => c.json({ status: "ok", service: "ai-router" }));
+
+serve({ fetch: app.fetch, port: Number(process.env.PORT) || 3002 }, (info) => {
+	console.log(`ai-router listening on :${info.port}`);
+});

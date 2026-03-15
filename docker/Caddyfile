@@ -1,0 +1,11 @@
+:80 {
+	handle /webhook/telegram* {
+		reverse_proxy telegram-bridge:3001
+	}
+
+	handle /setup* {
+		reverse_proxy web-ui:4321
+	}
+
+	respond "Not Found" 404
+}

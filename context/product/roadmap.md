@@ -8,11 +8,11 @@ _This roadmap is an execution plan for the selected V1 logical architecture and 
 
 _Lock down ingress, identity, and operational safety before building the Monica workflow._
 
-- [ ] **Monorepo & Runtime Baseline**
-  - [ ] Bootstrap the pnpm workspace layout for shared packages and the 8 logical service packages.
-  - [ ] Start with the initial V1 deployment profile: 8 application containers, one per documented service boundary.
-  - [ ] Wire Biome, Vitest, `tsx`, and `tsup` into a repeatable local and CI workflow.
-  - [ ] Stand up Docker Compose for app services, PostgreSQL, Redis, and observability.
+- [x] **Monorepo & Runtime Baseline**
+  - [x] Bootstrap the pnpm workspace layout for shared packages and the 8 logical service packages.
+  - [x] Start with the initial V1 deployment profile: 8 application containers, one per documented service boundary.
+  - [x] Wire Biome, Vitest, `tsx`, and `tsup` into a repeatable local and CI workflow.
+  - [x] Stand up Docker Compose for app services, PostgreSQL, Redis, and observability.
 
 - [ ] **Public Ingress Hardening**
   - [ ] Expose only the Telegram webhook and onboarding web UI through Caddy.
