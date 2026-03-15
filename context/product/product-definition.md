@@ -77,8 +77,16 @@ Individuals who use MonicaHQ v4 (self-hosted or the hosted instance at app.monic
 - One configurable cron job per user: daily or weekly event summary (birthdays, reminders) at a user-selected time. Telegram error notification when retries are exhausted.
 - Multi-user support with isolated accounts and MonicaHQ credentials.
 - Shared OpenAI API key (operator-provided), no per-user rate limits in v1 — monitor via observability.
+- Private-chat-only policy — bot rejects group messages. Telegram-only in v1.
+- Typing indicators shown while AI processes requests.
+- Dedicated voice-transcription service (connector-agnostic, reusable by future connectors).
+- Dedicated delivery service for outbound messages (decouples message generation from connector-specific delivery).
+- All commands (real-time and scheduled) execute through a unified scheduler with idempotency enforcement.
+- Idempotency/dedupe to prevent duplicate command execution from Telegram retries.
+- Log redaction to sanitize sensitive data (API keys, personal info) from logs.
+- Per-service `/health` endpoints for Docker readiness/liveness probes.
 - Modular architecture with a clear connector interface for future platforms.
-- Each service runs as a separate Docker container.
+- Each service runs as a separate Docker container (8 app containers).
 
 ### 3.2. What's Out-of-Scope (Non-Goals)
 

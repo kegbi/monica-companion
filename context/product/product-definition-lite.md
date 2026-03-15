@@ -17,4 +17,5 @@ Individuals using MonicaHQ v4 (self-hosted or app.monicahq.com) as a personal CR
 - **Daily/Weekly Reminders** — Cron job for event summaries (birthdays, reminders) at a chosen time. Telegram notification on failure.
 - **Web-Based Onboarding** — Secure web page for credential entry (MonicaHQ URL + API key). Never via Telegram chat.
 - **Multi-User / Multi-Instance** — Isolated accounts, each with their own MonicaHQ instance URL and API key.
-- **Modular Architecture** — Pluggable connector layer for future messaging platforms. Each service is a separate Docker container.
+- **Private Chat Only** — Bot enforces private-chat-only policy; shows typing indicators during processing.
+- **Modular Architecture** — 8 app containers: telegram-bridge, ai-router, voice-transcription, scheduler, delivery, user-management, web-ui. Pluggable connector layer for future platforms. Unified command execution through scheduler with idempotency. Dedicated delivery service for outbound messages. Log redaction and per-service health checks.

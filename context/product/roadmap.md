@@ -18,8 +18,11 @@ _Establish the architectural backbone — modular service design, observability,
   - [ ] **Presentation & Dashboards:** Set up observability dashboards for monitoring service health, errors, and performance.
 
 - [ ] **Inter-Service Security & User Identification**
-  - [ ] **Service-to-Service Communication Layer:** Implement secure communication between services (authentication, authorization, encryption in transit).
+  - [ ] **Service-to-Service Communication Layer:** Implement secure communication between services (authentication, authorization, encryption in transit). Shared `@monica-companion/auth` package for JWT signing/verification.
   - [ ] **User Identity Propagation:** Ensure user identity is securely passed and verified across service boundaries so each service knows which user's data it's operating on.
+  - [ ] **Idempotency & Dedupe:** Shared `@monica-companion/idempotency` package to prevent duplicate command execution from Telegram retries or message replays. Dedup keys stored in PostgreSQL/Redis.
+  - [ ] **Log Redaction:** Shared `@monica-companion/redaction` package to sanitize sensitive data (API keys, personal contact info, credentials) from structured logs before they reach the observability stack.
+  - [ ] **Health Check Endpoints:** Every application service exposes a `/health` endpoint for Docker Compose readiness/liveness probes and dependency ordering.
 
 ---
 
@@ -68,17 +71,22 @@ _Define the command vocabulary, build the AI-powered command router, and impleme
 _Wire everything together — scheduling, Telegram integration, and voice transcription — with a modular connector design for future platforms._
 
 - [ ] **Scheduler & Command Dispatch**
-  - [ ] **Command Execution Engine:** Implement command dispatching that routes structured payloads to the appropriate service (MonicaHQ API, user management, etc.).
-  - [ ] **Retry & Error Handling:** Add retry logic with exponential backoff for transient failures. When retries are exhausted, send user-facing error notification via Telegram (e.g., "MonicaHQ appears to be down, I'll keep trying").
-  - [ ] **Cron Job Support:** Enable per-user configurable cron jobs (daily/weekly event summaries) with delivery routed to the user's connected messaging platform.
-  - [ ] **Per-Connector Routing:** Route messages back to the connector they originated from, supporting future multi-connector scenarios.
+  - [ ] **Unified Command Execution:** ALL commands (real-time interactive and scheduled cron jobs) flow through the scheduler via BullMQ. ai-router enqueues structured payloads; scheduler executes them against MonicaHQ via monica-api-lib.
+  - [ ] **Retry & Error Handling:** Add retry logic with exponential backoff for transient failures. When retries are exhausted, route error notification to delivery service for user-facing message via Telegram.
+  - [ ] **Idempotency Enforcement:** Apply idempotency checks at scheduler ingress to prevent duplicate command execution.
+  - [ ] **Cron Job Support:** Enable per-user configurable cron jobs (daily/weekly event summaries) with results routed through delivery service.
+
+- [ ] **Delivery Service**
+  - [ ] **Outbound Message Routing:** Receive formatted results from scheduler and route to the originating connector (Telegram in v1). Decouples message generation from delivery.
+  - [ ] **Connector-Specific Formatting:** Handle connector-specific formatting (Telegram inline keyboards, markdown, etc.). Designed for future multi-connector support (Matrix, Discord).
+  - [ ] **Error Notification Delivery:** Deliver user-facing error messages (e.g., "MonicaHQ appears to be down") when command retries are exhausted.
 
 - [ ] **Telegram Bridge**
-  - [ ] **Bot Setup & User Identification:** Implement the Telegram bot with user registration, linking Telegram accounts to Monica Companion user accounts.
-  - [ ] **Message Send/Receive Pipeline:** Wire up end-to-end message handling — receive user text/voice, process through AI router, return responses and confirmations.
+  - [ ] **Bot Setup & User Identification:** Implement the Telegram bot with user registration, linking Telegram accounts to Monica Companion user accounts. Private-chat-only policy enforced (group messages rejected).
+  - [ ] **Message Ingress Pipeline:** Receive user text/voice messages, detect content type, route voice to voice-transcription service, forward transcribed/text to ai-router. Show typing indicators while AI processes.
   - [ ] **Error Handling & Edge Cases:** Handle Telegram API errors, rate limits, message format edge cases, and user-facing error messages gracefully.
 
-- [ ] **Voice Transcription**
-  - [ ] **Speech-to-Text Integration:** Integrate OpenAI Whisper API to convert Telegram voice messages to text. Multi-language transcription supported natively.
-  - [ ] **Telegram Voice Wiring:** Wire voice message handling into the Telegram bridge so voice notes flow through the same AI router pipeline as text.
-  - [ ] **Multi-Connector Abstraction:** Ensure the voice processing layer is connector-agnostic, so future platforms (Matrix, Discord) can reuse the same transcription pipeline.
+- [ ] **Voice Transcription Service**
+  - [ ] **Dedicated Transcription Service:** Standalone service wrapping OpenAI Whisper API. Receives audio from any connector, returns transcribed text. Connector-agnostic from day one.
+  - [ ] **Multi-Language Transcription:** Support transcription in any language natively via Whisper.
+  - [ ] **Telegram Integration:** Wire telegram-bridge to route voice messages to voice-transcription service and receive text back before forwarding to ai-router.

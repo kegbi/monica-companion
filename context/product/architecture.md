@@ -6,10 +6,10 @@
 
 - **Language & Runtime:** TypeScript on Node.js
 - **Package Manager:** pnpm (with workspaces for monorepo)
-- **Monorepo Structure:** pnpm workspaces — shared packages (`types`, `utils`, `monica-api-lib`) + service packages (`ai-router`, `telegram-bridge`, `user-management`, `scheduler`, `web-ui`). Each service runs as a separate Docker container.
+- **Monorepo Structure:** pnpm workspaces — shared packages (`types`, `utils`, `monica-api-lib`, `auth`, `idempotency`, `redaction`) + service packages (`ai-router`, `telegram-bridge`, `voice-transcription`, `scheduler`, `delivery`, `user-management`, `web-ui`). Each service runs as a separate Docker container (8 app containers total).
 - **AI Framework:** LangGraph TS — orchestrates LLM-powered command routing, disambiguation flows, and multi-turn conversation management
 - **LLM Provider:** OpenAI — GPT models for natural language understanding and command parsing. Shared operator-provided API key (no per-user keys in v1). Multi-language support from day one.
-- **Speech-to-Text:** OpenAI Whisper API — transcribes voice messages to text in any language
+- **Speech-to-Text:** OpenAI Whisper API — transcribes voice messages to text in any language. Runs as a dedicated `voice-transcription` service, connector-agnostic for future reuse by Matrix/Discord connectors
 - **Telegram Bot Framework:** grammY — TypeScript-first, modern middleware architecture, excellent plugin ecosystem
 - **Validation & Schemas:** Zod — runtime schema validation for API contracts, command payloads, and configuration. Shared Zod schemas across services for type-safe communication
 - **Build Tool:** tsx for development (fast TS execution, no build step), tsup (esbuild-based bundler) for production Docker builds
@@ -18,10 +18,10 @@
 
 ## 2. Data & Persistence
 
-- **Primary Database:** PostgreSQL (self-hosted via Docker Compose) — stores user accounts, configurations, conversation history, command logs
+- **Primary Database:** PostgreSQL (self-hosted via Docker Compose) — stores user accounts, configurations, conversation history, command logs, idempotency keys
 - **ORM:** Drizzle ORM — TypeScript-first, SQL-like query syntax, built-in migration system. Schemas defined in shared package for cross-service consistency
 - **Job Queue & Caching:** Redis (Docker Compose) — backing store for BullMQ job queues, optional caching for MonicaHQ API responses
-- **Job Scheduler:** BullMQ — production-grade job queue with cron scheduling (daily/weekly reminders), automatic retries with exponential backoff, priority queues, dead-letter handling
+- **Job Scheduler:** BullMQ — production-grade job queue. ALL commands (real-time and scheduled) flow through scheduler for uniform execution with built-in retry, exponential backoff, idempotency, priority queues, and dead-letter handling
 - **Credential Storage:** AES-256 encryption at rest in PostgreSQL — MonicaHQ API keys encrypted using a master key sourced from environment variables
 
 ---
@@ -40,7 +40,8 @@
 
 - **MonicaHQ v4 API:** REST API — typed client library built in-house (`monica-api-lib` shared package) with support for multiple API keys and base URLs per user (self-hosted instances or app.monicahq.com). Architecture should accommodate future multi-version support (different API payload types/commands per version)
 - **OpenAI API:** Chat completions (GPT) for NLU/command routing + Whisper API for speech-to-text
-- **Telegram Bot API:** Via grammY framework — webhook or long-polling mode, handles text messages, voice messages, and inline keyboards for confirmations and disambiguation. The bridge detects content type and always transcribes voice to text before processing — voice is a first-class input at every stage (commands, clarifications, confirmations)
+- **Telegram Bot API:** Via grammY framework — webhook mode, handles text messages, voice messages, and inline keyboards for confirmations and disambiguation. The bridge detects content type and routes voice to the voice-transcription service. Private-chat-only policy enforced at the bridge level (group messages rejected). Shows typing indicators while AI processes. Voice is a first-class input at every stage (commands, clarifications, confirmations).
+- **Delivery Service:** Outbound message delivery — receives formatted results from scheduler, routes to the originating connector (Telegram in v1). Handles connector-specific formatting (inline keyboards, markdown). Decouples message generation from delivery for future multi-connector support.
 - **Web UI:** Astro framework — serves the web-based onboarding page where users enter MonicaHQ credentials and configure preferences over HTTPS. Communicates with user-management service API. Telegram bot generates unique deep links to this page. Extensible to a full management dashboard (per-user settings, logs, login) in future versions.
 
 ---
@@ -53,6 +54,8 @@
 - **Trace Backend:** Grafana Tempo — receives distributed traces from OTel Collector
 - **Dashboards:** Grafana — unified dashboards for logs, metrics, and traces. Pre-built dashboards for service health, error rates, API latency, and job queue status
 - **OTel Collector:** Runs as a Docker Compose service, receives telemetry from all services and routes to Loki/Prometheus/Tempo
+- **Health Checks:** Every application service exposes a `/health` endpoint for readiness/liveness probes. Docker Compose health checks use these for dependency ordering and restart policies
+- **Log Redaction:** Shared `@monica-companion/redaction` package sanitizes sensitive data (API keys, personal contact info, credentials) from structured logs before they reach the observability stack
 
 ---
 
