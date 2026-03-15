@@ -1,6 +1,6 @@
 # Product Roadmap: Monica Companion
 
-_This roadmap is an execution plan for the already-selected V1 architecture. It prioritizes security contracts and core behavior before optimization or future connector expansion._
+_This roadmap is an execution plan for the selected V1 logical architecture and deployment profile documented in `context/spec/adr-v1-deployment-profile.md`. It prioritizes security contracts and core behavior before future connector expansion or service refactoring._
 
 ---
 
@@ -9,14 +9,15 @@ _This roadmap is an execution plan for the already-selected V1 architecture. It 
 _Lock down ingress, identity, and operational safety before building the Monica workflow._
 
 - [ ] **Monorepo & Runtime Baseline**
-  - [ ] Bootstrap the pnpm workspace layout for shared packages and the 8 service packages.
+  - [ ] Bootstrap the pnpm workspace layout for shared packages and the 8 logical service packages.
+  - [ ] Start with the initial V1 deployment profile: 8 application containers, one per documented service boundary.
   - [ ] Wire Biome, Vitest, `tsx`, and `tsup` into a repeatable local and CI workflow.
   - [ ] Stand up Docker Compose for app services, PostgreSQL, Redis, and observability.
 
 - [ ] **Public Ingress Hardening**
   - [ ] Expose only the Telegram webhook and onboarding web UI through Caddy.
   - [ ] Keep internal APIs and `/health` endpoints private to the internal network.
-  - [ ] Enforce Telegram webhook authenticity checks, request-size limits, and ingress rate limiting.
+  - [ ] Require `X-Telegram-Bot-Api-Secret-Token` on Telegram webhook ingress and enforce request-size limits plus ingress rate limiting.
 
 - [ ] **Inter-Service Security**
   - [ ] Implement signed JWT-based service auth with per-endpoint caller allowlists.
@@ -25,7 +26,7 @@ _Lock down ingress, identity, and operational safety before building the Monica 
 
 - [ ] **Setup-Link Authentication**
   - [ ] Implement one-time setup tokens bound to Telegram user identity and onboarding step.
-  - [ ] Define token TTL, consume-on-use semantics, replay rejection, cancellation, and reissue flow.
+  - [ ] Implement a 15-minute TTL, one-active-token-per-user, consume-on-success, replay rejection, cancellation, and reissue-invalidates-previous-token semantics.
   - [ ] Add CSRF/origin protections and audit logging to onboarding submission.
 
 - [ ] **Observability & Governance Baseline**
@@ -101,6 +102,7 @@ _Finish the end-to-end runtime behavior for confirmations, reminders, and messag
   - [ ] Support buttons, text replies, and voice replies for confirmation and clarification flows.
 
 - [ ] **Voice Transcription**
+  - [ ] Implement `voice-transcription` as a standalone service package and deployable in the initial Telegram-only profile.
   - [ ] Accept binary upload or short-lived fetch URL plus media metadata.
   - [ ] Return normalized transcript output and user-safe failure states.
   - [ ] Keep connector-specific file handles inside the connector.
@@ -111,6 +113,7 @@ _Finish the end-to-end runtime behavior for confirmations, reminders, and messag
   - [ ] Implement daily/weekly reminder scheduling using IANA timezones, DST-aware local wall-clock semantics, and a bounded catch-up window.
 
 - [ ] **Delivery**
+  - [ ] Implement `delivery` as a standalone service package and deployable in the initial Telegram-only profile.
   - [ ] Route all outbound connector-neutral message intents through `delivery`.
   - [ ] Keep formatting in the connector, not in `delivery` or `scheduler`.
   - [ ] Persist delivery audits and expose failure visibility in observability.
@@ -119,12 +122,12 @@ _Finish the end-to-end runtime behavior for confirmations, reminders, and messag
 
 ### Phase 5: Hardening & Scope Review
 
-_Use real usage data to decide whether the documented service split is justified for V1 or should stay modular-but-collapsed in deployment._
+_Use real usage data to validate that the separate service split remains justified and to identify where contracts or scaling boundaries need adjustment after V1._
 
 - [ ] **Operational Review**
   - [ ] Measure queue latency, retry amplification, OpenAI spend, and reminder reliability under load.
-  - [ ] Revisit whether `delivery` and `voice-transcription` need to remain separate deployables for the Telegram-only release.
-  - [ ] Revisit whether all read-only interactions need the full queued execution path.
+  - [ ] Validate that keeping `delivery` and `voice-transcription` as separate deployables in V1 continues to be justified by operational needs and connector roadmap.
+  - [ ] Verify that read-only interactions continue to bypass the queued execution path and still meet latency targets.
 
 - [ ] **Connector-Ready Contracts**
   - [ ] Keep connector-neutral contracts clean without leaking Telegram-specific assumptions.

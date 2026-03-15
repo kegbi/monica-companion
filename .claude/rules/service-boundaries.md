@@ -4,10 +4,11 @@
 - Keep Monica API specifics in `monica-integration` and `monica-api-lib` only. `ai-router`, `scheduler`, and `delivery` must depend on Monica-agnostic contracts.
 - `ai-router` may consume only the minimized `ContactResolutionSummary` projection from `monica-integration`, not raw Monica payloads or credentials.
 - `scheduler` operates on confirmed command payloads, not Telegram messages or raw Monica schemas.
+- Read-only queries, clarification prompts, and other non-mutating conversational responses stay off `scheduler` and flow directly from `ai-router` to `delivery`.
 - `delivery` routes connector-neutral outbound message intents. The connector owns platform-specific formatting and transport calls.
 - `voice-transcription` is connector-agnostic. It accepts binary upload or short-lived fetch URLs plus media metadata, never connector-native file handles.
 - Enforce service-to-service auth and explicit per-endpoint caller allowlists on all internal endpoints.
-- One service per Docker container. Services communicate over the Docker internal network only.
+- One service boundary per deployable in the initial Telegram-only V1 profile. Services communicate over the Docker internal network only.
 - `user-management` is the source of truth for user identity, setup tokens, credentials, and preferences, but access must be split by capability:
   - non-secret preference access for `telegram-bridge`, `ai-router`, and `scheduler`
   - audited credential access only for `monica-integration`

@@ -1,6 +1,6 @@
 # Service Architecture: Monica Companion
 
-Total: **16 containers** — 8 application + 3 infrastructure + 5 observability.
+Logical architecture and initial Telegram-only V1 deployment profile: **16 containers** — 8 application + 3 infrastructure + 5 observability.
 
 ---
 
@@ -16,7 +16,7 @@ Total: **16 containers** — 8 application + 3 infrastructure + 5 observability.
 
 **Responsibilities:**
 - Enforce private-chat-only policy and reject group messages.
-- Receive Telegram webhook traffic through Caddy and verify Telegram authenticity headers/secrets.
+- Receive Telegram webhook traffic through Caddy and require the configured `X-Telegram-Bot-Api-Secret-Token` before business logic runs.
 - Enforce ingress request-size limits and connector-level rate limiting.
 - Detect content type and normalize inbound text, callback, and voice interactions into internal envelopes with correlation metadata.
 - Resolve Telegram file IDs, fetch the actual media, and send a connector-neutral transcription request to `voice-transcription`.
@@ -99,6 +99,7 @@ Total: **16 containers** — 8 application + 3 infrastructure + 5 observability.
 
 **Responsibilities:**
 - Accept confirmed execution payloads from `ai-router`.
+- Do not handle read-only queries, clarification prompts, or other non-mutating conversational traffic.
 - Execute Monica-backed actions through `monica-integration`.
 - Own business/job retries, exponential backoff ceilings, dead-letter handling, and idempotency enforcement.
 - Run daily and weekly reminder jobs using the user's stored IANA timezone and configured local wall-clock time.
@@ -142,7 +143,7 @@ Total: **16 containers** — 8 application + 3 infrastructure + 5 observability.
 - Create and manage user accounts plus Telegram account linkage.
 - Store MonicaHQ base URL and API key per user with AES-256 encryption at rest.
 - Store non-secret preferences: language, confirmation mode, reminder cadence, IANA timezone, and connector routing metadata.
-- Issue, validate, consume, reissue, and cancel one-time setup tokens bound to Telegram user identity and onboarding step.
+- Issue, validate, consume, reissue, and cancel 15-minute one-time setup tokens bound to Telegram user identity and onboarding step. At most one active setup token may exist per Telegram user.
 - Expose onboarding APIs for `web-ui`.
 - Expose non-secret preference/schedule APIs to `telegram-bridge`, `ai-router`, and `scheduler`.
 - Expose a narrow audited credential-resolution API only to `monica-integration`.
@@ -160,7 +161,7 @@ Total: **16 containers** — 8 application + 3 infrastructure + 5 observability.
 **Why separate:** Frontend concerns, session handling, and browser protections differ from backend service concerns.
 
 **Responsibilities:**
-- Serve the onboarding page behind a signed one-time setup token.
+- Serve the onboarding page behind a signed 15-minute one-time setup token.
 - Collect MonicaHQ base URL, API key, language, confirmation mode, reminder cadence, and IANA timezone.
 - Enforce CSRF/origin protections and submit onboarding data to `user-management` over HTTPS.
 - Present replay/expiry failures clearly and direct the user back to Telegram to reissue a setup link.
@@ -230,9 +231,10 @@ telegram-bridge --voice--> voice-transcription
 
 - **Inter-service transport:** HTTP/REST over the internal Docker network with signed JWTs and per-endpoint caller allowlists.
 - **Public ingress:** Only the Telegram webhook and onboarding UI are publicly reachable. Internal APIs and `/health` endpoints are not exposed through Caddy.
-- **Webhook protection:** Telegram webhook requests must pass authenticity verification, rate limiting, and request-size limits before entering business logic.
+- **Webhook protection:** Telegram webhook requests must present the configured `X-Telegram-Bot-Api-Secret-Token`, then pass rate limiting and request-size limits before entering business logic.
 - **Credential access:** Only `monica-integration` may obtain decrypted Monica credentials, and only through a narrow audited endpoint in `user-management`.
 - **Outbound delivery:** `delivery` routes outbound intents; connectors format and send. Neither `ai-router` nor `scheduler` perform Telegram-specific formatting.
+- **Scheduler scope:** Only confirmed mutating commands and scheduled reminder jobs flow through `scheduler`. Read-only queries and clarification prompts stay on the live `ai-router -> delivery` path.
 - **Monica access:** `ai-router` may only call Monica through the read-only contact-projection endpoints on `monica-integration`; raw Monica payloads and API details stay behind the anti-corruption layer.
 
 ---

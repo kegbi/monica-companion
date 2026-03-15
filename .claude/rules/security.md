@@ -3,8 +3,8 @@
 - Service-to-service authentication is required on all internal endpoints using signed JWTs from `@monica-companion/auth`.
 - Each service must enforce per-endpoint caller allowlists. Do not treat a service-wide allowlist as sufficient when endpoints have different privilege levels.
 - Public ingress is limited to the Telegram webhook and onboarding web UI. Internal APIs and `/health` endpoints must not be exposed publicly.
-- Telegram webhook ingress must verify authenticity, enforce request-size limits, and apply rate limiting before business logic runs.
-- Setup links are authentication artifacts. They must be signed, one-time, short-lived, bound to Telegram user identity and onboarding step, and rejected if replayed or expired.
+- Telegram webhook ingress must require the configured `X-Telegram-Bot-Api-Secret-Token`, enforce request-size limits, and apply rate limiting before business logic runs.
+- Setup links are authentication artifacts. They must be signed, one-time, valid for 15 minutes, bound to Telegram user identity and onboarding step, limited to one active token per Telegram user, invalidated on reissue or cancellation, and rejected if replayed or expired.
 - Onboarding form submission must use HTTPS plus CSRF/origin protections.
 - MonicaHQ API keys are encrypted at rest in PostgreSQL. Never store credentials in plaintext.
 - Only `monica-integration` may obtain decrypted Monica credentials, and only through an audited narrow endpoint on `user-management`.

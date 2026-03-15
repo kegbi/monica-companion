@@ -1,15 +1,33 @@
 # System Architecture Overview: Monica Companion
 
+> Status: Planned target architecture. As of 2026-03-15 the repository contains documentation only; the pnpm workspace, service packages, Docker Compose stack, and GitHub Actions workflows described below are target-state artifacts, not committed implementation.
+
+---
+
+## 0. Repository State
+
+### Current Repository State
+
+- The repository currently contains product, review, and rules documentation.
+- No pnpm workspace, service packages, Docker Compose file, or GitHub Actions workflows are committed yet.
+
+### Target Repository State
+
+- A pnpm monorepo with shared packages and the logical service boundaries described below.
+- An initial Telegram-only V1 deployment profile with 8 application containers: `telegram-bridge`, `ai-router`, `voice-transcription`, `monica-integration`, `scheduler`, `delivery`, `user-management`, and `web-ui`.
+- The service boundaries are deployed separately from the start in V1. See `context/spec/adr-v1-deployment-profile.md`.
+
 ---
 
 ## 1. Application & Technology Stack
 
 - **Language & Runtime:** TypeScript on Node.js
 - **Package Manager:** pnpm with workspaces for the monorepo
-- **Monorepo Structure:** Shared packages (`types`, `utils`, `monica-api-lib`, `auth`, `idempotency`, `redaction`) plus service packages (`ai-router`, `telegram-bridge`, `voice-transcription`, `monica-integration`, `scheduler`, `delivery`, `user-management`, `web-ui`). Each service runs as a separate Docker container (8 app containers total).
+- **Target Monorepo Structure:** Shared packages (`types`, `utils`, `monica-api-lib`, `auth`, `idempotency`, `redaction`) plus logical service packages (`ai-router`, `telegram-bridge`, `voice-transcription`, `monica-integration`, `scheduler`, `delivery`, `user-management`, `web-ui`). The initial V1 deployment profile uses 8 application containers, one per service boundary.
 - **AI Framework:** LangGraph TS orchestrates LLM-powered command routing, disambiguation flows, and multi-turn conversation management.
 - **LLM Provider:** OpenAI GPT models handle NLU and command parsing. V1 uses a shared operator-provided API key with per-user request-size limits, concurrency caps, budget alarms, and an operator kill switch.
-- **Speech-to-Text:** OpenAI Whisper API transcribes voice messages in any supported language through a dedicated `voice-transcription` service. The contract is connector-neutral: binary upload or short-lived fetch URL plus media metadata.
+- **Speech-to-Text Boundary:** OpenAI Whisper API transcribes voice messages in any supported language through a dedicated connector-neutral `voice-transcription` service. The contract is binary upload or short-lived fetch URL plus media metadata.
+- **Outbound Delivery Boundary:** Connector-neutral `delivery` routes outbound message intents to the correct connector while keeping platform formatting in the connector.
 - **Telegram Bot Framework:** grammY
 - **Validation & Schemas:** Zod runtime validation for API contracts, command payloads, and configuration
 - **Build Tooling:** `tsx` for development and `tsup` for production builds
@@ -21,7 +39,7 @@
 - **Primary Database:** PostgreSQL stores user accounts, setup-token state, configurations, pending commands, conversation summaries, command logs, idempotency keys, and delivery audit records.
 - **ORM:** Drizzle ORM
 - **Job Queue & Caching:** Redis backs BullMQ queues and optional short-lived caches.
-- **Job Scheduler:** BullMQ runs confirmed commands and scheduled reminder jobs. Scheduler owns job-level retries, backoff ceilings, dead-letter handling, and schedule-window dedupe. Edge clients own only quick transport retries.
+- **Job Scheduler:** BullMQ runs confirmed mutating commands and scheduled reminder jobs. Read-only queries stay synchronous in `ai-router`. Scheduler owns job-level retries, backoff ceilings, dead-letter handling, and schedule-window dedupe. Edge clients own only quick transport retries.
 - **Credential Storage:** MonicaHQ API keys are encrypted at rest with AES-256 in PostgreSQL. Only `monica-integration` may request decrypted credentials through an audited narrow port exposed by `user-management`.
 
 ### 2.1. Data Governance
@@ -36,19 +54,20 @@
 
 ## 3. Infrastructure & Deployment
 
-- **Containerization:** Docker Compose runs all services, PostgreSQL, Redis, and the observability stack.
+- **Target Local Runtime:** Docker Compose runs application containers, PostgreSQL, Redis, and the observability stack.
+- **Initial V1 Deployment Profile:** 8 application containers plus 3 infrastructure and 5 observability containers. `voice-transcription` and `delivery` remain separate deployables in V1 as documented in `context/spec/adr-v1-deployment-profile.md`.
 - **Service Communication:** HTTP/REST over the Docker internal network with signed JWTs, user identity propagation, per-endpoint caller allowlists, and no anonymous access to internal APIs.
 - **Secret Rotation:** JWT signing keys and encryption master keys follow a documented rotation schedule.
 - **Reverse Proxy:** Caddy terminates TLS and exposes only the Telegram webhook and onboarding web UI. Internal service APIs and `/health` endpoints stay private to the internal network.
-- **CI/CD:** GitHub Actions runs lint, test, build, and deploy workflows.
+- **Target CI/CD:** GitHub Actions runs lint, test, build, and deploy workflows once the code workspace exists.
 - **Environment Management:** `.env` files per environment plus Docker secrets for production credentials
 
 ### 3.1. Public Ingress Matrix
 
 | Route | Public | Upstream | Required controls |
 |---|---|---|---|
-| Telegram webhook | Yes | `telegram-bridge` | TLS, Telegram secret-token verification, request body size limit, ingress rate limiting, private-chat-only enforcement |
-| Onboarding UI (`/setup/...`) | Yes | `web-ui` | TLS, signed one-time setup token, CSRF/origin checks, form rate limiting, audit logging |
+| Telegram webhook | Yes | `telegram-bridge` | TLS, required `X-Telegram-Bot-Api-Secret-Token`, request body size limit, ingress rate limiting, private-chat-only enforcement |
+| Onboarding UI (`/setup/...`) | Yes | `web-ui` | TLS, signed 15-minute one-time setup token, one-active-token-per-user invalidation rules, CSRF/origin checks, form rate limiting, audit logging |
 | Internal service APIs | No | Internal services only | Internal network only, signed JWT, per-endpoint caller allowlists |
 | `/health` endpoints | No | Each application service | Docker/internal probes only; not routed publicly |
 
@@ -58,9 +77,9 @@
 
 - **MonicaHQ v4 API:** Accessed only through `monica-integration`, which wraps `monica-api-lib`. The service normalizes Monica base URLs, requires canonical HTTPS by default, rejects loopback/RFC1918/link-local/blocked redirect targets after DNS resolution, and exposes a Monica-agnostic internal contract to other services. The detailed endpoint contract remains in `context/product/monica-api-scope.md`.
 - **OpenAI API:** GPT handles intent parsing and Whisper handles transcription. If budget or quota is exhausted, the system raises alerts, stops new mutating AI work via operator kill switch, and returns a degraded user-facing failure message instead of silent timeouts.
-- **Telegram Bot API:** grammY webhook mode receives text, voice, and inline-keyboard interactions. `telegram-bridge` verifies webhook authenticity, enforces request-size/rate limits, and converts connector-specific events into internal command or reply envelopes.
-- **Delivery Service:** Receives connector-neutral message intents from `ai-router` and `scheduler`, resolves the target connector, and forwards the payload. Connector services own platform-specific formatting and transport calls.
-- **Web UI:** Astro serves the onboarding page. Setup access uses short-lived one-time signed tokens bound to Telegram user identity and step. Form submissions go to `user-management` over HTTPS with CSRF/origin protection and replay-safe token consumption.
+- **Telegram Bot API:** grammY webhook mode receives text, voice, and inline-keyboard interactions. `telegram-bridge` requires the configured `X-Telegram-Bot-Api-Secret-Token`, enforces request-size/rate limits, and converts connector-specific events into internal command or reply envelopes.
+- **Delivery Boundary:** Receives connector-neutral message intents from `ai-router` and `scheduler`, resolves the target connector, and forwards the payload. Connector services own platform-specific formatting and transport calls.
+- **Web UI:** Astro serves the onboarding page. Setup access uses 15-minute one-time signed tokens bound to Telegram user identity and step. Only one active setup token exists per Telegram user; reissuing invalidates the previous token. Form submissions go to `user-management` over HTTPS with CSRF/origin protection and replay-safe token consumption.
 
 ---
 

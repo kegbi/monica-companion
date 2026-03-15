@@ -17,6 +17,7 @@ The first release is successful when all of the following are met.
 - [ ] p95 time to first actionable response is at most 5 seconds for text and 12 seconds for voice in the staging environment.
 - [ ] When contact resolution is ambiguous, the bot presents inline keyboard buttons for disambiguation.
 - [ ] Users can create contacts, add notes, log activities, update key fields (birthday, phone, email, address), and query contact info using simple direct lookups.
+- [ ] Supported Monica-backed operations in V1 are limited to contact create, note create, activity create, contact basic-detail updates (birthday, phone, email, address), and simple direct lookups such as birthday, phone, or last note.
 - [ ] Typing indicators are shown while the AI processes a request.
 
 ## Command Lifecycle
@@ -26,11 +27,12 @@ The first release is successful when all of the following are met.
 - [ ] Clarification replies, edit actions, button presses, and voice confirmations attach to an existing active pending command instead of creating unrelated executions.
 - [ ] Stale, expired, or version-mismatched confirmations are rejected with a clear user-facing message.
 - [ ] Scheduler accepts only confirmed commands for execution.
+- [ ] Read-only queries, clarification prompts, and other non-mutating conversational responses bypass `scheduler` and go directly from `ai-router` to outbound delivery.
 
 ## Onboarding & Multi-User
 
-- [ ] A new user can start the Telegram bot, receive a short-lived one-time setup link, and complete onboarding via the Astro web UI.
-- [ ] Setup links are signed, bound to the Telegram user identity, consumed on use, and rejected if replayed or expired.
+- [ ] A new user can start the Telegram bot, receive a 15-minute one-time setup link, and complete onboarding via the Astro web UI.
+- [ ] At most one active setup link exists per Telegram user. Setup links are signed, bound to the Telegram user identity and onboarding step, consumed on successful use, invalidated on reissue or cancellation, and rejected if replayed or expired.
 - [ ] Onboarding submission is protected by HTTPS plus CSRF/origin checks.
 - [ ] Credentials are never sent through Telegram chat.
 - [ ] Monica base URLs are normalized and stored canonically.
@@ -57,7 +59,7 @@ The first release is successful when all of the following are met.
 - [ ] Each service enforces per-endpoint caller allowlists.
 - [ ] Only the Telegram webhook and onboarding web UI are publicly exposed in V1.
 - [ ] Internal APIs and `/health` endpoints are not publicly routed.
-- [ ] Telegram webhook ingress verifies authenticity, enforces request-size limits, and applies rate limiting.
+- [ ] Telegram webhook ingress requires the configured `X-Telegram-Bot-Api-Secret-Token`, enforces request-size limits, and applies rate limiting.
 - [ ] MonicaHQ API keys are encrypted at rest in PostgreSQL.
 - [ ] Only `monica-integration` can obtain decrypted Monica credentials, through an audited narrow endpoint.
 - [ ] Sensitive data is redacted from logs, traces, queue payloads, dead letters, and support tooling.
