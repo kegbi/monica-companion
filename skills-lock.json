@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "langgraph-fundamentals": {
+      "source": "langchain-ai/langchain-skills",
+      "sourceType": "github",
+      "computedHash": "43a226ecc442ba6d6091eea39cf587a7583fa532e73db58259e35b1393c31418"
+    },
     "shadcn": {
       "source": "shadcn/ui",
       "sourceType": "github",
