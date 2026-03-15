@@ -10,7 +10,9 @@
       "Bash(powershell:*)",
       "Bash(git fetch:*)",
       "Bash(find:*)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "WebFetch(domain:www.monicahq.com)",
+      "Bash(curl:*)"
     ]
   },
   "disabledMcpjsonServers": [
