@@ -28,14 +28,19 @@ _Establish the architectural backbone — modular service design, observability,
 _Build a robust, typed interface to MonicaHQ and the multi-user management layer that sits on top of it._
 
 - [ ] **Monica API Library**
-  - [ ] **Typed API Client:** Build a MonicaHQ API client library with properly typed request/response contracts for all needed endpoints (contacts, notes, activities, reminders).
-  - [ ] **Multi-Key Support:** Support multiple API keys so different users can authenticate against different MonicaHQ instances.
-  - [ ] **Integration Testing:** Test the library against a real MonicaHQ test account to verify contracts match actual API behavior.
+  - [ ] **Typed API Client:** Build a MonicaHQ v4 API client library with properly typed request/response contracts for all needed endpoints (contacts, notes, activities, reminders).
+  - [ ] **Multi-Instance Support:** Support multiple API keys and base URLs so different users can authenticate against different MonicaHQ v4 instances.
+  - [ ] **Integration Testing:** Test the library against a real MonicaHQ v4 test account to verify typed contracts match actual API behavior.
 
 - [ ] **Multi-User Management Service**
-  - [ ] **User Registration & Configuration:** Allow multiple users to register, each with their own MonicaHQ API route/URL and credentials.
+  - [ ] **User Registration & Configuration:** Allow multiple users to register, each with their own MonicaHQ v4 instance URL and API key.
   - [ ] **Isolated User Contexts:** Ensure each user's MonicaHQ connection, data, and configuration are fully isolated from other users.
-  - [ ] **Credential Management:** Securely store and manage MonicaHQ API keys per user.
+  - [ ] **Credential Management:** Securely store and manage MonicaHQ API keys per user (AES-256 encrypted at rest).
+
+- [ ] **Web-Based Setup Frontend (Astro)**
+  - [ ] **Onboarding Web Page:** An Astro-based frontend service serving a secure web page where users enter their MonicaHQ instance URL, API key, preferred language, confirmation mode, and reminder schedule. Designed to be extensible into a full management dashboard (per-user settings, activity logs, login) in future versions.
+  - [ ] **Telegram Deep Link Integration:** Telegram bot generates a unique setup link per user. User opens link in browser, completes setup, and is redirected back to Telegram.
+  - [ ] **Credential Security:** Credentials are submitted over HTTPS directly to the user-management service API — never sent through Telegram chat.
 
 ---
 
@@ -48,8 +53,8 @@ _Define the command vocabulary, build the AI-powered command router, and impleme
   - [ ] **Supported Commands Catalog:** Document the concrete list of supported commands with their parameters, validation rules, and expected outcomes.
 
 - [ ] **AI Command Router**
-  - [ ] **Natural Language Parsing:** Parse free-form text/voice transcriptions into structured command intents using AI.
-  - [ ] **Smart Disambiguation & Clarification:** When the AI can't confidently resolve a contact or action, ask the user clarifying questions (e.g., "Which Sherry?") with inline selection.
+  - [ ] **Natural Language Parsing:** Parse free-form text/voice transcriptions into structured command intents using AI. Multi-language support from day one — detect language and process accordingly.
+  - [ ] **Smart Disambiguation & Clarification:** When the AI can't confidently resolve a contact or action, present Telegram inline keyboard buttons for selection (e.g., [Sherry Miller — friend] [Sherry Chen — colleague]). Users can reply via buttons, text, or voice message — voice is always transcribed and handled as text at every stage.
   - [ ] **Standard Format Serialization:** Serialize parsed intents into the structured command payloads defined above for downstream execution.
 
 - [ ] **Conversation History & Context**
@@ -64,7 +69,7 @@ _Wire everything together — scheduling, Telegram integration, and voice transc
 
 - [ ] **Scheduler & Command Dispatch**
   - [ ] **Command Execution Engine:** Implement command dispatching that routes structured payloads to the appropriate service (MonicaHQ API, user management, etc.).
-  - [ ] **Retry & Error Handling:** Add retry logic with backoff for transient failures and user-facing error notifications when actions fail.
+  - [ ] **Retry & Error Handling:** Add retry logic with exponential backoff for transient failures. When retries are exhausted, send user-facing error notification via Telegram (e.g., "MonicaHQ appears to be down, I'll keep trying").
   - [ ] **Cron Job Support:** Enable per-user configurable cron jobs (daily/weekly event summaries) with delivery routed to the user's connected messaging platform.
   - [ ] **Per-Connector Routing:** Route messages back to the connector they originated from, supporting future multi-connector scenarios.
 
@@ -74,6 +79,6 @@ _Wire everything together — scheduling, Telegram integration, and voice transc
   - [ ] **Error Handling & Edge Cases:** Handle Telegram API errors, rate limits, message format edge cases, and user-facing error messages gracefully.
 
 - [ ] **Voice Transcription**
-  - [ ] **Speech-to-Text Integration:** Integrate a voice transcription service (e.g., Whisper) to convert Telegram voice messages to text.
+  - [ ] **Speech-to-Text Integration:** Integrate OpenAI Whisper API to convert Telegram voice messages to text. Multi-language transcription supported natively.
   - [ ] **Telegram Voice Wiring:** Wire voice message handling into the Telegram bridge so voice notes flow through the same AI router pipeline as text.
   - [ ] **Multi-Connector Abstraction:** Ensure the voice processing layer is connector-agnostic, so future platforms (Matrix, Discord) can reuse the same transcription pipeline.
