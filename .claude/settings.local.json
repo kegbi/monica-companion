@@ -12,6 +12,5 @@
       "Bash(find:*)",
       "Read(//tmp/**)"
     ]
-  },
-  "enableAllProjectMcpServers": true
+  }
 }
