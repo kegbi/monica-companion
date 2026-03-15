@@ -37,7 +37,7 @@ _Build a robust, typed interface to MonicaHQ and the multi-user management layer
   - [ ] **Isolated User Contexts:** Ensure each user's MonicaHQ connection, data, and configuration are fully isolated from other users.
   - [ ] **Credential Management:** Securely store and manage MonicaHQ API keys per user (AES-256 encrypted at rest).
 
-- [ ] **Web-Based Setup Frontend (Astro)**
+- [ ] **Web UI (Astro)**
   - [ ] **Onboarding Web Page:** An Astro-based frontend service serving a secure web page where users enter their MonicaHQ instance URL, API key, preferred language, confirmation mode, and reminder schedule. Designed to be extensible into a full management dashboard (per-user settings, activity logs, login) in future versions.
   - [ ] **Telegram Deep Link Integration:** Telegram bot generates a unique setup link per user. User opens link in browser, completes setup, and is redirected back to Telegram.
   - [ ] **Credential Security:** Credentials are submitted over HTTPS directly to the user-management service API — never sent through Telegram chat.

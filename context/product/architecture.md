@@ -6,7 +6,7 @@
 
 - **Language & Runtime:** TypeScript on Node.js
 - **Package Manager:** pnpm (with workspaces for monorepo)
-- **Monorepo Structure:** pnpm workspaces — shared packages (`types`, `utils`, `monica-api-lib`) + service packages (`ai-router`, `telegram-bridge`, `user-management`, `scheduler`, `setup-frontend`). Each service runs as a separate Docker container.
+- **Monorepo Structure:** pnpm workspaces — shared packages (`types`, `utils`, `monica-api-lib`) + service packages (`ai-router`, `telegram-bridge`, `user-management`, `scheduler`, `web-ui`). Each service runs as a separate Docker container.
 - **AI Framework:** LangGraph TS — orchestrates LLM-powered command routing, disambiguation flows, and multi-turn conversation management
 - **LLM Provider:** OpenAI — GPT models for natural language understanding and command parsing. Shared operator-provided API key (no per-user keys in v1). Multi-language support from day one.
 - **Speech-to-Text:** OpenAI Whisper API — transcribes voice messages to text in any language
@@ -30,7 +30,7 @@
 
 - **Containerization:** Docker Compose — all services, PostgreSQL, Redis, and observability stack run as containers
 - **Service Communication:** HTTP/REST with internal APIs — user context propagated via signed JWT tokens between services
-- **Reverse Proxy:** Caddy — automatic HTTPS with Let's Encrypt, zero-config TLS termination. Routes to Telegram webhook endpoint, setup frontend, and internal service APIs
+- **Reverse Proxy:** Caddy — automatic HTTPS with Let's Encrypt, zero-config TLS termination. Routes to Telegram webhook endpoint, web-ui, and internal service APIs
 - **CI/CD:** GitHub Actions — lint, test, build, and deploy on push. Automated verification pipeline from day one
 - **Environment Management:** `.env` files per environment, Docker secrets for production credentials
 
@@ -41,7 +41,7 @@
 - **MonicaHQ v4 API:** REST API — typed client library built in-house (`monica-api-lib` shared package) with support for multiple API keys and base URLs per user (self-hosted instances or app.monicahq.com). Architecture should accommodate future multi-version support (different API payload types/commands per version)
 - **OpenAI API:** Chat completions (GPT) for NLU/command routing + Whisper API for speech-to-text
 - **Telegram Bot API:** Via grammY framework — webhook or long-polling mode, handles text messages, voice messages, and inline keyboards for confirmations and disambiguation. The bridge detects content type and always transcribes voice to text before processing — voice is a first-class input at every stage (commands, clarifications, confirmations)
-- **Setup Frontend:** Astro framework — serves the web-based onboarding page where users enter MonicaHQ credentials and configure preferences over HTTPS. Communicates with user-management service API. Telegram bot generates unique deep links to this page. Extensible to a full management dashboard (per-user settings, logs, login) in future versions.
+- **Web UI:** Astro framework — serves the web-based onboarding page where users enter MonicaHQ credentials and configure preferences over HTTPS. Communicates with user-management service API. Telegram bot generates unique deep links to this page. Extensible to a full management dashboard (per-user settings, logs, login) in future versions.
 
 ---
 
