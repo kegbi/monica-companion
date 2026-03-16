@@ -1,0 +1,126 @@
+import { embeddedContact2Fixture, embeddedContactFixture } from "./embedded-contact.js";
+
+/** Realistic full contact fixture with obviously fake data. */
+export const fullContactFixture = {
+	id: 42,
+	uuid: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+	object: "contact" as const,
+	hash_id: "h:abc123xyz",
+	first_name: "John",
+	last_name: "Doe",
+	nickname: "Johnny",
+	complete_name: "John Doe (Johnny)",
+	initials: "JD",
+	description: "Test contact for fixture purposes",
+	gender: "Man",
+	gender_type: "M",
+	is_starred: true,
+	is_partial: false,
+	is_active: true,
+	is_dead: false,
+	is_me: false,
+	last_called: null,
+	last_activity_together: "2026-03-10T14:30:00Z",
+	stay_in_touch_frequency: 30,
+	stay_in_touch_trigger_date: "2026-04-10T00:00:00Z",
+	information: {
+		relationships: {
+			love: {
+				total: 1,
+				contacts: [
+					{
+						relationship: {
+							id: 1,
+							uuid: "rel-uuid-0001",
+							name: "partner",
+						},
+						contact: embeddedContact2Fixture,
+					},
+				],
+			},
+			family: { total: 0, contacts: [] },
+			friend: { total: 0, contacts: [] },
+			work: { total: 0, contacts: [] },
+		},
+		dates: {
+			birthdate: {
+				is_age_based: false,
+				is_year_unknown: false,
+				date: "1990-01-15T00:00:00Z",
+			},
+			deceased_date: {
+				is_age_based: null,
+				is_year_unknown: null,
+				date: null,
+			},
+		},
+		career: {
+			job: "Software Engineer",
+			company: "Example Corp",
+		},
+		avatar: {
+			url: "https://example.test/avatars/default.png",
+			source: "default",
+			default_avatar_color: "#b3d5fe",
+		},
+		food_preferences: "Vegetarian",
+		how_you_met: {
+			general_information: "Met at a conference",
+			first_met_date: {
+				is_age_based: false,
+				is_year_unknown: true,
+				date: "0000-06-15T00:00:00Z",
+			},
+			first_met_through_contact: null,
+		},
+	},
+	addresses: [
+		{
+			id: 10,
+			uuid: "addr-uuid-0001",
+			object: "address" as const,
+			name: "home",
+			street: "123 Fake Street",
+			city: "Testville",
+			province: "TS",
+			postal_code: "12345",
+			latitude: 40.7128,
+			longitude: -74.006,
+			country: {
+				id: "US",
+				object: "country" as const,
+				name: "United States",
+				iso: "US",
+			},
+			url: "https://app.example.test/api/addresses/10",
+			account: { id: 1 },
+			contact: embeddedContactFixture,
+			created_at: "2026-01-01T00:00:00Z",
+			updated_at: "2026-01-01T00:00:00Z",
+		},
+	],
+	tags: [
+		{
+			id: 5,
+			object: "tag" as const,
+			name: "vip",
+			name_slug: "vip",
+			account: { id: 1 },
+			created_at: "2026-01-01T00:00:00Z",
+			updated_at: "2026-01-01T00:00:00Z",
+		},
+	],
+	statistics: {
+		number_of_calls: 3,
+		number_of_notes: 12,
+		number_of_activities: 7,
+		number_of_reminders: 2,
+		number_of_tasks: 0,
+		number_of_gifts: 1,
+		number_of_debts: 0,
+	},
+	url: "https://app.example.test/api/contacts/42",
+	account: { id: 1 },
+	created_at: "2025-06-15T10:00:00Z",
+	updated_at: "2026-03-10T14:30:00Z",
+};

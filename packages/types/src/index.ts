@@ -1,3 +1,5 @@
+export { ContactResolutionSummary, ImportantDate } from "./contact-resolution";
+
 export {
 	CancelSetupTokenResponse,
 	ConsumeSetupTokenRequest,

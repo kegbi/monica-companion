@@ -11,13 +11,15 @@
 	},
 	"scripts": {
 		"build": "tsup",
-		"check": "biome check ."
+		"check": "biome check .",
+		"test": "vitest run --passWithNoTests"
 	},
 	"dependencies": {
 		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"typescript": "catalog:",
-		"tsup": "catalog:"
+		"tsup": "catalog:",
+		"vitest": "catalog:"
 	}
 }

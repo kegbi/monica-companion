@@ -138,10 +138,10 @@ Adds `contactFields` array and `notes` array (latest 3) to the response.
   "stay_in_touch_trigger_date": "string|null",
   "information": {
     "relationships": {
-      "love":   { "total": "int", "contacts": "array" },
-      "family": { "total": "int", "contacts": "array" },
-      "friend": { "total": "int", "contacts": "array" },
-      "work":   { "total": "int", "contacts": "array" }
+      "love":   { "total": "int", "contacts": "RelationshipShort[]" },
+      "family": { "total": "int", "contacts": "RelationshipShort[]" },
+      "friend": { "total": "int", "contacts": "RelationshipShort[]" },
+      "work":   { "total": "int", "contacts": "RelationshipShort[]" }
     },
     "dates": {
       "birthdate":     { "is_age_based": "boolean|null", "is_year_unknown": "boolean|null", "date": "string|null" },
@@ -585,13 +585,265 @@ Same request body as Create. Returns updated Activity object.
 
 ### Genders — `GET /api/genders`
 
-Required for contact creation (`gender_id` field). Default genders:
+Required for contact creation (`gender_id` field). Returns paginated array of Gender objects. Default genders:
 
 | name           | type | gender_type |
 |----------------|------|-------------|
 | Man            | M    | M           |
 | Woman          | F    | F           |
 | Rather not say | O    | O           |
+
+**Gender object:**
+```jsonc
+{
+  "id": "int",
+  "object": "gender",
+  "name": "string",
+  "type": "string",             // "M", "F", "O"
+  "account": { "id": "int" },
+  "created_at": "string (ISO 8601)",
+  "updated_at": "string (ISO 8601)"
+}
+```
+
+---
+
+## Relationships
+
+### List Contact Relationships — `GET /api/contacts/:id/relationships`
+
+Returns all relationships for a contact as a collection (not paginated; returns `{ "data": [...] }` directly without pagination meta).
+
+### Get Relationship — `GET /api/relationships/:id`
+
+Returns `{ "data": <Relationship> }`.
+
+### Create Relationship — `POST /api/relationships`
+
+**Request body:**
+```jsonc
+{
+  "contact_is": "int (required)",           // contact ID of the subject
+  "of_contact": "int (required)",           // contact ID of the related person
+  "relationship_type_id": "int (required)"  // from GET /api/relationshiptypes
+}
+```
+
+> **Note:** Creating a relationship also creates the reverse relationship automatically (e.g. if A is "parent" of B, B becomes "child" of A).
+
+**Response:** `{ "data": <Relationship> }`
+
+### Update Relationship — `PUT /api/relationships/:id`
+
+**Request body:**
+```jsonc
+{
+  "relationship_type_id": "int (required)"
+}
+```
+
+**Response:** `{ "data": <Relationship> }`
+
+### Delete Relationship — `DELETE /api/relationships/:id`
+
+### Relationship Object (Full)
+
+```jsonc
+{
+  "id": "int",
+  "uuid": "string (UUID v4)",
+  "object": "relationship",
+  "contact_is": "EmbeddedContact (short form)",
+  "relationship_type": "RelationshipType",
+  "of_contact": "EmbeddedContact (short form)",
+  "url": "string (API URL)",
+  "account": { "id": "int" },
+  "created_at": "string (ISO 8601)",
+  "updated_at": "string (ISO 8601)"
+}
+```
+
+### RelationshipShort Object (Embedded in Full Contact)
+
+Found in `information.relationships.{love,family,friend,work}.contacts[]`:
+
+```jsonc
+{
+  "relationship": {
+    "id": "int",
+    "uuid": "string (UUID v4)",
+    "name": "string"       // relationship type name, e.g. "partner", "child", "friend"
+  },
+  "contact": "EmbeddedContact (short form)"
+}
+```
+
+### Relationship Types
+
+#### List Relationship Types — `GET /api/relationshiptypes`
+
+Returns paginated array of RelationshipType objects.
+
+#### Get Relationship Type — `GET /api/relationshiptypes/:id`
+
+Returns `{ "data": <RelationshipType> }`.
+
+**RelationshipType object:**
+```jsonc
+{
+  "id": "int",
+  "object": "relationshiptype",
+  "name": "string",
+  "name_reverse_relationship": "string",
+  "relationship_type_group_id": "int",
+  "delible": "boolean",
+  "account": { "id": "int" },
+  "created_at": "string (ISO 8601)",
+  "updated_at": "string (ISO 8601)"
+}
+```
+
+**Default relationship types by group:**
+
+| Group  | name              | name_reverse_relationship |
+|--------|-------------------|---------------------------|
+| love   | partner           | partner                   |
+| love   | spouse            | spouse                    |
+| love   | date              | date                      |
+| love   | lover             | lover                     |
+| love   | ex-boyfriend      | ex-boyfriend              |
+| love   | ex-girlfriend     | ex-girlfriend             |
+| love   | ex-husband        | ex-husband                |
+| love   | ex-wife           | ex-wife                   |
+| family | child             | parent                    |
+| family | parent            | child                     |
+| family | sibling           | sibling                   |
+| family | grandparent       | grandchild                |
+| family | grandchild        | grandparent               |
+| family | uncle             | nephew                    |
+| family | nephew            | uncle                     |
+| family | cousin            | cousin                    |
+| family | godparent         | godchild                  |
+| family | godchild          | godparent                 |
+| family | stepparent        | stepchild                 |
+| family | stepchild         | stepparent                |
+| friend | friend            | friend                    |
+| friend | bestfriend        | bestfriend                |
+| work   | colleague         | colleague                 |
+| work   | boss              | subordinate               |
+| work   | subordinate       | boss                      |
+| work   | mentor            | protege                   |
+| work   | protege           | mentor                    |
+
+> **Note:** These are read-only in V1. We only need them for reading relationship labels during contact resolution.
+
+### Relationship Type Groups
+
+#### List Relationship Type Groups — `GET /api/relationshiptypegroups`
+
+Returns paginated array of RelationshipTypeGroup objects.
+
+#### Get Relationship Type Group — `GET /api/relationshiptypegroups/:id`
+
+Returns `{ "data": <RelationshipTypeGroup> }`.
+
+**RelationshipTypeGroup object:**
+```jsonc
+{
+  "id": "int",
+  "object": "relationshiptypegroup",
+  "name": "string",
+  "delible": "boolean",
+  "account": { "id": "int" },
+  "created_at": "string (ISO 8601)",
+  "updated_at": "string (ISO 8601)"
+}
+```
+
+**Default groups:** `love`, `family`, `friend`, `work`.
+
+---
+
+## Tags
+
+### List Tags — `GET /api/tags`
+
+Returns paginated array of Tag objects.
+
+### Get Tag — `GET /api/tags/:id`
+
+Returns `{ "data": <Tag> }`.
+
+### List Contacts by Tag — `GET /api/tags/:id/contacts`
+
+Returns paginated array of Contact objects associated with the given tag.
+
+### Set Tags on Contact — `POST /api/contacts/:id/setTags`
+
+**Request body:**
+```jsonc
+{
+  "tags": "string[] (required)"    // array of tag name strings
+}
+```
+
+Sets the given tags on a contact. Creates tags that don't already exist.
+
+### Remove All Tags from Contact — `POST /api/contacts/:id/unsetTags`
+
+Removes all tags from a contact. No request body required.
+
+### Remove Specific Tag from Contact — `POST /api/contacts/:id/unsetTag`
+
+**Request body:**
+```jsonc
+{
+  "tags": "string[] (required)"    // array of tag name strings to remove
+}
+```
+
+> **Note:** Tag mutation endpoints are documented for reference but not used in V1.
+
+**Tag object:**
+```jsonc
+{
+  "id": "int",
+  "object": "tag",
+  "name": "string",
+  "name_slug": "string",
+  "account": { "id": "int" },
+  "created_at": "string (ISO 8601)",
+  "updated_at": "string (ISO 8601)"
+}
+```
+
+---
+
+## ContactResolutionSummary Endpoint Mapping
+
+This section documents which Monica API endpoints and fields feed into each field of the `ContactResolutionSummary` projection consumed by `ai-router`.
+
+| ContactResolutionSummary Field | Monica Source Endpoint | Monica Source Fields | Notes |
+|---|---|---|---|
+| `contactId` | `GET /api/contacts` | `id` | Stable integer ID |
+| `displayName` | `GET /api/contacts` | `complete_name` | Computed by Monica as "First Last (Nickname)" |
+| `aliases[]` | `GET /api/contacts` | `nickname`, `first_name`, `last_name` | V1: aliases are limited to name-derived fields. The broader alias set (user-defined aliases, family labels) is deferred to a future version. |
+| `relationshipLabels[]` | `GET /api/contacts` embedded relationships | `information.relationships.{love,family,friend,work}.contacts[].relationship.name` | From the contact's perspective. Only present for full contacts (`is_partial: false`). |
+| `importantDates[]` | `GET /api/contacts` | `information.dates.birthdate.date`, `information.dates.birthdate.is_age_based`, `information.dates.birthdate.is_year_unknown` | V1 focuses on birthdate. Nullable when birthdate is unknown. |
+| `lastInteractionAt` | `GET /api/contacts` | `last_activity_together` | Nullable. ISO 8601 datetime string or null. |
+
+### Fetch Strategy
+
+The contact projection cache is built from a full contact list fetch:
+
+1. **Initial load:** Paginate through `GET /api/contacts?limit=100` to fetch all contacts.
+2. **Projection extraction:** For each full contact, extract the fields listed above into a `ContactResolutionSummary`.
+3. **Relationship labels:** Read directly from `information.relationships.{group}.contacts[].relationship.name` in the full contact response. No separate relationship endpoint call needed.
+4. **Refresh:** Incremental refresh via `GET /api/contacts?sort=-updated_at` to detect recently changed contacts.
+
+> **Note:** `information.relationships` is omitted for partial contacts (`is_partial: true`). Partial contacts will have an empty `relationshipLabels[]` array.
+
+> **Rate limit consideration:** At 60 req/min and 100 contacts per page, a 1000-contact Monica instance requires 10 requests (10 seconds of rate budget). Implementation details including backoff strategy belong to the "Typed Monica Integration" task.
 
 ---
 
@@ -656,5 +908,13 @@ These files are the definitive source for response shapes and validation rules:
 | Activity create validation | `references/remote/app/Services/Account/Activity/Activity/CreateActivity.php` |
 | ContactField create validation | `references/remote/app/Services/Contact/ContactField/CreateContactField.php` |
 | Note create validation | `references/remote/app/Http/Controllers/Api/ApiNoteController.php` (inline) |
+| Relationship response | `references/remote/app/Http/Resources/Relationship/Relationship.php` |
+| RelationshipShort response | `references/remote/app/Http/Resources/Relationship/RelationshipShort.php` |
+| Relationship controller | `references/remote/app/Http/Controllers/Api/ApiRelationshipController.php` |
+| Relationship create validation | `references/remote/app/Services/Contact/Relationship/CreateRelationship.php` |
+| RelationshipType response | `references/remote/app/Http/Resources/RelationshipType/RelationshipType.php` |
+| RelationshipTypeGroup response | `references/remote/app/Http/Resources/RelationshipTypeGroup/RelationshipTypeGroup.php` |
+| Tag response | `references/remote/app/Http/Resources/Tag/Tag.php` |
+| Gender response | `references/remote/app/Http/Resources/Gender/Gender.php` |
 | API routes | `references/remote/routes/api.php` |
 | Pagination defaults | `references/remote/app/Http/Controllers/Api/ApiController.php` (`limitPerPage = 0` → Laravel default 15) |
