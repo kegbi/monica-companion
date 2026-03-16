@@ -24,10 +24,10 @@ _Lock down ingress, identity, and operational safety before building the Monica 
   - [x] Propagate user identity and correlation IDs across all service boundaries.
   - [x] Define secret-rotation procedures for JWT signing keys and encryption master keys.
 
-- [ ] **Setup-Link Authentication**
-  - [ ] Implement one-time setup tokens bound to Telegram user identity and onboarding step.
-  - [ ] Implement a 15-minute TTL, one-active-token-per-user, consume-on-success, replay rejection, cancellation, and reissue-invalidates-previous-token semantics.
-  - [ ] Add CSRF/origin protections and audit logging to onboarding submission.
+- [x] **Setup-Link Authentication**
+  - [x] Implement one-time setup tokens bound to Telegram user identity and onboarding step.
+  - [x] Implement a 15-minute TTL, one-active-token-per-user, consume-on-success, replay rejection, cancellation, and reissue-invalidates-previous-token semantics.
+  - [x] Add CSRF/origin protections and audit logging to onboarding submission.
 
 - [ ] **Observability & Governance Baseline**
   - [ ] Instrument all services with OpenTelemetry.
