@@ -153,6 +153,11 @@ services:
     environment:
       PORT: 3004
       SERVICE_NAME: monica-integration
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
+      USER_MANAGEMENT_URL: http://user-management:3007
+      MONICA_DEFAULT_TIMEOUT_MS: ${MONICA_DEFAULT_TIMEOUT_MS:-10000}
+      MONICA_RETRY_MAX: ${MONICA_RETRY_MAX:-2}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_SERVICE_NAME: monica-integration
     volumes:
@@ -165,6 +170,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      user-management:
+        condition: service_started
     networks:
       - internal
 

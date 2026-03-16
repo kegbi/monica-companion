@@ -6,11 +6,12 @@ const logger = createLogger("monica-integration");
 async function main() {
 	const { serve } = await import("@hono/node-server");
 	const { createApp } = await import("./app");
+	const { loadConfig } = await import("./config");
 
-	const app = createApp();
-	const port = Number(process.env.PORT) || 3004;
+	const config = loadConfig();
+	const app = createApp(config);
 
-	serve({ fetch: app.fetch, port }, (info) => {
+	serve({ fetch: app.fetch, port: config.port }, (info) => {
 		logger.info(`monica-integration listening on :${info.port}`);
 	});
 

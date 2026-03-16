@@ -1,3 +1,11 @@
+export { MonicaApiClient, type MonicaApiClientOptions } from "./client.js";
+export {
+	MonicaApiError,
+	MonicaNetworkError,
+	MonicaPaginationCapError,
+} from "./errors.js";
+export type { StructuredLogger } from "./logger-interface.js";
+export { type PaginatedResponsePage, type PaginateOptions, paginateAll } from "./pagination.js";
 export {
 	AccountRef,
 	Activity,
@@ -37,3 +45,4 @@ export {
 	UpdateContactCareerRequest,
 	UpdateRelationshipRequest,
 } from "./schemas/index.js";
+export { type RetryOptions, withRetry, withTimeout } from "./transport.js";

@@ -7,6 +7,9 @@
 		".": {
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
+		},
+		"./__fixtures__": {
+			"import": "./src/__fixtures__/index.ts"
 		}
 	},
 	"scripts": {

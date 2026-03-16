@@ -299,12 +299,27 @@ importers:
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.11(hono@4.12.8)
+      '@monica-companion/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@monica-companion/monica-api-lib':
+        specifier: workspace:*
+        version: link:../../packages/monica-api-lib
       '@monica-companion/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@monica-companion/redaction':
+        specifier: workspace:*
+        version: link:../../packages/redaction
+      '@monica-companion/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       hono:
         specifier: 'catalog:'
         version: 4.12.8
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       tsup:
         specifier: 'catalog:'

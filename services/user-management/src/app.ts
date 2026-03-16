@@ -5,11 +5,14 @@ import {
 	getServiceCaller,
 	serviceAuth,
 } from "@monica-companion/auth";
-import { otelMiddleware } from "@monica-companion/observability";
+import { createLogger, otelMiddleware } from "@monica-companion/observability";
 import { ConsumeSetupTokenRequest, IssueSetupTokenRequest } from "@monica-companion/types";
 import { Hono } from "hono";
 import type { Config } from "./config";
 import type { Database } from "./db/connection";
+
+const logger = createLogger("user-management");
+
 import { buildSetupUrl, generateSetupToken, verifySetupTokenSignature } from "./setup-token/crypto";
 import {
 	cancelToken,
@@ -244,6 +247,29 @@ export function createApp(config: Config, db: Database) {
 
 		return c.json(result);
 	});
+
+	// --- Stub credential endpoint (smoke testing only) ---
+	// TODO: Replace with real encrypted credential resolution (Least-Privilege User Management)
+	if (process.env.NODE_ENV !== "production") {
+		const monicaIntegrationAuth = serviceAuth({
+			audience: "user-management",
+			secrets: config.auth.jwtSecrets,
+			allowedCallers: ["monica-integration"],
+		});
+
+		logger.warn("Stub credential endpoint is active. This must NOT be used in production.");
+
+		app.get("/internal/users/:userId/monica-credentials", monicaIntegrationAuth, (c) => {
+			const baseUrl = process.env.MONICA_BASE_URL;
+			const apiToken = process.env.MONICA_API_TOKEN;
+
+			if (!baseUrl || !apiToken) {
+				return c.json({ error: "Monica credentials not configured" }, 404);
+			}
+
+			return c.json({ baseUrl, apiToken });
+		});
+	}
 
 	return app;
 }
