@@ -49,10 +49,10 @@ _Finish the Monica boundary and credential model before broader AI behavior depe
   - [x] Implement `monica-integration` as the only Monica-facing service.
   - [x] Add transport-level timeouts, capped quick retries, pagination handling, and Monica-specific error mapping.
 
-- [ ] **Safe Multi-Instance Support**
-  - [ ] Normalize and persist canonical Monica base URLs.
-  - [ ] Reject insecure or blocked Monica targets (`http://`, loopback, RFC1918, link-local, blocked redirects) in the hosted default.
-  - [ ] Support a documented operator override only for trusted single-tenant deployments that intentionally allow local-network Monica targets.
+- [x] **Safe Multi-Instance Support**
+  - [x] Normalize and persist canonical Monica base URLs.
+  - [x] Reject insecure or blocked Monica targets (`http://`, loopback, RFC1918, link-local, blocked redirects) in the hosted default.
+  - [x] Support a documented operator override only for trusted single-tenant deployments that intentionally allow local-network Monica targets.
 
 - [ ] **Least-Privilege User Management**
   - [ ] Keep Monica credentials encrypted at rest in `user-management`.
