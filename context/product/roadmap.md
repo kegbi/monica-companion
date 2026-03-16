@@ -54,10 +54,10 @@ _Finish the Monica boundary and credential model before broader AI behavior depe
   - [x] Reject insecure or blocked Monica targets (`http://`, loopback, RFC1918, link-local, blocked redirects) in the hosted default.
   - [x] Support a documented operator override only for trusted single-tenant deployments that intentionally allow local-network Monica targets.
 
-- [ ] **Least-Privilege User Management**
-  - [ ] Keep Monica credentials encrypted at rest in `user-management`.
-  - [ ] Expose audited credential access only to `monica-integration`.
-  - [ ] Expose separate non-secret preference and schedule endpoints to `telegram-bridge`, `ai-router`, and `scheduler`.
+- [x] **Least-Privilege User Management**
+  - [x] Keep Monica credentials encrypted at rest in `user-management`.
+  - [x] Expose audited credential access only to `monica-integration`.
+  - [x] Expose separate non-secret preference and schedule endpoints to `telegram-bridge`, `ai-router`, and `scheduler`.
 
 - [ ] **Testing Strategy Split**
   - [ ] Use mocked Monica contract tests in CI.
