@@ -70,10 +70,10 @@ _Finish the Monica boundary and credential model before broader AI behavior depe
 
 _Define the user-facing AI contract and make interactive mutations safe before scaling connector or scheduling behavior._
 
-- [ ] **Command Contract & Lifecycle**
-  - [ ] Define structured command schemas for all supported create/update/query actions.
-  - [ ] Implement pending-command storage with `pendingCommandId`, versioning, source-message references, and TTL.
-  - [ ] Enforce lifecycle transitions `draft -> pending_confirmation -> confirmed -> executed -> expired/cancelled`.
+- [x] **Command Contract & Lifecycle**
+  - [x] Define structured command schemas for all supported create/update/query actions.
+  - [x] Implement pending-command storage with `pendingCommandId`, versioning, source-message references, and TTL.
+  - [x] Enforce lifecycle transitions `draft -> pending_confirmation -> confirmed -> executed -> expired/cancelled`.
 
 - [ ] **Contact Resolution Boundary**
   - [ ] Implement the Monica-agnostic `ContactResolutionSummary` projection.
