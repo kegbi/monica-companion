@@ -1,9 +1,10 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { signServiceToken } from "@monica-companion/auth";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app";
 import type { Config } from "../config";
+import { computeKeyId, encryptCredential } from "../crypto/credential-cipher";
 import { createDb, type Database } from "../db/connection";
 import { setupTokenAuditLog, setupTokens } from "../db/schema";
 
@@ -11,6 +12,7 @@ const JWT_SECRET = "test-secret-256-bit-minimum-key!";
 const SETUP_TOKEN_SECRET = "test-setup-token-secret-32-bytes!";
 const DATABASE_URL =
 	process.env.DATABASE_URL ?? "postgresql://monica:monica_dev@localhost:5432/monica_companion";
+const MASTER_KEY = randomBytes(32);
 
 const testConfig: Config = {
 	port: 3007,
@@ -22,6 +24,8 @@ const testConfig: Config = {
 		serviceName: "user-management",
 		jwtSecrets: [JWT_SECRET],
 	},
+	encryptionMasterKey: MASTER_KEY,
+	encryptionMasterKeyPrevious: null,
 };
 
 let db: Database;
@@ -60,14 +64,64 @@ beforeAll(async () => {
 		CREATE INDEX IF NOT EXISTS idx_audit_log_token_id
 		ON setup_token_audit_log(token_id)
 	`);
+	// User tables for credential and preference endpoints
+	await db.execute(sql`
+		CREATE TABLE IF NOT EXISTS users (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			telegram_user_id TEXT NOT NULL UNIQUE,
+			monica_base_url TEXT NOT NULL,
+			monica_api_token_encrypted TEXT NOT NULL,
+			encryption_key_id TEXT NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+		)
+	`);
+	await db.execute(sql`
+		CREATE TABLE IF NOT EXISTS user_preferences (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID NOT NULL UNIQUE REFERENCES users(id),
+			language TEXT NOT NULL DEFAULT 'en',
+			confirmation_mode TEXT NOT NULL DEFAULT 'explicit',
+			timezone TEXT NOT NULL,
+			reminder_cadence TEXT NOT NULL DEFAULT 'daily',
+			reminder_time TEXT NOT NULL DEFAULT '08:00',
+			connector_type TEXT NOT NULL DEFAULT 'telegram',
+			connector_routing_id TEXT NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+		)
+	`);
+	await db.execute(sql`
+		CREATE TABLE IF NOT EXISTS credential_access_audit_log (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID NOT NULL REFERENCES users(id),
+			actor_service TEXT NOT NULL,
+			correlation_id TEXT,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+		)
+	`);
+	await db.execute(sql`
+		CREATE INDEX IF NOT EXISTS idx_credential_audit_user_id
+		ON credential_access_audit_log(user_id)
+	`);
+	await db.execute(sql`
+		CREATE INDEX IF NOT EXISTS idx_credential_audit_created_at
+		ON credential_access_audit_log(created_at)
+	`);
 });
 
 beforeEach(async () => {
+	await db.execute(sql`DELETE FROM credential_access_audit_log`);
+	await db.execute(sql`DELETE FROM user_preferences`);
+	await db.execute(sql`DELETE FROM users`);
 	await db.delete(setupTokenAuditLog);
 	await db.delete(setupTokens);
 });
 
 afterAll(async () => {
+	await db.execute(sql`DELETE FROM credential_access_audit_log`);
+	await db.execute(sql`DELETE FROM user_preferences`);
+	await db.execute(sql`DELETE FROM users`);
 	await db.delete(setupTokenAuditLog);
 	await db.delete(setupTokens);
 });
@@ -78,6 +132,44 @@ async function signToken(issuer: string, audience: string = "user-management") {
 		audience: audience as Parameters<typeof signServiceToken>[0]["audience"],
 		secret: JWT_SECRET,
 	});
+}
+
+/** Insert a test user directly into the database. */
+async function seedTestUser(opts?: {
+	telegramUserId?: string;
+	monicaBaseUrl?: string;
+	apiToken?: string;
+	withPreferences?: boolean;
+	timezone?: string;
+	connectorRoutingId?: string;
+	reminderCadence?: string;
+	reminderTime?: string;
+}) {
+	const telegramUserId = opts?.telegramUserId ?? `tg-${randomUUID()}`;
+	const apiToken = opts?.apiToken ?? "test-api-token";
+	const encrypted = encryptCredential(apiToken, MASTER_KEY);
+	const keyId = computeKeyId(MASTER_KEY);
+
+	const [user] = await db.execute(sql`
+		INSERT INTO users (telegram_user_id, monica_base_url, monica_api_token_encrypted, encryption_key_id)
+		VALUES (${telegramUserId}, ${opts?.monicaBaseUrl ?? "https://monica.example.com"}, ${encrypted}, ${keyId})
+		RETURNING id
+	`);
+
+	if (opts?.withPreferences) {
+		await db.execute(sql`
+			INSERT INTO user_preferences (user_id, timezone, connector_routing_id, reminder_cadence, reminder_time)
+			VALUES (
+				${user.id},
+				${opts?.timezone ?? "America/New_York"},
+				${opts?.connectorRoutingId ?? "chat-123"},
+				${opts?.reminderCadence ?? "daily"},
+				${opts?.reminderTime ?? "08:00"}
+			)
+		`);
+	}
+
+	return { id: user.id as string, telegramUserId, apiToken };
 }
 
 describe("GET /health", () => {
@@ -483,5 +575,221 @@ describe("POST /internal/setup-tokens/:tokenId/cancel", () => {
 			headers: { Authorization: `Bearer ${token}` },
 		});
 		expect(res.status).toBe(403);
+	});
+});
+
+// --- Credential endpoint tests ---
+
+describe("GET /internal/users/:userId/monica-credentials", () => {
+	it("returns 401 without auth", async () => {
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${randomUUID()}/monica-credentials`);
+		expect(res.status).toBe(401);
+	});
+
+	it("returns 403 for disallowed caller (telegram-bridge)", async () => {
+		const token = await signToken("telegram-bridge");
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${randomUUID()}/monica-credentials`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(403);
+	});
+
+	it("returns 403 for disallowed caller (ai-router)", async () => {
+		const token = await signToken("ai-router");
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${randomUUID()}/monica-credentials`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(403);
+	});
+
+	it("returns 400 for malformed userId", async () => {
+		const token = await signToken("monica-integration");
+		const app = createApp(testConfig, db);
+		const res = await app.request("/internal/users/not-a-uuid/monica-credentials", {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(400);
+	});
+
+	it("returns 404 for nonexistent user", async () => {
+		const token = await signToken("monica-integration");
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${randomUUID()}/monica-credentials`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(404);
+		const body = await res.json();
+		expect(body.error).toBe("User not found");
+	});
+
+	it("returns 200 with decrypted credentials for existing user", async () => {
+		const user = await seedTestUser({ apiToken: "my-secret-token" });
+		const token = await signToken("monica-integration");
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${user.id}/monica-credentials`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.baseUrl).toBe("https://monica.example.com");
+		expect(body.apiToken).toBe("my-secret-token");
+	});
+
+	it("creates audit log entry on successful credential access", async () => {
+		const user = await seedTestUser();
+		const token = await signToken("monica-integration");
+		const app = createApp(testConfig, db);
+		await app.request(`/internal/users/${user.id}/monica-credentials`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+
+		const rows = await db.execute(
+			sql`SELECT * FROM credential_access_audit_log WHERE user_id = ${user.id}`,
+		);
+		expect(rows.length).toBe(1);
+		expect(rows[0].actor_service).toBe("monica-integration");
+	});
+});
+
+// --- Preference endpoint tests ---
+
+describe("GET /internal/users/:userId/preferences", () => {
+	it("returns 401 without auth", async () => {
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${randomUUID()}/preferences`);
+		expect(res.status).toBe(401);
+	});
+
+	it("returns 403 for disallowed caller (monica-integration)", async () => {
+		const token = await signToken("monica-integration");
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${randomUUID()}/preferences`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(403);
+	});
+
+	it("returns 400 for malformed userId", async () => {
+		const token = await signToken("telegram-bridge");
+		const app = createApp(testConfig, db);
+		const res = await app.request("/internal/users/not-a-uuid/preferences", {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(400);
+	});
+
+	it("returns 404 for nonexistent user", async () => {
+		const token = await signToken("telegram-bridge");
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${randomUUID()}/preferences`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(404);
+	});
+
+	it("returns 404 when user exists but has no preferences", async () => {
+		const user = await seedTestUser();
+		const token = await signToken("telegram-bridge");
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${user.id}/preferences`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(404);
+	});
+
+	it("returns 200 with preferences for allowed caller (telegram-bridge)", async () => {
+		const user = await seedTestUser({ withPreferences: true, timezone: "Europe/Berlin" });
+		const token = await signToken("telegram-bridge");
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${user.id}/preferences`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.language).toBe("en");
+		expect(body.confirmationMode).toBe("explicit");
+		expect(body.timezone).toBe("Europe/Berlin");
+	});
+
+	it("returns 200 for allowed caller (ai-router)", async () => {
+		const user = await seedTestUser({ withPreferences: true });
+		const token = await signToken("ai-router");
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${user.id}/preferences`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(200);
+	});
+
+	it("returns 200 for allowed caller (scheduler)", async () => {
+		const user = await seedTestUser({ withPreferences: true });
+		const token = await signToken("scheduler");
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${user.id}/preferences`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(200);
+	});
+});
+
+// --- Schedule endpoint tests ---
+
+describe("GET /internal/users/:userId/schedule", () => {
+	it("returns 401 without auth", async () => {
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${randomUUID()}/schedule`);
+		expect(res.status).toBe(401);
+	});
+
+	it("returns 403 for disallowed caller (telegram-bridge)", async () => {
+		const token = await signToken("telegram-bridge");
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${randomUUID()}/schedule`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(403);
+	});
+
+	it("returns 400 for malformed userId", async () => {
+		const token = await signToken("scheduler");
+		const app = createApp(testConfig, db);
+		const res = await app.request("/internal/users/not-a-uuid/schedule", {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(400);
+	});
+
+	it("returns 404 for nonexistent user", async () => {
+		const token = await signToken("scheduler");
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${randomUUID()}/schedule`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(404);
+	});
+
+	it("returns 200 with schedule fields for scheduler", async () => {
+		const user = await seedTestUser({
+			withPreferences: true,
+			timezone: "Asia/Tokyo",
+			reminderCadence: "weekly",
+			reminderTime: "09:00",
+			connectorRoutingId: "chat-789",
+		});
+		const token = await signToken("scheduler");
+		const app = createApp(testConfig, db);
+		const res = await app.request(`/internal/users/${user.id}/schedule`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.reminderCadence).toBe("weekly");
+		expect(body.reminderTime).toBe("09:00");
+		expect(body.timezone).toBe("Asia/Tokyo");
+		expect(body.connectorType).toBe("telegram");
+		expect(body.connectorRoutingId).toBe("chat-789");
 	});
 });

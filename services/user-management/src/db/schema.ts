@@ -35,3 +35,49 @@ export const setupTokenAuditLog = pgTable(
 	},
 	(table) => [index("idx_audit_log_token_id").on(table.tokenId)],
 );
+
+// --- User tables (least-privilege user management) ---
+
+export const users = pgTable("users", {
+	id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+	telegramUserId: text("telegram_user_id").unique().notNull(),
+	monicaBaseUrl: text("monica_base_url").notNull(),
+	monicaApiTokenEncrypted: text("monica_api_token_encrypted").notNull(),
+	encryptionKeyId: text("encryption_key_id").notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const userPreferences = pgTable("user_preferences", {
+	id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+	userId: uuid("user_id")
+		.notNull()
+		.unique()
+		.references(() => users.id),
+	language: text("language").notNull().default("en"),
+	confirmationMode: text("confirmation_mode").notNull().default("explicit"),
+	timezone: text("timezone").notNull(),
+	reminderCadence: text("reminder_cadence").notNull().default("daily"),
+	reminderTime: text("reminder_time").notNull().default("08:00"),
+	connectorType: text("connector_type").notNull().default("telegram"),
+	connectorRoutingId: text("connector_routing_id").notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const credentialAccessAuditLog = pgTable(
+	"credential_access_audit_log",
+	{
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id),
+		actorService: text("actor_service").notNull(),
+		correlationId: text("correlation_id"),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [
+		index("idx_credential_audit_user_id").on(table.userId),
+		index("idx_credential_audit_created_at").on(table.createdAt),
+	],
+);

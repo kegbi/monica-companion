@@ -241,6 +241,8 @@ services:
       DATABASE_URL: postgresql://monica:monica_dev@postgres:5432/monica_companion
       SETUP_TOKEN_SECRET: ${SETUP_TOKEN_SECRET}
       SETUP_BASE_URL: ${SETUP_BASE_URL:-http://localhost}
+      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY}
+      ENCRYPTION_MASTER_KEY_PREVIOUS: ${ENCRYPTION_MASTER_KEY_PREVIOUS:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_SERVICE_NAME: user-management
     volumes:

@@ -8,10 +8,11 @@ import {
 import { createLogger, otelMiddleware } from "@monica-companion/observability";
 import { ConsumeSetupTokenRequest, IssueSetupTokenRequest } from "@monica-companion/types";
 import { Hono } from "hono";
+import { z } from "zod/v4";
 import type { Config } from "./config";
 import type { Database } from "./db/connection";
 
-const logger = createLogger("user-management");
+const _logger = createLogger("user-management");
 
 import { buildSetupUrl, generateSetupToken, verifySetupTokenSignature } from "./setup-token/crypto";
 import {
@@ -21,6 +22,14 @@ import {
 	issueToken,
 	logAuditEvent,
 } from "./setup-token/repository";
+import {
+	getDecryptedCredentials,
+	getUserPreferences,
+	getUserSchedule,
+	logCredentialAccess,
+} from "./user/repository";
+
+const uuidSchema = z.string().uuid();
 
 export function createApp(config: Config, db: Database) {
 	const app = new Hono();
@@ -39,6 +48,24 @@ export function createApp(config: Config, db: Database) {
 		audience: "user-management",
 		secrets: config.auth.jwtSecrets,
 		allowedCallers: ["web-ui"],
+	});
+
+	const monicaIntegrationAuth = serviceAuth({
+		audience: "user-management",
+		secrets: config.auth.jwtSecrets,
+		allowedCallers: ["monica-integration"],
+	});
+
+	const preferenceAuth = serviceAuth({
+		audience: "user-management",
+		secrets: config.auth.jwtSecrets,
+		allowedCallers: ["telegram-bridge", "ai-router", "scheduler"],
+	});
+
+	const schedulerAuth = serviceAuth({
+		audience: "user-management",
+		secrets: config.auth.jwtSecrets,
+		allowedCallers: ["scheduler"],
 	});
 
 	// --- Issue token endpoint (caller: telegram-bridge) ---
@@ -248,28 +275,79 @@ export function createApp(config: Config, db: Database) {
 		return c.json(result);
 	});
 
-	// --- Stub credential endpoint (smoke testing only) ---
-	// TODO: Replace with real encrypted credential resolution (Least-Privilege User Management)
-	if (process.env.NODE_ENV !== "production") {
-		const monicaIntegrationAuth = serviceAuth({
-			audience: "user-management",
-			secrets: config.auth.jwtSecrets,
-			allowedCallers: ["monica-integration"],
+	// --- Credential endpoint (caller: monica-integration only, audited) ---
+	app.get("/internal/users/:userId/monica-credentials", monicaIntegrationAuth, async (c) => {
+		const userId = c.req.param("userId");
+
+		// Validate UUID path parameter
+		const uuidResult = uuidSchema.safeParse(userId);
+		if (!uuidResult.success) {
+			return c.json({ error: "Invalid userId format" }, 400);
+		}
+
+		const cid = getCorrelationId(c);
+		const actorService = getServiceCaller(c);
+
+		const creds = await getDecryptedCredentials(
+			db,
+			userId,
+			config.encryptionMasterKey,
+			config.encryptionMasterKeyPrevious,
+		);
+
+		if (!creds) {
+			return c.json({ error: "User not found" }, 404);
+		}
+
+		// Audit log: record every credential access
+		await logCredentialAccess(db, {
+			userId,
+			actorService,
+			correlationId: cid,
 		});
 
-		logger.warn("Stub credential endpoint is active. This must NOT be used in production.");
+		return c.json({ baseUrl: creds.baseUrl, apiToken: creds.apiToken });
+	});
 
-		app.get("/internal/users/:userId/monica-credentials", monicaIntegrationAuth, (c) => {
-			const baseUrl = process.env.MONICA_BASE_URL;
-			const apiToken = process.env.MONICA_API_TOKEN;
+	// --- Preference endpoint (callers: telegram-bridge, ai-router, scheduler) ---
+	app.get("/internal/users/:userId/preferences", preferenceAuth, async (c) => {
+		const userId = c.req.param("userId");
 
-			if (!baseUrl || !apiToken) {
-				return c.json({ error: "Monica credentials not configured" }, 404);
-			}
+		// Validate UUID path parameter
+		const uuidResult = uuidSchema.safeParse(userId);
+		if (!uuidResult.success) {
+			return c.json({ error: "Invalid userId format" }, 400);
+		}
 
-			return c.json({ baseUrl, apiToken });
+		const prefs = await getUserPreferences(db, userId);
+		if (!prefs) {
+			return c.json({ error: "User not found" }, 404);
+		}
+
+		return c.json({
+			language: prefs.language,
+			confirmationMode: prefs.confirmationMode,
+			timezone: prefs.timezone,
 		});
-	}
+	});
+
+	// --- Schedule endpoint (caller: scheduler only) ---
+	app.get("/internal/users/:userId/schedule", schedulerAuth, async (c) => {
+		const userId = c.req.param("userId");
+
+		// Validate UUID path parameter
+		const uuidResult = uuidSchema.safeParse(userId);
+		if (!uuidResult.success) {
+			return c.json({ error: "Invalid userId format" }, 400);
+		}
+
+		const schedule = await getUserSchedule(db, userId);
+		if (!schedule) {
+			return c.json({ error: "User not found" }, 404);
+		}
+
+		return c.json(schedule);
+	});
 
 	return app;
 }

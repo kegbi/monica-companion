@@ -11,3 +11,9 @@ export {
 	SetupTokenStatus,
 	ValidateSetupTokenResponse,
 } from "./setup-token";
+
+export {
+	MonicaCredentialsResponse,
+	UserPreferencesResponse,
+	UserScheduleResponse,
+} from "./user-management";

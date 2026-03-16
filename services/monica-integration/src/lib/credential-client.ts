@@ -1,12 +1,10 @@
 import type { ServiceClient } from "@monica-companion/auth";
-import { z } from "zod/v4";
+import {
+	type MonicaCredentialsResponse as MonicaCredentials,
+	MonicaCredentialsResponse,
+} from "@monica-companion/types";
 
-const MonicaCredentialsResponse = z.object({
-	baseUrl: z.string(),
-	apiToken: z.string(),
-});
-
-export type MonicaCredentials = z.infer<typeof MonicaCredentialsResponse>;
+export type { MonicaCredentials };
 
 /** Error thrown when credential resolution from user-management fails. */
 export class CredentialResolutionError extends Error {
