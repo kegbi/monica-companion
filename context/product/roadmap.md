@@ -75,10 +75,10 @@ _Define the user-facing AI contract and make interactive mutations safe before s
   - [x] Implement pending-command storage with `pendingCommandId`, versioning, source-message references, and TTL.
   - [x] Enforce lifecycle transitions `draft -> pending_confirmation -> confirmed -> executed -> expired/cancelled`.
 
-- [ ] **Contact Resolution Boundary**
-  - [ ] Implement the Monica-agnostic `ContactResolutionSummary` projection.
-  - [ ] Ensure `ai-router` consumes only the projection, not raw Monica payloads or credentials.
-  - [ ] Define deterministic ranking and ambiguity thresholds for kinship, nickname, and duplicate-name scenarios.
+- [x] **Contact Resolution Boundary**
+  - [x] Implement the Monica-agnostic `ContactResolutionSummary` projection.
+  - [x] Ensure `ai-router` consumes only the projection, not raw Monica payloads or credentials.
+  - [x] Define deterministic ranking and ambiguity thresholds for kinship, nickname, and duplicate-name scenarios.
 
 - [ ] **Benchmark & Quality Gates**
   - [ ] Build the labeled benchmark set for read intents, write intents, and clarification turns.
