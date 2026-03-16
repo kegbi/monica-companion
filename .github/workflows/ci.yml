@@ -32,5 +32,6 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # All Monica API tests use mocked fixtures. No real Monica instance is contacted.
       - name: Test
         run: pnpm test

@@ -15,7 +15,8 @@
 	"scripts": {
 		"build": "tsup",
 		"check": "biome check .",
-		"test": "vitest run --passWithNoTests"
+		"test": "vitest run --passWithNoTests",
+		"test:smoke": "vitest run --config vitest.smoke.config.ts"
 	},
 	"dependencies": {
 		"zod": "catalog:"

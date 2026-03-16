@@ -11,6 +11,7 @@
 		"check:fix": "biome check --write .",
 		"dev": "pnpm -r --parallel run dev",
 		"test": "pnpm -r run test",
+		"test:smoke:monica": "pnpm --filter @monica-companion/monica-api-lib test:smoke",
 		"prepare": "husky"
 	},
 	"devDependencies": {

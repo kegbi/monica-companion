@@ -1,0 +1,97 @@
+name: Monica Smoke Tests
+
+on:
+  schedule:
+    # Run nightly at 3am UTC
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for manual trigger (e.g., release-candidate validation)"
+        required: false
+        type: string
+
+# All smoke tests run against a real Monica v4 instance with seeded test data.
+# This workflow is intentionally separate from CI and never runs on push/PR.
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      mariadb:
+        image: mariadb:11.7.2
+        env:
+          MYSQL_ROOT_PASSWORD: smoke_root_password
+          MYSQL_DATABASE: monica
+          MYSQL_USER: monica
+          MYSQL_PASSWORD: smoke_db_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start Monica container
+        run: |
+          docker run -d \
+            --name monica-smoke \
+            --network host \
+            -e APP_ENV=local \
+            -e APP_DEBUG=true \
+            -e "APP_KEY=base64:eJGRxF0b1S7KPkUmhoeIQl/sM4LhOqGPVHNxAdT+sOA=" \
+            -e APP_URL=http://localhost:8080 \
+            -e DB_CONNECTION=mysql \
+            -e DB_HOST=127.0.0.1 \
+            -e DB_PORT=3306 \
+            -e DB_DATABASE=monica \
+            -e DB_USERNAME=monica \
+            -e DB_PASSWORD=smoke_db_password \
+            -e MAIL_MAILER=log \
+            -e HASH_DRIVER=bcrypt \
+            monica:4.1.2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build monica-api-lib
+        run: pnpm --filter @monica-companion/monica-api-lib build
+
+      - name: Wait for Monica and seed test data
+        env:
+          MONICA_SMOKE_URL: http://localhost:8080
+        run: pnpm tsx scripts/seed-monica-smoke.ts
+
+      - name: Run smoke tests
+        env:
+          MONICA_SMOKE_BASE_URL: http://localhost:8080
+          MONICA_SMOKE_API_TOKEN: ${{ env.SMOKE_API_TOKEN }}
+        run: pnpm test:smoke:monica
+
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: packages/monica-api-lib/smoke-results/
+          retention-days: 30
+
+      - name: Cleanup Monica container
+        if: always()
+        run: docker rm -f monica-smoke || true

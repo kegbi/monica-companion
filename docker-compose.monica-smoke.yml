@@ -1,0 +1,62 @@
+# Docker Compose overlay for running a real Monica v4 instance for smoke testing.
+# This is completely isolated from the main application stack.
+#
+# Usage:
+#   docker compose -f docker-compose.monica-smoke.yml up -d
+#   pnpm tsx scripts/seed-monica-smoke.ts
+#   pnpm test:smoke:monica
+#   docker compose -f docker-compose.monica-smoke.yml down -v
+
+services:
+  monica-smoke-db:
+    image: mariadb:11.7.2
+    environment:
+      MYSQL_ROOT_PASSWORD: smoke_root_password
+      MYSQL_DATABASE: monica
+      MYSQL_USER: monica
+      MYSQL_PASSWORD: smoke_db_password
+    volumes:
+      - monica_smoke_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - monica-smoke
+
+  monica-smoke:
+    image: monica:4.1.2
+    ports:
+      - "8180:80"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_KEY: base64:eJGRxF0b1S7KPkUmhoeIQl/sM4LhOqGPVHNxAdT+sOA=
+      APP_URL: http://localhost:8180
+      DB_CONNECTION: mysql
+      DB_HOST: monica-smoke-db
+      DB_PORT: 3306
+      DB_DATABASE: monica
+      DB_USERNAME: monica
+      DB_PASSWORD: smoke_db_password
+      MAIL_MAILER: log
+      HASH_DRIVER: bcrypt
+    depends_on:
+      monica-smoke-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    networks:
+      - monica-smoke
+
+volumes:
+  monica_smoke_db_data:
+
+networks:
+  monica-smoke:
+    driver: bridge
