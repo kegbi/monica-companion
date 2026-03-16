@@ -32,3 +32,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Orchestrator work directory
+.claude-work/
