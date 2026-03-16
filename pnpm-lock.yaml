@@ -139,6 +139,9 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.0
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.2)

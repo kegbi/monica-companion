@@ -60,4 +60,45 @@ describe("loadConfig", () => {
 		expect(config.auth.jwtSecrets).toHaveLength(2);
 		expect(config.auth.jwtSecrets[1]).toBe("old-secret");
 	});
+
+	describe("ALLOW_PRIVATE_NETWORK_TARGETS", () => {
+		it("defaults to false when not set", () => {
+			const config = loadConfig(validEnv);
+			expect(config.allowPrivateNetworkTargets).toBe(false);
+		});
+
+		it('parses "true" to boolean true', () => {
+			const config = loadConfig({
+				...validEnv,
+				ALLOW_PRIVATE_NETWORK_TARGETS: "true",
+			});
+			expect(config.allowPrivateNetworkTargets).toBe(true);
+		});
+
+		it('parses "false" to boolean false', () => {
+			const config = loadConfig({
+				...validEnv,
+				ALLOW_PRIVATE_NETWORK_TARGETS: "false",
+			});
+			expect(config.allowPrivateNetworkTargets).toBe(false);
+		});
+
+		it('rejects invalid values like "yes"', () => {
+			expect(() =>
+				loadConfig({
+					...validEnv,
+					ALLOW_PRIVATE_NETWORK_TARGETS: "yes",
+				}),
+			).toThrow();
+		});
+
+		it('rejects invalid values like "1"', () => {
+			expect(() =>
+				loadConfig({
+					...validEnv,
+					ALLOW_PRIVATE_NETWORK_TARGETS: "1",
+				}),
+			).toThrow();
+		});
+	});
 });

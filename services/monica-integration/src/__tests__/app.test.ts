@@ -1,4 +1,5 @@
 import { signServiceToken } from "@monica-companion/auth";
+import { MonicaApiError, MonicaUrlValidationError } from "@monica-companion/monica-api-lib";
 import {
 	activityFixture,
 	addressFixture,
@@ -9,13 +10,44 @@ import {
 	noteFixture,
 	reminderOutboxFixture,
 } from "@monica-companion/monica-api-lib/__fixtures__";
+import type { Context } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Config } from "../config.js";
 
-// Mock the shared module that creates the MonicaApiClient
-vi.mock("../routes/shared.js", () => ({
-	createMonicaClient: vi.fn(),
+// Mock observability to avoid symlink resolution issues in test environment
+vi.mock("@monica-companion/observability", () => ({
+	otelMiddleware: () => async (_c: unknown, next: () => Promise<void>) => next(),
+	createLogger: () => ({
+		info: () => {},
+		warn: () => {},
+		error: () => {},
+		debug: () => {},
+	}),
 }));
+
+// Mock the shared module: keep createMonicaClient as a mock fn,
+// but provide the real handleMonicaError logic inline to avoid
+// import-order issues with the observability package.
+vi.mock("../routes/shared.js", () => {
+	function handleMonicaError(c: Context, err: unknown) {
+		if (err instanceof MonicaUrlValidationError) {
+			return c.json({ error: "Invalid Monica instance URL" }, 422);
+		}
+		if (err instanceof MonicaApiError) {
+			const status = err.statusCode >= 500 ? 502 : err.statusCode;
+			return c.json({ error: "Monica API error" }, status as 400);
+		}
+		if (err instanceof Error && err.name === "CredentialResolutionError") {
+			return c.json({ error: "Failed to resolve user credentials" }, 502);
+		}
+		throw err;
+	}
+
+	return {
+		createMonicaClient: vi.fn(),
+		handleMonicaError,
+	};
+});
 
 import { createApp } from "../app.js";
 import { createMonicaClient } from "../routes/shared.js";
@@ -27,6 +59,7 @@ const testConfig: Config = {
 	userManagementUrl: "http://user-management:3007",
 	monicaDefaultTimeoutMs: 5000,
 	monicaRetryMax: 0,
+	allowPrivateNetworkTargets: false,
 	auth: {
 		serviceName: "monica-integration",
 		jwtSecrets: [TEST_SECRET],
@@ -385,6 +418,60 @@ describe("monica-integration app", () => {
 			expect(res.status).toBe(201);
 			const body = await res.json();
 			expect(body.addressId).toBe(10);
+		});
+	});
+
+	describe("URL validation error handling", () => {
+		it("returns 422 when createMonicaClient throws MonicaUrlValidationError", async () => {
+			(createMonicaClient as ReturnType<typeof vi.fn>).mockRejectedValue(
+				new MonicaUrlValidationError("BLOCKED_IP", "URL resolves to a blocked IP address"),
+			);
+
+			const token = await createToken("ai-router", "user-123");
+			const res = await app.request("/internal/contacts/resolution-summaries", {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+
+			expect(res.status).toBe(422);
+			const body = await res.json();
+			expect(body.error).toBe("Invalid Monica instance URL");
+		});
+
+		it("does not leak URL or IP details in 422 response", async () => {
+			(createMonicaClient as ReturnType<typeof vi.fn>).mockRejectedValue(
+				new MonicaUrlValidationError("BLOCKED_IP", "URL resolves to 127.0.0.1"),
+			);
+
+			const token = await createToken("ai-router", "user-123");
+			const res = await app.request("/internal/contacts/resolution-summaries", {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+
+			expect(res.status).toBe(422);
+			const body = await res.json();
+			const bodyStr = JSON.stringify(body);
+			expect(bodyStr).not.toContain("127.0.0.1");
+			expect(bodyStr).not.toContain("resolves to");
+		});
+
+		it("returns 422 for HTTP_NOT_ALLOWED on write endpoints too", async () => {
+			(createMonicaClient as ReturnType<typeof vi.fn>).mockRejectedValue(
+				new MonicaUrlValidationError("HTTP_NOT_ALLOWED", "Only HTTPS allowed"),
+			);
+
+			const token = await createToken("scheduler", "user-123");
+			const res = await app.request("/internal/contacts", {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${token}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ firstName: "Alice", genderId: 1 }),
+			});
+
+			expect(res.status).toBe(422);
+			const body = await res.json();
+			expect(body.error).toBe("Invalid Monica instance URL");
 		});
 	});
 });

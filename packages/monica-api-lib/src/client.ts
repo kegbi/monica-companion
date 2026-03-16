@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import { z } from "zod/v4";
 import { MonicaApiError, MonicaNetworkError } from "./errors.js";
 import type { StructuredLogger } from "./logger-interface.js";
@@ -22,6 +23,7 @@ import {
 	UpdateContactCareerRequest,
 } from "./schemas/index.js";
 import { type RetryOptions, withRetry, withTimeout } from "./transport.js";
+import { isBlockedIp, MonicaUrlValidationError, normalizeMonicaUrl } from "./url-validation.js";
 
 type FetchFn = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
@@ -53,15 +55,6 @@ function singleEnvelope<T extends z.ZodType>(schema: T) {
 	return z.object({ data: schema });
 }
 
-/** Normalize a base URL: strip trailing slash, ensure /api suffix. */
-function normalizeBaseUrl(url: string): string {
-	let normalized = url.replace(/\/+$/, "");
-	if (!normalized.endsWith("/api")) {
-		normalized = `${normalized}/api`;
-	}
-	return normalized;
-}
-
 /**
  * Typed HTTP client for the Monica v4 API.
  * Wraps every endpoint with Zod validation, timeout, and retry handling.
@@ -75,7 +68,7 @@ export class MonicaApiClient {
 	private readonly logger?: StructuredLogger;
 
 	constructor(options: MonicaApiClientOptions) {
-		this.baseApiUrl = normalizeBaseUrl(options.baseUrl);
+		this.baseApiUrl = normalizeMonicaUrl(options.baseUrl);
 		this.apiToken = options.apiToken;
 		const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 		const rawFetch = options.fetch ?? globalThis.fetch;
@@ -272,13 +265,26 @@ export class MonicaApiClient {
 			Accept: "application/json",
 		};
 
-		const init: RequestInit = { method, headers };
+		// Use redirect: "manual" to intercept redirects and validate targets
+		// against blocked IP ranges (SSRF protection).
+		const init: RequestInit = { method, headers, redirect: "manual" };
 		if (body !== undefined) {
 			init.body = JSON.stringify(body);
 		}
 
 		try {
 			const response = await withRetry(() => this.fetchFn(url, init), this.retryOptions);
+
+			// Reject redirects to blocked IP ranges
+			if (response.status >= 300 && response.status < 400) {
+				const location = response.headers.get("location");
+				if (location) {
+					this.validateRedirectTarget(location);
+				}
+				throw new MonicaNetworkError(
+					"Monica API returned a redirect; redirect-following is not supported",
+				);
+			}
 
 			const durationMs = Date.now() - startTime;
 			this.logger?.debug("Monica API request completed", {
@@ -300,7 +306,36 @@ export class MonicaApiClient {
 			if (err instanceof MonicaNetworkError) {
 				throw err;
 			}
+			if (err instanceof MonicaUrlValidationError) {
+				throw err;
+			}
 			throw new MonicaNetworkError(err instanceof Error ? err.message : "Unknown network error");
+		}
+	}
+
+	/**
+	 * Validate a redirect Location header target against blocked IP ranges.
+	 * Throws MonicaUrlValidationError if the redirect would target a blocked IP.
+	 */
+	private validateRedirectTarget(location: string): void {
+		let target: URL;
+		try {
+			target = new URL(location, this.baseApiUrl);
+		} catch {
+			return; // Malformed redirect target will be rejected anyway
+		}
+
+		const rawHostname = target.hostname;
+		const hostname =
+			rawHostname.startsWith("[") && rawHostname.endsWith("]")
+				? rawHostname.slice(1, -1)
+				: rawHostname;
+
+		if (isIP(hostname) > 0 && isBlockedIp(hostname)) {
+			throw new MonicaUrlValidationError(
+				"BLOCKED_IP",
+				"Redirect target resolves to a blocked IP address",
+			);
 		}
 	}
 }

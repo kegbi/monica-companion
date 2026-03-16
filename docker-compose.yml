@@ -158,6 +158,7 @@ services:
       USER_MANAGEMENT_URL: http://user-management:3007
       MONICA_DEFAULT_TIMEOUT_MS: ${MONICA_DEFAULT_TIMEOUT_MS:-10000}
       MONICA_RETRY_MAX: ${MONICA_RETRY_MAX:-2}
+      ALLOW_PRIVATE_NETWORK_TARGETS: ${ALLOW_PRIVATE_NETWORK_TARGETS:-false}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_SERVICE_NAME: monica-integration
     volumes:

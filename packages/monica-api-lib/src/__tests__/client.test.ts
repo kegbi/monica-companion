@@ -12,7 +12,8 @@ import {
 	reminderOutboxFixture,
 } from "../__fixtures__/index.js";
 import { MonicaApiClient } from "../client.js";
-import { MonicaApiError } from "../errors.js";
+import { MonicaApiError, MonicaNetworkError } from "../errors.js";
+import { MonicaUrlValidationError } from "../url-validation.js";
 
 function mockFetchResponse(data: unknown, status = 200): typeof globalThis.fetch {
 	return vi.fn<typeof globalThis.fetch>().mockResolvedValue(
@@ -439,5 +440,69 @@ describe("MonicaApiClient - write operations", () => {
 
 			await expect(client.getContact(42)).rejects.toThrow();
 		});
+	});
+});
+
+describe("MonicaApiClient - redirect protection", () => {
+	const baseOpts = {
+		baseUrl: "https://example.test",
+		apiToken: "test-token-123",
+		timeoutMs: 5000,
+		retryOptions: { maxRetries: 0, baseDelayMs: 10, maxDelayMs: 50 },
+	};
+
+	it("throws MonicaNetworkError on redirect response", async () => {
+		const fetchFn = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+			new Response(null, {
+				status: 302,
+				headers: { Location: "https://other.example.test/api/contacts" },
+			}),
+		);
+		const client = new MonicaApiClient({ ...baseOpts, fetch: fetchFn });
+
+		await expect(client.listContacts()).rejects.toThrow(MonicaNetworkError);
+	});
+
+	it("throws MonicaUrlValidationError when redirect targets blocked IP", async () => {
+		const fetchFn = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+			new Response(null, {
+				status: 301,
+				headers: { Location: "http://127.0.0.1/api/contacts" },
+			}),
+		);
+		const client = new MonicaApiClient({ ...baseOpts, fetch: fetchFn });
+
+		await expect(client.listContacts()).rejects.toThrow(MonicaUrlValidationError);
+	});
+
+	it("sets redirect: manual on fetch calls", async () => {
+		const fetchFn = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+			new Response(
+				JSON.stringify({
+					data: [],
+					links: { first: "", last: "", prev: null, next: null },
+					meta: {
+						current_page: 1,
+						from: null,
+						last_page: 1,
+						links: [],
+						path: "",
+						per_page: 100,
+						to: null,
+						total: 0,
+					},
+				}),
+				{
+					status: 200,
+					headers: { "Content-Type": "application/json" },
+				},
+			),
+		);
+		const client = new MonicaApiClient({ ...baseOpts, fetch: fetchFn });
+
+		await client.listContacts();
+
+		const callArgs = (fetchFn as ReturnType<typeof vi.fn>).mock.calls[0];
+		expect(callArgs[1]?.redirect).toBe("manual");
 	});
 });

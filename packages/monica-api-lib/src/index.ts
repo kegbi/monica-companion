@@ -46,3 +46,11 @@ export {
 	UpdateRelationshipRequest,
 } from "./schemas/index.js";
 export { type RetryOptions, withRetry, withTimeout } from "./transport.js";
+export {
+	isBlockedIp,
+	MonicaUrlValidationError,
+	type MonicaUrlValidationErrorCode,
+	normalizeMonicaUrl,
+	type ValidateMonicaUrlOptions,
+	validateMonicaUrl,
+} from "./url-validation.js";

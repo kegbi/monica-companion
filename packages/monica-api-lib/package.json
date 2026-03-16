@@ -21,6 +21,7 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
+		"@types/node": "catalog:",
 		"typescript": "catalog:",
 		"tsup": "catalog:",
 		"vitest": "catalog:"

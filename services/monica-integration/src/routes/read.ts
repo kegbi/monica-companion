@@ -1,5 +1,4 @@
 import { getCorrelationId, serviceAuth } from "@monica-companion/auth";
-import { MonicaApiError } from "@monica-companion/monica-api-lib";
 import { Hono } from "hono";
 import type { Config } from "../config.js";
 import {
@@ -7,7 +6,7 @@ import {
 	buildContactResolutionSummary,
 } from "../lib/contact-projection.js";
 import { requireUserId } from "../lib/require-user-id.js";
-import { createMonicaClient } from "./shared.js";
+import { createMonicaClient, handleMonicaError } from "./shared.js";
 
 /**
  * Read-only endpoints.
@@ -125,15 +124,4 @@ export function readRoutes(config: Config) {
 	});
 
 	return routes;
-}
-
-function handleMonicaError(c: import("hono").Context, err: unknown) {
-	if (err instanceof MonicaApiError) {
-		const status = err.statusCode >= 500 ? 502 : err.statusCode;
-		return c.json({ error: "Monica API error" }, status as 400);
-	}
-	if (err instanceof Error && err.name === "CredentialResolutionError") {
-		return c.json({ error: "Failed to resolve user credentials" }, 502);
-	}
-	throw err;
 }
