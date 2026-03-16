@@ -29,10 +29,10 @@ _Lock down ingress, identity, and operational safety before building the Monica 
   - [x] Implement a 15-minute TTL, one-active-token-per-user, consume-on-success, replay rejection, cancellation, and reissue-invalidates-previous-token semantics.
   - [x] Add CSRF/origin protections and audit logging to onboarding submission.
 
-- [ ] **Observability & Governance Baseline**
-  - [ ] Instrument all services with OpenTelemetry.
-  - [ ] Define redaction, retention, and deletion rules for logs, traces, queue payloads, dead letters, and conversation state.
-  - [ ] Create dashboards and alerts for failures, latency, quota exhaustion, and scheduler misfires.
+- [x] **Observability & Governance Baseline**
+  - [x] Instrument all services with OpenTelemetry.
+  - [x] Define redaction, retention, and deletion rules for logs, traces, queue payloads, dead letters, and conversation state.
+  - [x] Create dashboards and alerts for failures, latency, quota exhaustion, and scheduler misfires.
 
 ---
 
