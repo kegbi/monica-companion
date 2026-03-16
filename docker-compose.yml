@@ -1,5 +1,5 @@
 services:
-  # ── Infrastructure (always start) ──────────────────────────────────────
+  # -- Infrastructure (always start) ------------------------------------------
 
   postgres:
     image: postgres:17.9-alpine
@@ -45,7 +45,7 @@ services:
     networks:
       - public
 
-  # ── Dependency init (--profile app) ────────────────────────────────────
+  # -- Dependency init (--profile app) -----------------------------------------
 
   deps-init:
     image: node:24.14.0-slim
@@ -59,7 +59,7 @@ services:
     networks:
       - internal
 
-  # ── Application services (--profile app) ───────────────────────────────
+  # -- Application services (--profile app) ------------------------------------
 
   telegram-bridge:
     image: node:24.14.0-slim
@@ -77,6 +77,8 @@ services:
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
       RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-60}
       USER_MANAGEMENT_URL: http://user-management:3007
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: telegram-bridge
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -100,6 +102,9 @@ services:
       - "3002"
     environment:
       PORT: 3002
+      SERVICE_NAME: ai-router
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: ai-router
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -122,6 +127,9 @@ services:
       - "3003"
     environment:
       PORT: 3003
+      SERVICE_NAME: voice-transcription
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: voice-transcription
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -144,6 +152,9 @@ services:
       - "3004"
     environment:
       PORT: 3004
+      SERVICE_NAME: monica-integration
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: monica-integration
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -166,6 +177,9 @@ services:
       - "3005"
     environment:
       PORT: 3005
+      SERVICE_NAME: scheduler
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: scheduler
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -188,6 +202,9 @@ services:
       - "3006"
     environment:
       PORT: 3006
+      SERVICE_NAME: delivery
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: delivery
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -216,6 +233,8 @@ services:
       DATABASE_URL: postgresql://monica:monica_dev@postgres:5432/monica_companion
       SETUP_TOKEN_SECRET: ${SETUP_TOKEN_SECRET}
       SETUP_BASE_URL: ${SETUP_BASE_URL:-http://localhost}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: user-management
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -243,6 +262,8 @@ services:
       JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
       USER_MANAGEMENT_URL: http://user-management:3007
       EXPECTED_ORIGIN: ${EXPECTED_ORIGIN:-http://localhost}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: web-ui
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -253,7 +274,7 @@ services:
       - public
       - internal
 
-  # ── Observability (--profile observability) ────────────────────────────
+  # -- Observability (--profile observability) ---------------------------------
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.147.0
@@ -279,8 +300,11 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_UNIFIED_ALERTING_ENABLED: "true"
     volumes:
-      - ./docker/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./docker/grafana/provisioning/datasources/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./docker/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./docker/grafana/provisioning/alerting:/etc/grafana/provisioning/alerting:ro
       - grafana_data:/var/lib/grafana
     networks:
       - internal
@@ -302,6 +326,9 @@ services:
     profiles: [observability]
     ports:
       - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=14d"
     volumes:
       - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus

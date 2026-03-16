@@ -1,0 +1,77 @@
+{
+	"annotations": {
+		"list": []
+	},
+	"description": "Service health overview for Monica Companion",
+	"editable": true,
+	"fiscalYearStartMonth": 0,
+	"graphTooltip": 1,
+	"id": null,
+	"links": [],
+	"panels": [
+		{
+			"title": "HTTP Request Rate by Service",
+			"type": "timeseries",
+			"gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"targets": [
+				{
+					"expr": "sum(rate(http_server_request_duration_seconds_count[5m])) by (service_name)",
+					"legendFormat": "{{service_name}}",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "reqps"
+				},
+				"overrides": []
+			}
+		},
+		{
+			"title": "HTTP Error Rate by Service (5xx)",
+			"type": "timeseries",
+			"gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"targets": [
+				{
+					"expr": "sum(rate(http_server_request_duration_seconds_count{http_status_code=~\"5..\"}[5m])) by (service_name) / sum(rate(http_server_request_duration_seconds_count[5m])) by (service_name) * 100",
+					"legendFormat": "{{service_name}} error %",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "percent"
+				},
+				"overrides": []
+			}
+		},
+		{
+			"title": "Service Status",
+			"type": "stat",
+			"gridPos": { "h": 4, "w": 24, "x": 0, "y": 16 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"targets": [
+				{
+					"expr": "count(up{job=\"otel-collector\"}) by (job)",
+					"legendFormat": "{{job}}",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {},
+				"overrides": []
+			}
+		}
+	],
+	"schemaVersion": 39,
+	"tags": ["monica-companion", "service-health"],
+	"templating": { "list": [] },
+	"time": { "from": "now-1h", "to": "now" },
+	"timepicker": {},
+	"timezone": "browser",
+	"title": "Service Health Overview",
+	"uid": "service-health",
+	"version": 1
+}

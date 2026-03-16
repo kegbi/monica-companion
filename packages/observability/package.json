@@ -1,0 +1,39 @@
+{
+	"name": "@monica-companion/observability",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsup",
+		"check": "biome check .",
+		"test": "vitest run --passWithNoTests"
+	},
+	"dependencies": {
+		"@monica-companion/redaction": "workspace:*",
+		"@opentelemetry/api": "catalog:",
+		"@opentelemetry/api-logs": "catalog:",
+		"@opentelemetry/sdk-node": "catalog:",
+		"@opentelemetry/exporter-trace-otlp-http": "catalog:",
+		"@opentelemetry/exporter-logs-otlp-http": "catalog:",
+		"@opentelemetry/exporter-metrics-otlp-http": "catalog:",
+		"@opentelemetry/resources": "catalog:",
+		"@opentelemetry/semantic-conventions": "catalog:",
+		"@opentelemetry/instrumentation-http": "catalog:",
+		"@opentelemetry/sdk-trace-base": "catalog:",
+		"@opentelemetry/sdk-logs": "catalog:",
+		"@opentelemetry/sdk-metrics": "catalog:",
+		"hono": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"typescript": "catalog:",
+		"tsup": "catalog:",
+		"vitest": "catalog:"
+	}
+}

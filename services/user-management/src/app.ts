@@ -5,6 +5,7 @@ import {
 	getServiceCaller,
 	serviceAuth,
 } from "@monica-companion/auth";
+import { otelMiddleware } from "@monica-companion/observability";
 import { ConsumeSetupTokenRequest, IssueSetupTokenRequest } from "@monica-companion/types";
 import { Hono } from "hono";
 import type { Config } from "./config";
@@ -20,6 +21,8 @@ import {
 
 export function createApp(config: Config, db: Database) {
 	const app = new Hono();
+
+	app.use(otelMiddleware());
 
 	app.get("/health", correlationId(), (c) => c.json({ status: "ok", service: "user-management" }));
 

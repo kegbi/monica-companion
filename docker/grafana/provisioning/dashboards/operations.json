@@ -1,0 +1,76 @@
+{
+	"annotations": {
+		"list": []
+	},
+	"description": "Operations dashboard with placeholder panels for queues, OpenAI budget, scheduler, and delivery",
+	"editable": true,
+	"fiscalYearStartMonth": 0,
+	"graphTooltip": 1,
+	"id": null,
+	"links": [],
+	"panels": [
+		{
+			"title": "BullMQ Queue Depth (placeholder)",
+			"type": "text",
+			"gridPos": { "h": 4, "w": 12, "x": 0, "y": 0 },
+			"options": {
+				"mode": "markdown",
+				"content": "Queue depth metrics will be available when BullMQ is wired in Phase 4."
+			}
+		},
+		{
+			"title": "BullMQ Processing Rate (placeholder)",
+			"type": "text",
+			"gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
+			"options": {
+				"mode": "markdown",
+				"content": "Processing rate metrics will be available when BullMQ is wired in Phase 4."
+			}
+		},
+		{
+			"title": "OpenAI Budget Burn Rate (placeholder)",
+			"type": "text",
+			"gridPos": { "h": 4, "w": 24, "x": 0, "y": 4 },
+			"options": {
+				"mode": "markdown",
+				"content": "OpenAI budget metrics will be available when the OpenAI client is implemented in Phase 3."
+			}
+		},
+		{
+			"title": "Scheduler Job Status (placeholder)",
+			"type": "text",
+			"gridPos": { "h": 4, "w": 12, "x": 0, "y": 8 },
+			"options": {
+				"mode": "markdown",
+				"content": "Scheduler job metrics will be available when scheduler jobs are implemented in Phase 4."
+			}
+		},
+		{
+			"title": "Scheduler Misfires (placeholder)",
+			"type": "text",
+			"gridPos": { "h": 4, "w": 12, "x": 12, "y": 8 },
+			"options": {
+				"mode": "markdown",
+				"content": "Misfire detection will be available when scheduler DST/window logic is implemented in Phase 4."
+			}
+		},
+		{
+			"title": "Delivery Success/Failure Rate (placeholder)",
+			"type": "text",
+			"gridPos": { "h": 4, "w": 24, "x": 0, "y": 12 },
+			"options": {
+				"mode": "markdown",
+				"content": "Delivery metrics will be available when delivery connectors are implemented in Phase 2."
+			}
+		}
+	],
+	"schemaVersion": 39,
+	"tags": ["monica-companion", "operations"],
+	"templating": { "list": [] },
+	"time": { "from": "now-1h", "to": "now" },
+	"timepicker": {},
+	"timezone": "browser",
+	"title": "Operations & Queues",
+	"uid": "operations",
+	"version": 1
+}

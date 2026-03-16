@@ -1,0 +1,122 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: monica-companion-alerts
+    folder: Monica Companion
+    interval: 1m
+    rules:
+      - uid: service-down
+        title: ServiceDown
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: absent(up{job="otel-collector"})
+              instant: true
+              refId: A
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 1m
+        annotations:
+          summary: "OTel Collector is down - telemetry pipeline is broken"
+          description: "The OTel Collector has been unreachable for more than 1 minute. No telemetry is being collected."
+        labels:
+          severity: critical
+
+      - uid: high-error-rate
+        title: HighErrorRate
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: >
+                (sum(rate(http_server_request_duration_seconds_count{http_status_code=~"5.."}[2m])) by (service_name)
+                / sum(rate(http_server_request_duration_seconds_count[2m])) by (service_name)) > 0.05
+              instant: true
+              refId: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: "High HTTP 5xx error rate on {{ $labels.service_name }}"
+          description: "Service {{ $labels.service_name }} has more than 5% HTTP 5xx errors over the last 2 minutes."
+        labels:
+          severity: warning
+
+      - uid: high-latency
+        title: HighLatency
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: >
+                histogram_quantile(0.95,
+                  sum(rate(http_server_request_duration_seconds_bucket[2m])) by (le, service_name)
+                ) > 5
+              instant: true
+              refId: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: "High p95 latency on {{ $labels.service_name }}"
+          description: "Service {{ $labels.service_name }} p95 response time exceeds 5 seconds over the last 2 minutes."
+        labels:
+          severity: warning
+
+      - uid: quota-exhaustion-placeholder
+        title: QuotaExhaustion (placeholder)
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: "vector(0)"
+              instant: true
+              refId: A
+        noDataState: OK
+        execErrState: OK
+        for: 1m
+        annotations:
+          summary: "Placeholder: OpenAI quota exhaustion alert"
+          description: "This alert will be wired when OpenAI API metrics are available. It will fire when 429 status codes from OpenAI exceed threshold for >1 minute."
+        labels:
+          severity: info
+
+      - uid: scheduler-misfire-placeholder
+        title: SchedulerMisfire (placeholder)
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 21600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: "vector(0)"
+              instant: true
+              refId: A
+        noDataState: OK
+        execErrState: OK
+        for: 1m
+        annotations:
+          summary: "Placeholder: Scheduler misfire alert"
+          description: "This alert will be wired when scheduler job metrics are available. It will fire when a scheduled job misses its window by >6 hours."
+        labels:
+          severity: info

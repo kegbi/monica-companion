@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@monica-companion/auth": "workspace:*",
+		"@monica-companion/observability": "workspace:*",
 		"hono": "catalog:",
 		"@hono/node-server": "catalog:",
 		"zod": "catalog:"

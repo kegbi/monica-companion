@@ -1,4 +1,5 @@
 import { correlationId, serviceAuth } from "@monica-companion/auth";
+import { otelMiddleware } from "@monica-companion/observability";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { Config } from "./config";
@@ -7,6 +8,8 @@ import { webhookSecret } from "./middleware/webhook-secret";
 
 export function createApp(config: Config) {
 	const app = new Hono();
+
+	app.use(otelMiddleware());
 
 	app.get("/health", correlationId(), (c) => c.json({ status: "ok", service: "telegram-bridge" }));
 

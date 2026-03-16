@@ -1,0 +1,91 @@
+{
+	"annotations": {
+		"list": []
+	},
+	"description": "HTTP latency and error details for Monica Companion services",
+	"editable": true,
+	"fiscalYearStartMonth": 0,
+	"graphTooltip": 1,
+	"id": null,
+	"links": [],
+	"panels": [
+		{
+			"title": "Response Time p50 / p95 / p99 by Service",
+			"type": "timeseries",
+			"gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"targets": [
+				{
+					"expr": "histogram_quantile(0.5, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, service_name))",
+					"legendFormat": "{{service_name}} p50",
+					"refId": "A"
+				},
+				{
+					"expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, service_name))",
+					"legendFormat": "{{service_name}} p95",
+					"refId": "B"
+				},
+				{
+					"expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, service_name))",
+					"legendFormat": "{{service_name}} p99",
+					"refId": "C"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "s"
+				},
+				"overrides": []
+			}
+		},
+		{
+			"title": "Error Rate by Service and Route",
+			"type": "timeseries",
+			"gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"targets": [
+				{
+					"expr": "sum(rate(http_server_request_duration_seconds_count{http_status_code=~\"[45]..\"}[5m])) by (service_name, http_route)",
+					"legendFormat": "{{service_name}} {{http_route}}",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "reqps"
+				},
+				"overrides": []
+			}
+		},
+		{
+			"title": "Top Slow Endpoints (p95 > 1s)",
+			"type": "table",
+			"gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"targets": [
+				{
+					"expr": "topk(10, histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, service_name, http_route)))",
+					"legendFormat": "{{service_name}} {{http_route}}",
+					"refId": "A",
+					"format": "table",
+					"instant": true
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"unit": "s"
+				},
+				"overrides": []
+			}
+		}
+	],
+	"schemaVersion": 39,
+	"tags": ["monica-companion", "http-latency"],
+	"templating": { "list": [] },
+	"time": { "from": "now-1h", "to": "now" },
+	"timepicker": {},
+	"timezone": "browser",
+	"title": "HTTP Latency & Errors",
+	"uid": "http-latency",
+	"version": 1
+}
