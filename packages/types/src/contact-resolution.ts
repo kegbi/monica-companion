@@ -39,3 +39,42 @@ export const ContactResolutionSummary = z.object({
 	lastInteractionAt: z.string().nullable(),
 });
 export type ContactResolutionSummary = z.infer<typeof ContactResolutionSummary>;
+
+/** Possible reasons a candidate matched a contact reference query. */
+export const MatchReason = z.enum([
+	"exact_display_name",
+	"exact_first_name",
+	"alias_match",
+	"relationship_label_match",
+	"partial_match",
+]);
+export type MatchReason = z.infer<typeof MatchReason>;
+
+/** A scored contact candidate returned by the matching algorithm. */
+export const ContactMatchCandidate = z.object({
+	contactId: z.number().int(),
+	displayName: z.string(),
+	score: z.number().min(0).max(1),
+	matchReason: MatchReason,
+});
+export type ContactMatchCandidate = z.infer<typeof ContactMatchCandidate>;
+
+/** Possible outcomes of the contact resolution process. */
+export const ResolutionOutcome = z.enum(["resolved", "ambiguous", "no_match"]);
+export type ResolutionOutcome = z.infer<typeof ResolutionOutcome>;
+
+/** Result of resolving a natural-language contact reference to Monica contacts. */
+export const ContactResolutionResult = z.object({
+	outcome: ResolutionOutcome,
+	resolved: ContactResolutionSummary.nullable(),
+	candidates: z.array(ContactMatchCandidate),
+	query: z.string(),
+});
+export type ContactResolutionResult = z.infer<typeof ContactResolutionResult>;
+
+/** Request to resolve a natural-language contact reference. */
+export const ContactResolutionRequest = z.object({
+	contactRef: z.string().min(1).max(500),
+	correlationId: z.string().min(1),
+});
+export type ContactResolutionRequest = z.infer<typeof ContactResolutionRequest>;

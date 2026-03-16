@@ -5,6 +5,7 @@ const baseEnv = {
 	SERVICE_NAME: "ai-router" as const,
 	JWT_SECRET: "test-jwt-secret",
 	DATABASE_URL: "postgresql://monica:monica_dev@localhost:5432/monica_companion",
+	MONICA_INTEGRATION_URL: "http://monica-integration:3004",
 };
 
 describe("loadConfig", () => {
@@ -54,5 +55,15 @@ describe("loadConfig", () => {
 	it("includes previous JWT secret when provided", () => {
 		const config = loadConfig({ ...baseEnv, JWT_SECRET_PREVIOUS: "old-secret" });
 		expect(config.auth.jwtSecrets).toEqual(["test-jwt-secret", "old-secret"]);
+	});
+
+	it("parses MONICA_INTEGRATION_URL", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.monicaIntegrationUrl).toBe("http://monica-integration:3004");
+	});
+
+	it("throws when MONICA_INTEGRATION_URL is missing", () => {
+		const { MONICA_INTEGRATION_URL, ...env } = baseEnv;
+		expect(() => loadConfig(env)).toThrow();
 	});
 });

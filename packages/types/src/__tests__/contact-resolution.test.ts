@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { ContactResolutionSummary, ImportantDate } from "../contact-resolution.js";
+import {
+	ContactMatchCandidate,
+	ContactResolutionRequest,
+	ContactResolutionResult,
+	ContactResolutionSummary,
+	ImportantDate,
+	MatchReason,
+	ResolutionOutcome,
+} from "../contact-resolution.js";
 
 describe("ContactResolutionSummary schema", () => {
 	const validSummary = {
@@ -82,6 +90,198 @@ describe("ContactResolutionSummary schema", () => {
 			});
 			expect(result.success).toBe(false);
 		});
+	});
+});
+
+describe("MatchReason schema", () => {
+	it("accepts valid match reasons", () => {
+		for (const reason of [
+			"exact_display_name",
+			"exact_first_name",
+			"alias_match",
+			"relationship_label_match",
+			"partial_match",
+		]) {
+			expect(MatchReason.safeParse(reason).success).toBe(true);
+		}
+	});
+
+	it("rejects invalid match reason", () => {
+		expect(MatchReason.safeParse("unknown_reason").success).toBe(false);
+	});
+});
+
+describe("ResolutionOutcome schema", () => {
+	it("accepts valid outcomes", () => {
+		for (const outcome of ["resolved", "ambiguous", "no_match"]) {
+			expect(ResolutionOutcome.safeParse(outcome).success).toBe(true);
+		}
+	});
+
+	it("rejects invalid outcome", () => {
+		expect(ResolutionOutcome.safeParse("maybe").success).toBe(false);
+	});
+});
+
+describe("ContactMatchCandidate schema", () => {
+	const validCandidate = {
+		contactId: 42,
+		displayName: "John Doe",
+		score: 0.95,
+		matchReason: "exact_first_name" as const,
+	};
+
+	it("parses a valid ContactMatchCandidate", () => {
+		const result = ContactMatchCandidate.safeParse(validCandidate);
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts score of 0", () => {
+		const result = ContactMatchCandidate.safeParse({ ...validCandidate, score: 0 });
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts score of 1", () => {
+		const result = ContactMatchCandidate.safeParse({ ...validCandidate, score: 1 });
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects score above 1", () => {
+		const result = ContactMatchCandidate.safeParse({ ...validCandidate, score: 1.1 });
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects score below 0", () => {
+		const result = ContactMatchCandidate.safeParse({ ...validCandidate, score: -0.1 });
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects non-integer contactId", () => {
+		const result = ContactMatchCandidate.safeParse({ ...validCandidate, contactId: 1.5 });
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects invalid matchReason", () => {
+		const result = ContactMatchCandidate.safeParse({
+			...validCandidate,
+			matchReason: "magic",
+		});
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("ContactResolutionResult schema", () => {
+	const validSummary = {
+		contactId: 42,
+		displayName: "John Doe (Johnny)",
+		aliases: ["Johnny", "John", "Doe"],
+		relationshipLabels: ["partner"],
+		importantDates: [],
+		lastInteractionAt: "2026-03-10T14:30:00Z",
+	};
+
+	it("parses a resolved result", () => {
+		const result = ContactResolutionResult.safeParse({
+			outcome: "resolved",
+			resolved: validSummary,
+			candidates: [],
+			query: "John",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("parses an ambiguous result with candidates", () => {
+		const result = ContactResolutionResult.safeParse({
+			outcome: "ambiguous",
+			resolved: null,
+			candidates: [
+				{
+					contactId: 42,
+					displayName: "John Doe",
+					score: 0.8,
+					matchReason: "alias_match",
+				},
+				{
+					contactId: 43,
+					displayName: "John Smith",
+					score: 0.8,
+					matchReason: "alias_match",
+				},
+			],
+			query: "John",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("parses a no_match result", () => {
+		const result = ContactResolutionResult.safeParse({
+			outcome: "no_match",
+			resolved: null,
+			candidates: [],
+			query: "Xavier",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects missing query", () => {
+		const result = ContactResolutionResult.safeParse({
+			outcome: "no_match",
+			resolved: null,
+			candidates: [],
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects invalid outcome", () => {
+		const result = ContactResolutionResult.safeParse({
+			outcome: "maybe",
+			resolved: null,
+			candidates: [],
+			query: "test",
+		});
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("ContactResolutionRequest schema", () => {
+	const validRequest = {
+		contactRef: "Mom",
+		correlationId: "corr-123",
+	};
+
+	it("parses a valid request", () => {
+		const result = ContactResolutionRequest.safeParse(validRequest);
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects empty contactRef", () => {
+		const result = ContactResolutionRequest.safeParse({
+			...validRequest,
+			contactRef: "",
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects contactRef exceeding 500 chars", () => {
+		const result = ContactResolutionRequest.safeParse({
+			...validRequest,
+			contactRef: "a".repeat(501),
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects empty correlationId", () => {
+		const result = ContactResolutionRequest.safeParse({
+			...validRequest,
+			correlationId: "",
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects missing correlationId", () => {
+		const { correlationId, ...rest } = validRequest;
+		const result = ContactResolutionRequest.safeParse(rest);
+		expect(result.success).toBe(false);
 	});
 });
 

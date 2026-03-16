@@ -6,6 +6,7 @@ const configSchema = z.object({
 	DATABASE_URL: z.string().min(1),
 	PENDING_COMMAND_TTL_MINUTES: z.coerce.number().int().positive().default(30),
 	EXPIRY_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
+	MONICA_INTEGRATION_URL: z.string().min(1),
 });
 
 export interface Config {
@@ -13,6 +14,7 @@ export interface Config {
 	databaseUrl: string;
 	pendingCommandTtlMinutes: number;
 	expirySweepIntervalMs: number;
+	monicaIntegrationUrl: string;
 	auth: AuthConfig;
 }
 
@@ -24,6 +26,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 		databaseUrl: parsed.DATABASE_URL,
 		pendingCommandTtlMinutes: parsed.PENDING_COMMAND_TTL_MINUTES,
 		expirySweepIntervalMs: parsed.EXPIRY_SWEEP_INTERVAL_MS,
+		monicaIntegrationUrl: parsed.MONICA_INTEGRATION_URL,
 		auth,
 	};
 }

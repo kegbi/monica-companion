@@ -13,7 +13,15 @@ export {
 	ReadOnlyCommandType,
 } from "./commands";
 
-export { ContactResolutionSummary, ImportantDate } from "./contact-resolution";
+export {
+	ContactMatchCandidate,
+	ContactResolutionRequest,
+	ContactResolutionResult,
+	ContactResolutionSummary,
+	ImportantDate,
+	MatchReason,
+	ResolutionOutcome,
+} from "./contact-resolution";
 
 export {
 	CancelSetupTokenResponse,
