@@ -103,6 +103,11 @@ services:
     environment:
       PORT: 3002
       SERVICE_NAME: ai-router
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
+      DATABASE_URL: postgresql://monica:monica_dev@postgres:5432/monica_companion
+      PENDING_COMMAND_TTL_MINUTES: ${PENDING_COMMAND_TTL_MINUTES:-30}
+      EXPIRY_SWEEP_INTERVAL_MS: ${EXPIRY_SWEEP_INTERVAL_MS:-60000}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_SERVICE_NAME: ai-router
     volumes:

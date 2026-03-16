@@ -1,14 +1,22 @@
 import { createLogger } from "@monica-companion/observability";
-import { telemetry } from "./instrumentation";
+import { telemetry } from "./instrumentation.js";
 
 const logger = createLogger("ai-router");
 
 async function main() {
 	const { serve } = await import("@hono/node-server");
-	const { createApp } = await import("./app");
+	const { createApp } = await import("./app.js");
+	const { loadConfig } = await import("./config.js");
+	const { createDb } = await import("./db/connection.js");
+	const { startExpirySweep } = await import("./pending-command/expiry-sweep.js");
 
-	const app = createApp();
-	const port = Number(process.env.PORT) || 3002;
+	const config = loadConfig();
+	const db = createDb(config.databaseUrl);
+	const app = createApp(config, db);
+
+	const stopExpirySweep = startExpirySweep(db, config.expirySweepIntervalMs);
+
+	const port = config.port;
 
 	serve({ fetch: app.fetch, port }, (info) => {
 		logger.info(`ai-router listening on :${info.port}`);
@@ -16,6 +24,7 @@ async function main() {
 
 	const shutdown = async () => {
 		logger.info("Shutting down ai-router");
+		stopExpirySweep();
 		await telemetry.shutdown();
 		process.exit(0);
 	};
