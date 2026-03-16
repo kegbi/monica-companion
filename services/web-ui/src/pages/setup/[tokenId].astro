@@ -1,0 +1,75 @@
+---
+import { getUserManagementClient } from "../../lib/user-management-client";
+
+const { tokenId } = Astro.params;
+const sig = Astro.url.searchParams.get("sig");
+const csrfToken = Astro.locals.csrfToken;
+
+let isValid = false;
+let telegramUserId = "";
+let step = "";
+let expiresAt = "";
+let errorMessage = "";
+
+if (!tokenId || !sig) {
+	errorMessage = "Invalid setup link. Please return to Telegram to request a new setup link.";
+} else {
+	try {
+		const client = getUserManagementClient();
+		const response = await client.fetch(
+			`/internal/setup-tokens/${tokenId}/validate?sig=${encodeURIComponent(sig)}`,
+		);
+
+		if (response.ok) {
+			const data = await response.json();
+			if (data.valid) {
+				isValid = true;
+				telegramUserId = data.telegramUserId;
+				step = data.step;
+				expiresAt = data.expiresAt;
+			} else {
+				errorMessage =
+					"This link has expired or already been used. Please return to Telegram to request a new setup link.";
+			}
+		} else if (response.status === 403) {
+			errorMessage =
+				"This link is invalid. Please return to Telegram to request a new setup link.";
+		} else {
+			errorMessage = "An error occurred while validating your setup link. Please try again.";
+		}
+	} catch {
+		errorMessage =
+			"Unable to validate your setup link at this time. Please try again later.";
+	}
+}
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Monica Companion — Setup</title>
+	</head>
+	<body>
+		<h1>Monica Companion Setup</h1>
+		{isValid ? (
+			<div id="setup-form">
+				<p>Welcome! Complete the form below to finish setting up your Monica Companion.</p>
+				<form method="POST" action="/setup/submit">
+					<input type="hidden" name="csrf_token" value={csrfToken} />
+					<input type="hidden" name="tokenId" value={tokenId} />
+					<input type="hidden" name="sig" value={sig} />
+					<p>Setup step: {step}</p>
+					<p>
+						<em>Onboarding form fields will be added in a future phase.</em>
+					</p>
+					<button type="submit">Complete Setup</button>
+				</form>
+			</div>
+		) : (
+			<div id="error-message">
+				<p>{errorMessage}</p>
+			</div>
+		)}
+	</body>
+</html>

@@ -1,10 +1,12 @@
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
+import { createApp } from "./app";
+import { loadConfig } from "./config";
+import { createDb } from "./db/connection";
 
-const app = new Hono();
+const config = loadConfig();
+const db = createDb(config.databaseUrl);
+const app = createApp(config, db);
 
-app.get("/health", (c) => c.json({ status: "ok", service: "user-management" }));
-
-serve({ fetch: app.fetch, port: Number(process.env.PORT) || 3007 }, (info) => {
+serve({ fetch: app.fetch, port: config.port }, (info) => {
 	console.log(`user-management listening on :${info.port}`);
 });

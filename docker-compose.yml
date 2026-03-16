@@ -76,6 +76,7 @@ services:
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
       RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-60}
+      USER_MANAGEMENT_URL: http://user-management:3007
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -209,6 +210,12 @@ services:
       - "3007"
     environment:
       PORT: 3007
+      SERVICE_NAME: user-management
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
+      DATABASE_URL: postgresql://monica:monica_dev@postgres:5432/monica_companion
+      SETUP_TOKEN_SECRET: ${SETUP_TOKEN_SECRET}
+      SETUP_BASE_URL: ${SETUP_BASE_URL:-http://localhost}
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -231,6 +238,11 @@ services:
       - "4321"
     environment:
       PORT: 4321
+      SERVICE_NAME: web-ui
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
+      USER_MANAGEMENT_URL: http://user-management:3007
+      EXPECTED_ORIGIN: ${EXPECTED_ORIGIN:-http://localhost}
     volumes:
       - .:/app
       - node_modules:/app/node_modules

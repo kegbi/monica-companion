@@ -13,6 +13,9 @@
 		"build": "tsup",
 		"check": "biome check ."
 	},
+	"dependencies": {
+		"zod": "catalog:"
+	},
 	"devDependencies": {
 		"typescript": "catalog:",
 		"tsup": "catalog:"
