@@ -59,10 +59,10 @@ _Finish the Monica boundary and credential model before broader AI behavior depe
   - [x] Expose audited credential access only to `monica-integration`.
   - [x] Expose separate non-secret preference and schedule endpoints to `telegram-bridge`, `ai-router`, and `scheduler`.
 
-- [ ] **Testing Strategy Split**
-  - [ ] Use mocked Monica contract tests in CI.
-  - [ ] Stand up a controlled real-Monica smoke suite outside normal CI.
-  - [ ] Make the smoke suite a release gate for production.
+- [x] **Testing Strategy Split**
+  - [x] Use mocked Monica contract tests in CI.
+  - [x] Stand up a controlled real-Monica smoke suite outside normal CI.
+  - [x] Make the smoke suite a release gate for production.
 
 ---
 
