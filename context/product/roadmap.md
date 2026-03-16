@@ -44,10 +44,10 @@ _Finish the Monica boundary and credential model before broader AI behavior depe
   - [x] Finish `context/product/monica-api-scope.md` so fixtures, schemas, and tests stop depending on guesswork.
   - [x] Document the Monica fields and endpoints needed to build the internal contact-resolution projection.
 
-- [ ] **Typed Monica Integration**
-  - [ ] Build `@monica-companion/monica-api-lib` with typed contracts and validation for all V1 operations.
-  - [ ] Implement `monica-integration` as the only Monica-facing service.
-  - [ ] Add transport-level timeouts, capped quick retries, pagination handling, and Monica-specific error mapping.
+- [x] **Typed Monica Integration**
+  - [x] Build `@monica-companion/monica-api-lib` with typed contracts and validation for all V1 operations.
+  - [x] Implement `monica-integration` as the only Monica-facing service.
+  - [x] Add transport-level timeouts, capped quick retries, pagination handling, and Monica-specific error mapping.
 
 - [ ] **Safe Multi-Instance Support**
   - [ ] Normalize and persist canonical Monica base URLs.
