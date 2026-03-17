@@ -7,9 +7,22 @@ async function main() {
 	const { serve } = await import("@hono/node-server");
 	const { createApp } = await import("./app");
 	const { loadConfig } = await import("./config");
+	const { createRedisClient, closeRedisClient } = await import("@monica-companion/guardrails");
+	const { createWhisperClient } = await import("./whisper-client");
 
 	const config = loadConfig();
-	const app = createApp(config);
+
+	// Create Redis client for guardrails
+	const redis = createRedisClient(config.redisUrl);
+
+	// Create Whisper client
+	const whisperClient = createWhisperClient({
+		apiKey: config.openaiApiKey,
+		model: config.whisperModel,
+		timeoutMs: config.whisperTimeoutMs,
+	});
+
+	const app = createApp(config, redis, whisperClient);
 	const port = Number(process.env.PORT) || 3003;
 
 	serve({ fetch: app.fetch, port }, (info) => {
@@ -18,6 +31,7 @@ async function main() {
 
 	const shutdown = async () => {
 		logger.info("Shutting down voice-transcription");
+		await closeRedisClient(redis);
 		await telemetry.shutdown();
 		process.exit(0);
 	};

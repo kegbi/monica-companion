@@ -11,6 +11,7 @@ export interface VoiceTranscriptionClient {
 	transcribe(
 		metadata: TranscriptionRequestMetadata,
 		audioBuffer: ArrayBuffer,
+		userId: string,
 	): Promise<TranscriptionResponse>;
 }
 
@@ -28,6 +29,7 @@ export function createVoiceTranscriptionClient(
 		async transcribe(
 			metadata: TranscriptionRequestMetadata,
 			audioBuffer: ArrayBuffer,
+			userId: string,
 		): Promise<TranscriptionResponse> {
 			const formData = new FormData();
 			formData.append("metadata", JSON.stringify(metadata));
@@ -38,6 +40,7 @@ export function createVoiceTranscriptionClient(
 				method: "POST",
 				body: formData,
 				correlationId: metadata.correlationId,
+				userId,
 				signal,
 			});
 

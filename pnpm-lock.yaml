@@ -66,6 +66,9 @@ catalogs:
     jose:
       specifier: 6.2.1
       version: 6.2.1
+    openai:
+      specifier: 6.31.0
+      version: 6.31.0
     postgres:
       specifier: 3.4.8
       version: 3.4.8
@@ -88,10 +91,6 @@ catalogs:
 importers:
 
   .:
-    dependencies:
-      '@rollup/rollup-win32-x64-msvc':
-        specifier: ^4.59.0
-        version: 4.59.0
     devDependencies:
       '@biomejs/biome':
         specifier: 2.4.7
@@ -539,15 +538,30 @@ importers:
       '@monica-companion/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@monica-companion/guardrails':
+        specifier: workspace:*
+        version: link:../../packages/guardrails
       '@monica-companion/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@monica-companion/redaction':
+        specifier: workspace:*
+        version: link:../../packages/redaction
       '@monica-companion/types':
         specifier: workspace:*
         version: link:../../packages/types
+      '@opentelemetry/api':
+        specifier: 'catalog:'
+        version: 1.9.0
       hono:
         specifier: 'catalog:'
         version: 4.12.8
+      ioredis:
+        specifier: 'catalog:'
+        version: 5.10.0
+      openai:
+        specifier: 'catalog:'
+        version: 6.31.0(zod@4.3.6)
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -2640,6 +2654,18 @@ packages:
   oniguruma-to-es@4.3.5:
     resolution: {integrity: sha512-Zjygswjpsewa0NLTsiizVuMQZbp0MDyM6lIt66OxsF21npUDlzpHi1Mgb/qhQdkb+dWFTzJmFbEWdvZgRho8eQ==}
 
+  openai@6.31.0:
+    resolution: {integrity: sha512-iqEn3QY1NnVrDOynUWA2Fjs04gzZ0m7fbwR9xZVFmcN1cqQwslMQM2sjQBNkTVFK/rrSvV78SXiBgU+Pyqz1Aw==}
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   p-limit@7.3.0:
     resolution: {integrity: sha512-7cIXg/Z0M5WZRblrsOla88S4wAK+zOQQWeBYfV3qJuJXMr+LnbYjaadrFaS0JILfEDPVqHyKnZ1Z/1d6J9VVUw==}
     engines: {node: '>=20'}
@@ -4134,7 +4160,8 @@ snapshots:
   '@rollup/rollup-win32-x64-gnu@4.59.0':
     optional: true
 
-  '@rollup/rollup-win32-x64-msvc@4.59.0': {}
+  '@rollup/rollup-win32-x64-msvc@4.59.0':
+    optional: true
 
   '@shikijs/core@4.0.2':
     dependencies:
@@ -5354,6 +5381,10 @@ snapshots:
       oniguruma-parser: 0.12.1
       regex: 6.1.0
       regex-recursion: 6.0.2
+
+  openai@6.31.0(zod@4.3.6):
+    optionalDependencies:
+      zod: 4.3.6
 
   p-limit@7.3.0:
     dependencies:

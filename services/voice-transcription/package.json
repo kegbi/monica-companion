@@ -12,10 +12,15 @@
 	},
 	"dependencies": {
 		"@monica-companion/auth": "workspace:*",
+		"@monica-companion/guardrails": "workspace:*",
 		"@monica-companion/observability": "workspace:*",
+		"@monica-companion/redaction": "workspace:*",
 		"@monica-companion/types": "workspace:*",
 		"hono": "catalog:",
 		"@hono/node-server": "catalog:",
+		"ioredis": "catalog:",
+		"@opentelemetry/api": "catalog:",
+		"openai": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

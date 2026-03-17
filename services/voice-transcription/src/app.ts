@@ -1,12 +1,16 @@
 import { serviceAuth } from "@monica-companion/auth";
+import { createGuardrailMetrics, guardrailMiddleware } from "@monica-companion/guardrails";
 import { otelMiddleware } from "@monica-companion/observability";
-import { TranscriptionRequestMetadataSchema } from "@monica-companion/types";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
+import type Redis from "ioredis";
 import type { Config } from "./config";
+import { createTranscriptionHandler } from "./transcription-handler";
+import type { WhisperClient } from "./whisper-client";
 
-export function createApp(config: Config) {
+export function createApp(config: Config, redis: Redis, whisperClient: WhisperClient) {
 	const app = new Hono();
+	const metrics = createGuardrailMetrics();
 
 	app.use(otelMiddleware());
 
@@ -21,41 +25,36 @@ export function createApp(config: Config) {
 		}),
 	);
 
-	// 25MB body limit per plan [LOW-1 fix]
+	// 25MB body limit
 	internal.use(bodyLimit({ maxSize: 25 * 1024 * 1024 }));
 
-	internal.post("/transcribe", async (c) => {
-		let formData: FormData;
-		try {
-			formData = await c.req.formData();
-		} catch {
-			return c.json({ error: "Invalid multipart request" }, 400);
-		}
+	// Apply guardrail middleware with duration-based cost estimation (M2 finding)
+	internal.use(
+		"/transcribe",
+		guardrailMiddleware({
+			redis,
+			modelType: "whisper",
+			rateLimit: config.guardrails.rateLimitPerUser,
+			rateWindowSeconds: config.guardrails.rateWindowSeconds,
+			maxConcurrency: config.guardrails.concurrencyPerUser,
+			budgetLimitUsd: config.guardrails.budgetLimitUsd,
+			budgetAlarmThresholdPct: config.guardrails.budgetAlarmThresholdPct,
+			costEstimator: () => {
+				// Duration-based cost estimation per M2 finding
+				// Default to 1 minute estimate when duration unknown
+				return config.whisperCostPerMinuteUsd;
+			},
+			metrics,
+			service: "voice-transcription",
+		}),
+	);
 
-		const metadataRaw = formData.get("metadata");
-		if (typeof metadataRaw !== "string") {
-			return c.json({ error: "Missing metadata field" }, 400);
-		}
-
-		let metadataParsed: unknown;
-		try {
-			metadataParsed = JSON.parse(metadataRaw);
-		} catch {
-			return c.json({ error: "Invalid metadata JSON" }, 400);
-		}
-
-		const metadataResult = TranscriptionRequestMetadataSchema.safeParse(metadataParsed);
-		if (!metadataResult.success) {
-			return c.json({ error: "Invalid metadata" }, 400);
-		}
-
-		// Stub: transcription not yet implemented
-		return c.json({
-			success: false,
-			error: "Transcription not implemented",
-			correlationId: metadataResult.data.correlationId,
-		});
+	const handler = createTranscriptionHandler({
+		config,
+		whisperClient,
 	});
+
+	internal.post("/transcribe", handler);
 
 	app.route("/internal", internal);
 

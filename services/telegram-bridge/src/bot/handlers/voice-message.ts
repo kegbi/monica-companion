@@ -10,6 +10,7 @@ export type TranscribeFn = (
 		correlationId: string;
 	},
 	audioBuffer: ArrayBuffer,
+	userId: string,
 ) => Promise<{ success: boolean; text?: string; error?: string; correlationId: string }>;
 
 export type ForwardEventFn = (event: InboundEvent) => Promise<void>;
@@ -37,6 +38,7 @@ export function createVoiceMessageHandler(
 					correlationId: ctx.correlationId,
 				},
 				buffer,
+				ctx.userId,
 			);
 
 			if (!transcriptionResult.success || !transcriptionResult.text) {

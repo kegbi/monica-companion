@@ -60,7 +60,8 @@ export function createApp(config: Config, redis?: Redis) {
 		},
 		forwardEvent: (event) => aiRouterClient.forwardEvent(event),
 		downloadFile: (fileId) => fileFetcher.downloadFile(fileId),
-		transcribe: (metadata, buffer) => voiceTranscriptionClient.transcribe(metadata, buffer),
+		transcribe: (metadata, buffer, userId) =>
+			voiceTranscriptionClient.transcribe(metadata, buffer, userId),
 	});
 
 	// Create update dedup (uses Redis if available)

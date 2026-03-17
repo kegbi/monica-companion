@@ -51,6 +51,34 @@ describe("voiceMessageHandler", () => {
 		});
 	});
 
+	it("passes userId to transcribe function for guardrail enforcement", async () => {
+		const mockDownload = vi.fn(async () => ({
+			buffer: new ArrayBuffer(10),
+		}));
+		const mockTranscribe = vi.fn(async () => ({
+			success: true,
+			text: "Hello from voice",
+			correlationId: "corr-voice",
+		}));
+		const mockForward = vi.fn(async () => {});
+
+		const handler = createVoiceMessageHandler(mockDownload, mockTranscribe, mockForward);
+		const ctx = createMockCtx();
+
+		await handler(ctx as never);
+
+		// Verify userId is passed as the third argument to transcribe
+		expect(mockTranscribe).toHaveBeenCalledWith(
+			expect.objectContaining({
+				mimeType: "audio/ogg",
+				durationSeconds: 5,
+				correlationId: "corr-voice",
+			}),
+			expect.any(ArrayBuffer),
+			"user-uuid-123",
+		);
+	});
+
 	it("sends error message when transcription fails", async () => {
 		const mockDownload = vi.fn(async () => ({
 			buffer: new ArrayBuffer(10),

@@ -1,5 +1,24 @@
 import { signServiceToken } from "@monica-companion/auth";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// Mock guardrails to pass through
+vi.mock("@monica-companion/guardrails", () => ({
+	guardrailMiddleware: vi.fn().mockReturnValue(async (_c: any, next: any) => {
+		await next();
+	}),
+	createGuardrailMetrics: vi.fn().mockReturnValue({
+		recordRateLimitRejection: vi.fn(),
+		recordConcurrencyRejection: vi.fn(),
+		updateBudgetSpend: vi.fn(),
+		updateBudgetLimit: vi.fn(),
+		updateBudgetAlarm: vi.fn(),
+		recordBudgetExhaustion: vi.fn(),
+		updateKillSwitch: vi.fn(),
+		recordKillSwitchRejection: vi.fn(),
+		recordRequestAllowed: vi.fn(),
+	}),
+}));
+
 import { createApp } from "../app";
 
 const JWT_SECRET = "test-secret-256-bit-minimum-key!";
@@ -9,11 +28,34 @@ const testConfig = {
 		serviceName: "voice-transcription" as const,
 		jwtSecrets: [JWT_SECRET],
 	},
+	openaiApiKey: "sk-test-key",
+	whisperModel: "whisper-1",
+	whisperTimeoutMs: 60000,
+	whisperMaxFileSizeBytes: 25 * 1024 * 1024,
+	fetchUrlTimeoutMs: 15000,
+	whisperCostPerMinuteUsd: 0.006,
+	redisUrl: "redis://localhost:6379",
+	guardrails: {
+		redisUrl: "redis://localhost:6379",
+		rateLimitPerUser: 30,
+		rateWindowSeconds: 60,
+		concurrencyPerUser: 3,
+		budgetLimitUsd: 100,
+		budgetAlarmThresholdPct: 80,
+		costPerRequestUsd: 0.01,
+	},
+};
+
+const mockWhisperClient = {
+	transcribe: vi.fn().mockResolvedValue({
+		text: "Test transcription",
+		detectedLanguage: "en",
+	}),
 };
 
 describe("voice-transcription app", () => {
 	it("GET /health returns 200", async () => {
-		const app = createApp(testConfig);
+		const app = createApp(testConfig, null as any, mockWhisperClient);
 		const res = await app.request("/health");
 		expect(res.status).toBe(200);
 		const body = await res.json();
@@ -21,7 +63,7 @@ describe("voice-transcription app", () => {
 	});
 
 	it("POST /internal/transcribe returns 401 without auth", async () => {
-		const app = createApp(testConfig);
+		const app = createApp(testConfig, null as any, mockWhisperClient);
 		const res = await app.request("/internal/transcribe", { method: "POST" });
 		expect(res.status).toBe(401);
 	});
@@ -32,7 +74,7 @@ describe("voice-transcription app", () => {
 			audience: "voice-transcription",
 			secret: JWT_SECRET,
 		});
-		const app = createApp(testConfig);
+		const app = createApp(testConfig, null as any, mockWhisperClient);
 		const res = await app.request("/internal/transcribe", {
 			method: "POST",
 			headers: { Authorization: `Bearer ${token}` },
@@ -40,14 +82,15 @@ describe("voice-transcription app", () => {
 		expect(res.status).toBe(403);
 	});
 
-	it("POST /internal/transcribe returns stub error for valid request from telegram-bridge", async () => {
+	it("POST /internal/transcribe returns transcription for valid request from telegram-bridge", async () => {
 		const token = await signServiceToken({
 			issuer: "telegram-bridge",
 			audience: "voice-transcription",
 			secret: JWT_SECRET,
 			correlationId: "corr-test",
+			subject: "user-123",
 		});
-		const app = createApp(testConfig);
+		const app = createApp(testConfig, null as any, mockWhisperClient);
 
 		const formData = new FormData();
 		formData.append(
@@ -67,8 +110,8 @@ describe("voice-transcription app", () => {
 		});
 		const body = await res.json();
 		expect(res.status).toBe(200);
-		expect(body.success).toBe(false);
-		expect(body.error).toBe("Transcription not implemented");
+		expect(body.success).toBe(true);
+		expect(body.text).toBe("Test transcription");
 		expect(body.correlationId).toBe("corr-test");
 	});
 });
