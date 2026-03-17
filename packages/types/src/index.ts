@@ -1,4 +1,14 @@
 export {
+	BenchmarkCase,
+	BenchmarkCaseCategory,
+	BenchmarkCaseStatus,
+	BenchmarkMetrics,
+	CaseResult,
+	ContactResolutionBenchmarkCase,
+	IntentBenchmarkCase,
+} from "./benchmark";
+
+export {
 	type CommandType,
 	type ConfirmedCommandPayload,
 	ConfirmedCommandPayloadSchema,

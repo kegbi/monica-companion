@@ -35,3 +35,8 @@ jobs:
       # All Monica API tests use mocked fixtures. No real Monica instance is contacted.
       - name: Test
         run: pnpm test
+
+      # Benchmark quality gates: fails the build if accuracy thresholds are not met.
+      # Thresholds: contact-resolution >= 95%, read >= 92%, write >= 90%, false-positive mutation < 1%.
+      - name: Benchmark quality gates
+        run: pnpm bench:ai

@@ -4,6 +4,11 @@ import { defineConfig } from "vitest/config";
 const pnpmStore = resolve(__dirname, "../../node_modules/.pnpm");
 const honoBase = resolve(pnpmStore, "hono@4.12.8/node_modules/hono");
 
+/**
+ * Vitest config for benchmark quality gate tests only.
+ * Uses the same module aliases as the main config but includes
+ * only the benchmark test files.
+ */
 export default defineConfig({
 	resolve: {
 		alias: {
@@ -41,6 +46,6 @@ export default defineConfig({
 	},
 	test: {
 		fileParallelism: false,
-		exclude: ["**/node_modules/**", "**/dist/**", "**/benchmark/**"],
+		include: ["src/benchmark/__tests__/**/*.test.ts"],
 	},
 });
