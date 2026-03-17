@@ -6,6 +6,7 @@ const baseEnv = {
 	JWT_SECRET: "test-jwt-secret",
 	DATABASE_URL: "postgresql://monica:monica_dev@localhost:5432/monica_companion",
 	MONICA_INTEGRATION_URL: "http://monica-integration:3004",
+	REDIS_URL: "redis://localhost:6379",
 };
 
 describe("loadConfig", () => {
@@ -65,5 +66,31 @@ describe("loadConfig", () => {
 	it("throws when MONICA_INTEGRATION_URL is missing", () => {
 		const { MONICA_INTEGRATION_URL, ...env } = baseEnv;
 		expect(() => loadConfig(env)).toThrow();
+	});
+
+	it("loads guardrail config with defaults", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.guardrails.redisUrl).toBe("redis://localhost:6379");
+		expect(config.guardrails.rateLimitPerUser).toBe(30);
+		expect(config.guardrails.rateWindowSeconds).toBe(60);
+		expect(config.guardrails.concurrencyPerUser).toBe(3);
+		expect(config.guardrails.budgetLimitUsd).toBe(100);
+		expect(config.guardrails.budgetAlarmThresholdPct).toBe(80);
+		expect(config.guardrails.costPerRequestUsd).toBe(0.01);
+	});
+
+	it("throws when REDIS_URL is missing", () => {
+		const { REDIS_URL, ...env } = baseEnv;
+		expect(() => loadConfig(env)).toThrow();
+	});
+
+	it("parses custom guardrail values", () => {
+		const config = loadConfig({
+			...baseEnv,
+			GUARDRAIL_RATE_LIMIT_PER_USER: "50",
+			GUARDRAIL_BUDGET_LIMIT_USD: "200",
+		});
+		expect(config.guardrails.rateLimitPerUser).toBe(50);
+		expect(config.guardrails.budgetLimitUsd).toBe(200);
 	});
 });

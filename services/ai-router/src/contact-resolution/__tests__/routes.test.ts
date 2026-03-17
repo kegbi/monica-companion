@@ -14,6 +14,24 @@ vi.mock("@monica-companion/observability", () => ({
 	}),
 }));
 
+// Mock guardrails so middleware passes through without Redis
+vi.mock("@monica-companion/guardrails", () => ({
+	guardrailMiddleware: () => async (_c: unknown, next: () => Promise<void>) => {
+		await next();
+	},
+	createGuardrailMetrics: vi.fn().mockReturnValue({
+		recordRateLimitRejection: vi.fn(),
+		recordConcurrencyRejection: vi.fn(),
+		updateBudgetSpend: vi.fn(),
+		updateBudgetLimit: vi.fn(),
+		updateBudgetAlarm: vi.fn(),
+		recordBudgetExhaustion: vi.fn(),
+		updateKillSwitch: vi.fn(),
+		recordKillSwitchRejection: vi.fn(),
+		recordRequestAllowed: vi.fn(),
+	}),
+}));
+
 import { createApp } from "../../app.js";
 import type { Config } from "../../config.js";
 import type { Database } from "../../db/connection.js";
@@ -42,9 +60,19 @@ const testConfig: Config = {
 		serviceName: "ai-router",
 		jwtSecrets: ["test-secret-that-is-long-enough-for-hs256"],
 	},
+	guardrails: {
+		redisUrl: "redis://localhost:6379",
+		rateLimitPerUser: 30,
+		rateWindowSeconds: 60,
+		concurrencyPerUser: 3,
+		budgetLimitUsd: 100,
+		budgetAlarmThresholdPct: 80,
+		costPerRequestUsd: 0.01,
+	},
 };
 
 const testDb = {} as Database;
+const testRedis = {} as any;
 
 async function makeAuthToken(
 	overrides: { issuer?: string; subject?: string; correlationId?: string } = {},
@@ -60,7 +88,7 @@ async function makeAuthToken(
 
 describe("POST /internal/resolve-contact", () => {
 	it("returns 200 with ContactResolutionResult for valid request", async () => {
-		const app = createApp(testConfig, testDb);
+		const app = createApp(testConfig, testDb, testRedis);
 		mockResolve.mockResolvedValue({
 			outcome: "resolved",
 			resolved: {
@@ -96,7 +124,7 @@ describe("POST /internal/resolve-contact", () => {
 	});
 
 	it("returns 400 for invalid request body", async () => {
-		const app = createApp(testConfig, testDb);
+		const app = createApp(testConfig, testDb, testRedis);
 		const token = await makeAuthToken();
 
 		const res = await app.request("/internal/resolve-contact", {
@@ -112,7 +140,7 @@ describe("POST /internal/resolve-contact", () => {
 	});
 
 	it("returns 400 for empty contactRef", async () => {
-		const app = createApp(testConfig, testDb);
+		const app = createApp(testConfig, testDb, testRedis);
 		const token = await makeAuthToken();
 
 		const res = await app.request("/internal/resolve-contact", {
@@ -131,7 +159,7 @@ describe("POST /internal/resolve-contact", () => {
 	});
 
 	it("returns 502 when monica-integration is unavailable", async () => {
-		const app = createApp(testConfig, testDb);
+		const app = createApp(testConfig, testDb, testRedis);
 		mockResolve.mockRejectedValue(
 			new ContactResolutionClientError("monica-integration returned status 502"),
 		);
@@ -155,7 +183,7 @@ describe("POST /internal/resolve-contact", () => {
 	});
 
 	it("returns 401 for missing auth token", async () => {
-		const app = createApp(testConfig, testDb);
+		const app = createApp(testConfig, testDb, testRedis);
 
 		const res = await app.request("/internal/resolve-contact", {
 			method: "POST",

@@ -77,25 +77,69 @@ groups:
         labels:
           severity: warning
 
-      - uid: quota-exhaustion-placeholder
-        title: QuotaExhaustion (placeholder)
+      - uid: budget-alarm
+        title: BudgetAlarm
         condition: A
         data:
           - refId: A
             relativeTimeRange:
-              from: 60
+              from: 120
               to: 0
             datasourceUid: prometheus
             model:
-              expr: "vector(0)"
+              expr: guardrail_budget_alarm_active == 1
+              instant: true
+              refId: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 1m
+        annotations:
+          summary: "OpenAI budget alarm threshold exceeded"
+          description: "The cumulative OpenAI spend has exceeded the configured alarm threshold percentage. Review usage and consider adjusting limits."
+        labels:
+          severity: warning
+
+      - uid: budget-exhausted
+        title: BudgetExhausted
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: guardrail_budget_current_spend_usd >= guardrail_budget_limit_usd
+              instant: true
+              refId: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 1m
+        annotations:
+          summary: "OpenAI budget exhausted - AI features are blocked"
+          description: "The cumulative OpenAI spend has reached or exceeded the budget limit. All AI requests are being rejected until the budget is increased or the month resets."
+        labels:
+          severity: critical
+
+      - uid: kill-switch-active
+        title: KillSwitchActive
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: guardrail_kill_switch_active == 1
               instant: true
               refId: A
         noDataState: OK
         execErrState: OK
         for: 1m
         annotations:
-          summary: "Placeholder: OpenAI quota exhaustion alert"
-          description: "This alert will be wired when OpenAI API metrics are available. It will fire when 429 status codes from OpenAI exceed threshold for >1 minute."
+          summary: "AI kill switch is active"
+          description: "The operator kill switch is enabled. All AI requests are being rejected. Clear the kill switch via redis-cli DEL guardrail:kill-switch to restore service."
         labels:
           severity: info
 

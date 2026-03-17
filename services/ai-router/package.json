@@ -15,8 +15,10 @@
 	},
 	"dependencies": {
 		"@monica-companion/auth": "workspace:*",
+		"@monica-companion/guardrails": "workspace:*",
 		"@monica-companion/observability": "workspace:*",
 		"@monica-companion/types": "workspace:*",
+		"ioredis": "catalog:",
 		"hono": "catalog:",
 		"@hono/node-server": "catalog:",
 		"zod": "catalog:",

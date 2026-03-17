@@ -1,0 +1,31 @@
+{
+	"name": "@monica-companion/guardrails",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"build": "tsup",
+		"check": "biome check .",
+		"test": "vitest run --passWithNoTests"
+	},
+	"dependencies": {
+		"@monica-companion/auth": "workspace:*",
+		"@opentelemetry/api": "catalog:",
+		"hono": "catalog:",
+		"ioredis": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"tsup": "catalog:",
+		"vitest": "catalog:"
+	}
+}

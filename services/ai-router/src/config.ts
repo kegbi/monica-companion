@@ -1,4 +1,5 @@
 import { type AuthConfig, loadAuthConfig } from "@monica-companion/auth";
+import { type GuardrailConfig, loadGuardrailConfig } from "@monica-companion/guardrails";
 import { z } from "zod/v4";
 
 const configSchema = z.object({
@@ -16,11 +17,13 @@ export interface Config {
 	expirySweepIntervalMs: number;
 	monicaIntegrationUrl: string;
 	auth: AuthConfig;
+	guardrails: GuardrailConfig;
 }
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
 	const parsed = configSchema.parse(env);
 	const auth = loadAuthConfig(env);
+	const guardrails = loadGuardrailConfig(env);
 	return {
 		port: parsed.PORT,
 		databaseUrl: parsed.DATABASE_URL,
@@ -28,5 +31,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 		expirySweepIntervalMs: parsed.EXPIRY_SWEEP_INTERVAL_MS,
 		monicaIntegrationUrl: parsed.MONICA_INTEGRATION_URL,
 		auth,
+		guardrails,
 	};
 }

@@ -30,7 +30,12 @@ export default defineConfig({
 				pnpmStore,
 				"@opentelemetry+api-logs@0.213.0/node_modules/@opentelemetry/api-logs",
 			),
+			"@opentelemetry/api": resolve(
+				pnpmStore,
+				"@opentelemetry+api@1.9.0/node_modules/@opentelemetry/api",
+			),
 			"@monica-companion/auth": resolve(__dirname, "../../packages/auth/src/index.ts"),
+			"@monica-companion/guardrails": resolve(__dirname, "../../packages/guardrails/src/index.ts"),
 			"@monica-companion/types": resolve(__dirname, "../../packages/types/src/index.ts"),
 			"@monica-companion/observability": resolve(
 				__dirname,

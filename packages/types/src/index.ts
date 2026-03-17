@@ -32,7 +32,18 @@ export {
 	MatchReason,
 	ResolutionOutcome,
 } from "./contact-resolution";
-
+export {
+	type BudgetExhaustedError,
+	BudgetExhaustedError as BudgetExhaustedErrorSchema,
+	type ConcurrencyExceededError,
+	ConcurrencyExceededError as ConcurrencyExceededErrorSchema,
+	type GuardrailErrorResponse,
+	GuardrailErrorResponse as GuardrailErrorResponseSchema,
+	type RateLimitedError,
+	RateLimitedError as RateLimitedErrorSchema,
+	type ServiceDegradedError,
+	ServiceDegradedError as ServiceDegradedErrorSchema,
+} from "./guardrails";
 export {
 	CancelSetupTokenResponse,
 	ConsumeSetupTokenRequest,

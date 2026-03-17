@@ -1,0 +1,262 @@
+{
+	"annotations": {
+		"list": []
+	},
+	"editable": true,
+	"fiscalYearStartMonth": 0,
+	"graphTooltip": 1,
+	"id": null,
+	"links": [],
+	"panels": [
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "currencyUSD",
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{ "color": "green", "value": null },
+							{ "color": "yellow", "value": 80 },
+							{ "color": "red", "value": 100 }
+						]
+					}
+				}
+			},
+			"gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+			"id": 1,
+			"options": {
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"fields": "",
+					"values": false
+				},
+				"orientation": "auto",
+				"showThresholdLabels": false,
+				"showThresholdMarkers": true
+			},
+			"title": "Current Month Spend",
+			"type": "gauge",
+			"targets": [
+				{
+					"expr": "guardrail_budget_current_spend_usd",
+					"legendFormat": "Spend",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "currencyUSD"
+				}
+			},
+			"gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+			"id": 2,
+			"options": {
+				"reduceOptions": {
+					"calcs": ["lastNotNull"],
+					"fields": "",
+					"values": false
+				}
+			},
+			"title": "Budget Limit",
+			"type": "stat",
+			"targets": [
+				{
+					"expr": "guardrail_budget_limit_usd",
+					"legendFormat": "Limit",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"mappings": [
+						{
+							"options": {
+								"0": { "text": "OFF", "color": "green" },
+								"1": { "text": "ON", "color": "red" }
+							},
+							"type": "value"
+						}
+					]
+				}
+			},
+			"gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+			"id": 3,
+			"title": "Kill Switch Status",
+			"type": "stat",
+			"targets": [
+				{
+					"expr": "guardrail_kill_switch_active",
+					"legendFormat": "Kill Switch",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "currencyUSD",
+					"custom": {
+						"lineWidth": 2,
+						"fillOpacity": 10,
+						"gradientMode": "scheme",
+						"showPoints": "auto"
+					}
+				}
+			},
+			"gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
+			"id": 4,
+			"title": "Budget Burn Rate (Spend Over Time)",
+			"type": "timeseries",
+			"targets": [
+				{
+					"expr": "guardrail_budget_current_spend_usd",
+					"legendFormat": "Cumulative Spend",
+					"refId": "A"
+				},
+				{
+					"expr": "guardrail_budget_limit_usd",
+					"legendFormat": "Budget Limit",
+					"refId": "B"
+				}
+			]
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"custom": {
+						"lineWidth": 2,
+						"fillOpacity": 10,
+						"showPoints": "auto"
+					}
+				}
+			},
+			"gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+			"id": 5,
+			"title": "Rate Limit Rejections",
+			"type": "timeseries",
+			"targets": [
+				{
+					"expr": "rate(guardrail_rate_limit_rejected_total[5m])",
+					"legendFormat": "{{model_type}} - {{service}}",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"custom": {
+						"lineWidth": 2,
+						"fillOpacity": 10,
+						"showPoints": "auto"
+					}
+				}
+			},
+			"gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+			"id": 6,
+			"title": "Concurrency Rejections",
+			"type": "timeseries",
+			"targets": [
+				{
+					"expr": "rate(guardrail_concurrency_rejected_total[5m])",
+					"legendFormat": "{{model_type}} - {{service}}",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"custom": {
+						"lineWidth": 2,
+						"fillOpacity": 10,
+						"showPoints": "auto"
+					}
+				}
+			},
+			"gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+			"id": 7,
+			"title": "Requests Allowed",
+			"type": "timeseries",
+			"targets": [
+				{
+					"expr": "rate(guardrail_request_allowed_total[5m])",
+					"legendFormat": "{{model_type}} - {{service}}",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"datasource": {
+				"type": "prometheus",
+				"uid": "prometheus"
+			},
+			"fieldConfig": {
+				"defaults": {
+					"custom": {
+						"lineWidth": 2,
+						"fillOpacity": 10,
+						"showPoints": "auto"
+					}
+				}
+			},
+			"gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+			"id": 8,
+			"title": "Kill Switch Rejections",
+			"type": "timeseries",
+			"targets": [
+				{
+					"expr": "rate(guardrail_kill_switch_rejected_total[5m])",
+					"legendFormat": "{{service}}",
+					"refId": "A"
+				}
+			]
+		}
+	],
+	"schemaVersion": 39,
+	"tags": ["guardrails", "openai", "budget"],
+	"templating": {
+		"list": []
+	},
+	"time": {
+		"from": "now-24h",
+		"to": "now"
+	},
+	"timepicker": {},
+	"timezone": "utc",
+	"title": "OpenAI Budget & Guardrails",
+	"uid": "openai-budget",
+	"version": 1
+}
