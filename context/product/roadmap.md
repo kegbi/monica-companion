@@ -112,11 +112,11 @@ _Finish the end-to-end runtime behavior for confirmations, reminders, and messag
   - [x] Own idempotency, job-level retries, dead-letter handling, and execution observability.
   - [x] Implement daily/weekly reminder scheduling using IANA timezones, DST-aware local wall-clock semantics, and a bounded catch-up window.
 
-- [ ] **Delivery**
-  - [ ] Implement `delivery` as a standalone service package and deployable in the initial Telegram-only profile.
-  - [ ] Route all outbound connector-neutral message intents through `delivery`.
-  - [ ] Keep formatting in the connector, not in `delivery` or `scheduler`.
-  - [ ] Persist delivery audits and expose failure visibility in observability.
+- [x] **Delivery**
+  - [x] Implement `delivery` as a standalone service package and deployable in the initial Telegram-only profile.
+  - [x] Route all outbound connector-neutral message intents through `delivery`.
+  - [x] Keep formatting in the connector, not in `delivery` or `scheduler`.
+  - [x] Persist delivery audits and expose failure visibility in observability.
 
 ---
 
