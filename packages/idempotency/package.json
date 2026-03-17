@@ -11,10 +11,16 @@
 	},
 	"scripts": {
 		"build": "tsup",
-		"check": "biome check ."
+		"check": "biome check .",
+		"test": "vitest run --passWithNoTests"
+	},
+	"dependencies": {
+		"drizzle-orm": "catalog:",
+		"postgres": "catalog:"
 	},
 	"devDependencies": {
 		"typescript": "catalog:",
-		"tsup": "catalog:"
+		"tsup": "catalog:",
+		"vitest": "catalog:"
 	}
 }

@@ -27,6 +27,7 @@ import {
 	getDecryptedCredentials,
 	getUserPreferences,
 	getUserSchedule,
+	listUsersWithSchedules,
 	logCredentialAccess,
 } from "./user/repository";
 
@@ -351,6 +352,12 @@ export function createApp(config: Config, db: Database) {
 			confirmationMode: prefs.confirmationMode,
 			timezone: prefs.timezone,
 		});
+	});
+
+	// --- User schedule list endpoint (caller: scheduler only) ---
+	app.get("/internal/users/with-schedules", schedulerAuth, async (c) => {
+		const users = await listUsersWithSchedules(db);
+		return c.json({ data: users });
 	});
 
 	// --- Schedule endpoint (caller: scheduler only) ---

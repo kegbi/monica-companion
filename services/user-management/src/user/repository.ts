@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, ne } from "drizzle-orm";
 import {
 	computeKeyId,
 	encryptCredential,
@@ -71,6 +71,34 @@ export async function getUserSchedule(
 		connectorType: prefs.connectorType,
 		connectorRoutingId: prefs.connectorRoutingId,
 	};
+}
+
+/**
+ * List all users with active reminder schedules (cadence != 'none').
+ * Used by the scheduler to enumerate users for reminder polling.
+ */
+export async function listUsersWithSchedules(db: Database): Promise<
+	Array<{
+		userId: string;
+		reminderCadence: string;
+		reminderTime: string;
+		timezone: string;
+		connectorType: string;
+		connectorRoutingId: string;
+	}>
+> {
+	const rows = await db
+		.select({
+			userId: userPreferences.userId,
+			reminderCadence: userPreferences.reminderCadence,
+			reminderTime: userPreferences.reminderTime,
+			timezone: userPreferences.timezone,
+			connectorType: userPreferences.connectorType,
+			connectorRoutingId: userPreferences.connectorRoutingId,
+		})
+		.from(userPreferences)
+		.where(ne(userPreferences.reminderCadence, "none"));
+	return rows;
 }
 
 export async function logCredentialAccess(

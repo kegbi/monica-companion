@@ -848,3 +848,92 @@ describe("GET /internal/users/by-connector/:connectorType/:connectorUserId", () 
 		expect(body.error).toBe("Unsupported connector type");
 	});
 });
+
+// --- User schedule list endpoint tests ---
+
+describe("GET /internal/users/with-schedules", () => {
+	it("returns 401 without auth", async () => {
+		const app = createApp(testConfig, db);
+		const res = await app.request("/internal/users/with-schedules");
+		expect(res.status).toBe(401);
+	});
+
+	it("returns 403 for disallowed caller (telegram-bridge)", async () => {
+		const token = await signToken("telegram-bridge");
+		const app = createApp(testConfig, db);
+		const res = await app.request("/internal/users/with-schedules", {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(403);
+	});
+
+	it("returns empty array when no users have schedules", async () => {
+		const token = await signToken("scheduler");
+		const app = createApp(testConfig, db);
+		const res = await app.request("/internal/users/with-schedules", {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.data).toEqual([]);
+	});
+
+	it("returns users with active reminder cadence (not none)", async () => {
+		await seedTestUser({
+			withPreferences: true,
+			timezone: "America/New_York",
+			reminderCadence: "daily",
+			reminderTime: "08:00",
+			connectorRoutingId: "chat-123",
+		});
+		await seedTestUser({
+			withPreferences: true,
+			timezone: "Europe/London",
+			reminderCadence: "weekly",
+			reminderTime: "09:00",
+			connectorRoutingId: "chat-456",
+		});
+
+		const token = await signToken("scheduler");
+		const app = createApp(testConfig, db);
+		const res = await app.request("/internal/users/with-schedules", {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.data).toHaveLength(2);
+		expect(body.data[0]).toHaveProperty("userId");
+		expect(body.data[0]).toHaveProperty("reminderCadence");
+		expect(body.data[0]).toHaveProperty("reminderTime");
+		expect(body.data[0]).toHaveProperty("timezone");
+		expect(body.data[0]).toHaveProperty("connectorType");
+		expect(body.data[0]).toHaveProperty("connectorRoutingId");
+	});
+
+	it("excludes users with reminder_cadence = none", async () => {
+		await seedTestUser({
+			withPreferences: true,
+			timezone: "UTC",
+			reminderCadence: "none",
+			reminderTime: "08:00",
+			connectorRoutingId: "chat-789",
+		});
+		await seedTestUser({
+			withPreferences: true,
+			timezone: "UTC",
+			reminderCadence: "daily",
+			reminderTime: "10:00",
+			connectorRoutingId: "chat-012",
+		});
+
+		const token = await signToken("scheduler");
+		const app = createApp(testConfig, db);
+		const res = await app.request("/internal/users/with-schedules", {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.data).toHaveLength(1);
+		expect(body.data[0].reminderCadence).toBe("daily");
+	});
+});
