@@ -124,10 +124,10 @@ _Finish the end-to-end runtime behavior for confirmations, reminders, and messag
 
 _Use real usage data to validate that the separate service split remains justified and to identify where contracts or scaling boundaries need adjustment after V1._
 
-- [ ] **Operational Review**
-  - [ ] Measure queue latency, retry amplification, OpenAI spend, and reminder reliability under load.
-  - [ ] Validate that keeping `delivery` and `voice-transcription` as separate deployables in V1 continues to be justified by operational needs and connector roadmap.
-  - [ ] Verify that read-only interactions continue to bypass the queued execution path and still meet latency targets.
+- [x] **Operational Review**
+  - [x] Measure queue latency, retry amplification, OpenAI spend, and reminder reliability under load.
+  - [x] Validate that keeping `delivery` and `voice-transcription` as separate deployables in V1 continues to be justified by operational needs and connector roadmap.
+  - [x] Verify that read-only interactions continue to bypass the queued execution path and still meet latency targets.
 
 - [ ] **Connector-Ready Contracts**
   - [ ] Keep connector-neutral contracts clean without leaking Telegram-specific assumptions.
