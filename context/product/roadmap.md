@@ -96,10 +96,10 @@ _Define the user-facing AI contract and make interactive mutations safe before s
 
 _Finish the end-to-end runtime behavior for confirmations, reminders, and message delivery._
 
-- [ ] **Telegram Bridge**
-  - [ ] Implement webhook ingestion, private-chat-only enforcement, connector event normalization, and Telegram file retrieval.
-  - [ ] Route voice input through `voice-transcription` using the connector-neutral transcription contract.
-  - [ ] Support buttons, text replies, and voice replies for confirmation and clarification flows.
+- [x] **Telegram Bridge**
+  - [x] Implement webhook ingestion, private-chat-only enforcement, connector event normalization, and Telegram file retrieval.
+  - [x] Route voice input through `voice-transcription` using the connector-neutral transcription contract.
+  - [x] Support buttons, text replies, and voice replies for confirmation and clarification flows.
 
 - [ ] **Voice Transcription**
   - [ ] Implement `voice-transcription` as a standalone service package and deployable in the initial Telegram-only profile.
