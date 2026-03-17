@@ -41,6 +41,16 @@ Check all changes against these rules (read each file):
 - **`.claude/rules/reliability.md`** — Timeouts on external calls? Zod validation on contracts? Proper error handling?
 - **`.claude/rules/definition-of-done.md`** — All criteria met?
 
+### 4. Check for Unintended Removals
+
+Inspect the `git diff` for **deletions in shared/config files** that the plan did not authorize:
+
+- **`.env.example`**: Must contain ALL previously-documented env vars plus any new ones. If the diff shows removed variables, sections, or comments that the plan did not call for removing, flag as HIGH.
+- **`docker-compose.yml`**: Verify no existing service definitions, env vars, or volume mounts were accidentally removed.
+- **`pnpm-workspace.yaml`**: Verify no existing catalog entries were removed.
+- **`packages/*/src/index.ts`** (barrel exports): Verify no existing exports were removed unless the plan explicitly calls for it.
+- **General rule**: If the plan says "add" or "document" for a file, the diff should be additive only. Significant deletions in files that should only be appended to are a HIGH finding.
+
 ### 4. Check Plan Compliance
 Compare the implementation against the approved plan. Was the plan followed? Are there unjustified deviations?
 

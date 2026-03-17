@@ -52,6 +52,12 @@ Do NOT write implementation code before writing the test for it.
 - Run `pnpm test` in affected packages to verify all tests pass.
 - Keep changes focused — implement exactly what the plan says.
 
+## Non-Destructive Edits
+
+- When the plan says "add" or "document" variables in `.env.example`, config files, or other shared files, use `Edit` to append — never `Write` to overwrite. Read the file first and preserve all existing content.
+- When modifying any existing file, prefer `Edit` (targeted replacement) over `Write` (full overwrite). Only use `Write` for new files or when the plan explicitly calls for a complete rewrite.
+- Before modifying a shared file (`.env.example`, `docker-compose.yml`, `pnpm-workspace.yaml`, `packages/types/src/index.ts`, etc.), read it first and verify your change does not remove existing entries.
+
 ## Handling Code Review Feedback
 
 If you receive a code review rejection:
