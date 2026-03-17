@@ -107,10 +107,10 @@ _Finish the end-to-end runtime behavior for confirmations, reminders, and messag
   - [x] Return normalized transcript output and user-safe failure states.
   - [x] Keep connector-specific file handles inside the connector.
 
-- [ ] **Scheduler**
-  - [ ] Accept only confirmed commands for execution.
-  - [ ] Own idempotency, job-level retries, dead-letter handling, and execution observability.
-  - [ ] Implement daily/weekly reminder scheduling using IANA timezones, DST-aware local wall-clock semantics, and a bounded catch-up window.
+- [x] **Scheduler**
+  - [x] Accept only confirmed commands for execution.
+  - [x] Own idempotency, job-level retries, dead-letter handling, and execution observability.
+  - [x] Implement daily/weekly reminder scheduling using IANA timezones, DST-aware local wall-clock semantics, and a bounded catch-up window.
 
 - [ ] **Delivery**
   - [ ] Implement `delivery` as a standalone service package and deployable in the initial Telegram-only profile.
