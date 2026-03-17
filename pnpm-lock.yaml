@@ -366,13 +366,28 @@ importers:
       '@monica-companion/types':
         specifier: workspace:*
         version: link:../../packages/types
+      '@opentelemetry/api':
+        specifier: 'catalog:'
+        version: 1.9.0
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.1(@opentelemetry/api@1.9.0)(postgres@3.4.8)
       hono:
         specifier: 'catalog:'
         version: 4.12.8
+      postgres:
+        specifier: 'catalog:'
+        version: 3.4.8
       zod:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.12.0
+      drizzle-kit:
+        specifier: 'catalog:'
+        version: 0.31.9
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.2)

@@ -35,6 +35,12 @@ export {
 	ResolutionOutcome,
 } from "./contact-resolution";
 export {
+	type DeliveryResponse,
+	DeliveryResponseSchema,
+	type DeliveryResponseStatus,
+	DeliveryResponseStatusSchema,
+} from "./delivery";
+export {
 	type BudgetExhaustedError,
 	BudgetExhaustedError as BudgetExhaustedErrorSchema,
 	type ConcurrencyExceededError,
@@ -70,7 +76,6 @@ export {
 	type TranscriptionResponse,
 	TranscriptionResponseSchema,
 } from "./transcription";
-
 export {
 	MonicaCredentialsResponse,
 	UserPreferencesResponse,
