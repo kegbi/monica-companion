@@ -80,10 +80,10 @@ _Define the user-facing AI contract and make interactive mutations safe before s
   - [x] Ensure `ai-router` consumes only the projection, not raw Monica payloads or credentials.
   - [x] Define deterministic ranking and ambiguity thresholds for kinship, nickname, and duplicate-name scenarios.
 
-- [ ] **Benchmark & Quality Gates**
-  - [ ] Build the labeled benchmark set for read intents, write intents, and clarification turns.
-  - [ ] Track read accuracy, write accuracy, contact-resolution precision, false-positive mutation rate, and latency.
-  - [ ] Block release if the benchmark thresholds in `acceptance-criteria.md` are not met.
+- [x] **Benchmark & Quality Gates**
+  - [x] Build the labeled benchmark set for read intents, write intents, and clarification turns.
+  - [x] Track read accuracy, write accuracy, contact-resolution precision, false-positive mutation rate, and latency.
+  - [x] Block release if the benchmark thresholds in `acceptance-criteria.md` are not met.
 
 - [ ] **Shared-Model Guardrails**
   - [ ] Enforce per-user request-size limits and concurrency caps for GPT/Whisper usage.
