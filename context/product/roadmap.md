@@ -85,10 +85,10 @@ _Define the user-facing AI contract and make interactive mutations safe before s
   - [x] Track read accuracy, write accuracy, contact-resolution precision, false-positive mutation rate, and latency.
   - [x] Block release if the benchmark thresholds in `acceptance-criteria.md` are not met.
 
-- [ ] **Shared-Model Guardrails**
-  - [ ] Enforce per-user request-size limits and concurrency caps for GPT/Whisper usage.
-  - [ ] Add budget alarms and an operator kill switch/degraded-mode path.
-  - [ ] Define user-facing behavior when OpenAI quota or budget is exhausted.
+- [x] **Shared-Model Guardrails**
+  - [x] Enforce per-user request-size limits and concurrency caps for GPT/Whisper usage.
+  - [x] Add budget alarms and an operator kill switch/degraded-mode path.
+  - [x] Define user-facing behavior when OpenAI quota or budget is exhausted.
 
 ---
 
