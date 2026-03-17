@@ -101,11 +101,11 @@ _Finish the end-to-end runtime behavior for confirmations, reminders, and messag
   - [x] Route voice input through `voice-transcription` using the connector-neutral transcription contract.
   - [x] Support buttons, text replies, and voice replies for confirmation and clarification flows.
 
-- [ ] **Voice Transcription**
-  - [ ] Implement `voice-transcription` as a standalone service package and deployable in the initial Telegram-only profile.
-  - [ ] Accept binary upload or short-lived fetch URL plus media metadata.
-  - [ ] Return normalized transcript output and user-safe failure states.
-  - [ ] Keep connector-specific file handles inside the connector.
+- [x] **Voice Transcription**
+  - [x] Implement `voice-transcription` as a standalone service package and deployable in the initial Telegram-only profile.
+  - [x] Accept binary upload or short-lived fetch URL plus media metadata.
+  - [x] Return normalized transcript output and user-safe failure states.
+  - [x] Keep connector-specific file handles inside the connector.
 
 - [ ] **Scheduler**
   - [ ] Accept only confirmed commands for execution.
