@@ -5,11 +5,20 @@ const logger = createLogger("telegram-bridge");
 
 async function main() {
 	const { serve } = await import("@hono/node-server");
+	const { default: Redis } = await import("ioredis");
 	const { createApp } = await import("./app");
 	const { loadConfig } = await import("./config");
 
 	const config = loadConfig();
-	const app = createApp(config);
+
+	let redis: InstanceType<typeof Redis> | undefined;
+	try {
+		redis = new Redis(config.redisUrl);
+	} catch {
+		logger.warn("Failed to connect to Redis for update dedup -- proceeding without dedup");
+	}
+
+	const app = createApp(config, redis);
 
 	serve({ fetch: app.fetch, port: config.port }, (info) => {
 		logger.info(`telegram-bridge listening on :${info.port}`);
@@ -17,6 +26,9 @@ async function main() {
 
 	const shutdown = async () => {
 		logger.info("Shutting down telegram-bridge");
+		if (redis) {
+			await redis.quit();
+		}
 		await telemetry.shutdown();
 		process.exit(0);
 	};

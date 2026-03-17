@@ -793,3 +793,58 @@ describe("GET /internal/users/:userId/schedule", () => {
 		expect(body.connectorRoutingId).toBe("chat-789");
 	});
 });
+
+// --- Connector user lookup endpoint tests ---
+
+describe("GET /internal/users/by-connector/:connectorType/:connectorUserId", () => {
+	it("returns 401 without auth", async () => {
+		const app = createApp(testConfig, db);
+		const res = await app.request("/internal/users/by-connector/telegram/12345");
+		expect(res.status).toBe(401);
+	});
+
+	it("returns 403 for disallowed caller (ai-router)", async () => {
+		const token = await signToken("ai-router");
+		const app = createApp(testConfig, db);
+		const res = await app.request("/internal/users/by-connector/telegram/12345", {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(403);
+	});
+
+	it("returns found: true with userId for known Telegram user", async () => {
+		const user = await seedTestUser({ telegramUserId: "tg-lookup-test" });
+		const token = await signToken("telegram-bridge");
+		const app = createApp(testConfig, db);
+		const res = await app.request("/internal/users/by-connector/telegram/tg-lookup-test", {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.found).toBe(true);
+		expect(body.userId).toBe(user.id);
+	});
+
+	it("returns found: false for unknown Telegram user", async () => {
+		const token = await signToken("telegram-bridge");
+		const app = createApp(testConfig, db);
+		const res = await app.request("/internal/users/by-connector/telegram/nonexistent-user", {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.found).toBe(false);
+		expect(body.userId).toBeUndefined();
+	});
+
+	it("returns 400 for unsupported connector type", async () => {
+		const token = await signToken("telegram-bridge");
+		const app = createApp(testConfig, db);
+		const res = await app.request("/internal/users/by-connector/slack/12345", {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status).toBe(400);
+		const body = await res.json();
+		expect(body.error).toBe("Unsupported connector type");
+	});
+});

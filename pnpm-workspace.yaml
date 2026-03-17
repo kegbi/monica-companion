@@ -28,6 +28,7 @@ catalog:
   '@opentelemetry/sdk-logs': 0.213.0
   '@opentelemetry/sdk-metrics': 2.6.0
   ioredis: 5.10.0
+  grammy: 1.41.1
 
 onlyBuiltDependencies:
   - esbuild

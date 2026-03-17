@@ -54,6 +54,9 @@ catalogs:
     drizzle-orm:
       specifier: 0.45.1
       version: 0.45.1
+    grammy:
+      specifier: 1.41.1
+      version: 1.41.1
     hono:
       specifier: 4.12.8
       version: 4.12.8
@@ -85,6 +88,10 @@ catalogs:
 importers:
 
   .:
+    dependencies:
+      '@rollup/rollup-win32-x64-msvc':
+        specifier: ^4.59.0
+        version: 4.59.0
     devDependencies:
       '@biomejs/biome':
         specifier: 2.4.7
@@ -338,12 +345,24 @@ importers:
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.11(hono@4.12.8)
+      '@monica-companion/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@monica-companion/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@monica-companion/redaction':
+        specifier: workspace:*
+        version: link:../../packages/redaction
+      '@monica-companion/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       hono:
         specifier: 'catalog:'
         version: 4.12.8
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       tsup:
         specifier: 'catalog:'
@@ -434,9 +453,21 @@ importers:
       '@monica-companion/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@monica-companion/redaction':
+        specifier: workspace:*
+        version: link:../../packages/redaction
+      '@monica-companion/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      grammy:
+        specifier: 'catalog:'
+        version: 1.41.1
       hono:
         specifier: 'catalog:'
         version: 4.12.8
+      ioredis:
+        specifier: 'catalog:'
+        version: 5.10.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -505,12 +536,21 @@ importers:
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.11(hono@4.12.8)
+      '@monica-companion/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@monica-companion/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@monica-companion/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       hono:
         specifier: 'catalog:'
         version: 4.12.8
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       tsup:
         specifier: 'catalog:'
@@ -1114,6 +1154,9 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@grammyjs/types@3.25.0':
+    resolution: {integrity: sha512-iN9i5p+8ZOu9OMxWNcguojQfz4K/PDyMPOnL7PPCON+SoA/F8OKMH3uR7CVUkYfdNe0GCz8QOzAWrnqusQYFOg==}
 
   '@grpc/grpc-js@1.14.3':
     resolution: {integrity: sha512-Iq8QQQ/7X3Sac15oB6p0FmUg/klxQvXLeileoqrTRGJYLV+/9tubbr9ipz0GKHjmXVsgFPo/+W+2cA8eNcR+XA==}
@@ -1723,6 +1766,10 @@ packages:
   '@vitest/utils@4.1.0':
     resolution: {integrity: sha512-XfPXT6a8TZY3dcGY8EdwsBulFCIw+BeeX0RZn2x/BtiY/75YGh8FeWGG8QISN/WhaqSrE2OrlDgtF8q5uhOTmw==}
 
+  abort-controller@3.0.0:
+    resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
+    engines: {node: '>=6.5'}
+
   acorn-import-attributes@1.9.5:
     resolution: {integrity: sha512-n02Vykv5uA3eHGM/Z2dQrcD56kL8TyDb2p1+0P83PClMnC/nc+anbQRhIOWnSq4Ke/KvDPrY3C9hDtC/A3eHnQ==}
     peerDependencies:
@@ -2150,6 +2197,10 @@ packages:
     resolution: {integrity: sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==}
     engines: {node: '>= 0.6'}
 
+  event-target-shim@5.0.1:
+    resolution: {integrity: sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==}
+    engines: {node: '>=6'}
+
   eventemitter3@5.0.4:
     resolution: {integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==}
 
@@ -2208,6 +2259,10 @@ packages:
 
   github-slugger@2.0.0:
     resolution: {integrity: sha512-IaOQ9puYtjrkq7Y0Ygl9KDZnrf/aiUJYUpVf89y8kyaxbRG7Y1SrX/jaumrv81vc61+kiMempujsM3Yw7w5qcw==}
+
+  grammy@1.41.1:
+    resolution: {integrity: sha512-wcHAQ1e7svL3fJMpDchcQVcWUmywhuepOOjHUHmMmWAwUJEIyK5ea5sbSjZd+Gy1aMpZeP8VYJa+4tP+j1YptQ==}
+    engines: {node: ^12.20.0 || >=14.13.1}
 
   h3@1.15.6:
     resolution: {integrity: sha512-oi15ESLW5LRthZ+qPCi5GNasY/gvynSKUQxgiovrY63bPAtG59wtM+LSrlcwvOHAXzGrXVLnI97brbkdPF9WoQ==}
@@ -2538,6 +2593,15 @@ packages:
 
   node-fetch-native@1.6.7:
     resolution: {integrity: sha512-g9yhqoedzIUm0nTnTqAQvueMPVOuIY16bqgAJJC8XOOubYFNwz6IER9qs0Gq2Xd0+CecCKFjtdDTMA4u4xG06Q==}
+
+  node-fetch@2.7.0:
+    resolution: {integrity: sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==}
+    engines: {node: 4.x || >=6.0.0}
+    peerDependencies:
+      encoding: ^0.1.0
+    peerDependenciesMeta:
+      encoding:
+        optional: true
 
   node-mock-http@1.0.4:
     resolution: {integrity: sha512-8DY+kFsDkNXy1sJglUfuODx1/opAGJGyrTuFqEoN90oRc2Vk0ZbD4K2qmKXBBEhZQzdKHIVfEJpDU8Ak2NJEvQ==}
@@ -2910,6 +2974,9 @@ packages:
     resolution: {integrity: sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==}
     engines: {node: '>=0.6'}
 
+  tr46@0.0.3:
+    resolution: {integrity: sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==}
+
   tree-kill@1.2.2:
     resolution: {integrity: sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A==}
     hasBin: true
@@ -3166,6 +3233,12 @@ packages:
 
   web-namespaces@2.0.1:
     resolution: {integrity: sha512-bKr1DkiNa2krS7qxNtdrtHAmzuYGFQLiQ13TsorsdT6ULTkPLKuu5+GsFpDlg6JFjUTwX2DyhMPG2be8uPrqsQ==}
+
+  webidl-conversions@3.0.1:
+    resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
+
+  whatwg-url@5.0.0:
+    resolution: {integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==}
 
   which-pm-runs@1.1.0:
     resolution: {integrity: sha512-n1brCuqClxfFfq/Rb0ICg9giSZqCS+pLtccdag6C2HyufBrh3fBOiy9nb6ggRMvWOVH5GrdJskj5iGTZNxd7SA==}
@@ -3575,6 +3648,8 @@ snapshots:
 
   '@esbuild/win32-x64@0.27.4':
     optional: true
+
+  '@grammyjs/types@3.25.0': {}
 
   '@grpc/grpc-js@1.14.3':
     dependencies:
@@ -4059,8 +4134,7 @@ snapshots:
   '@rollup/rollup-win32-x64-gnu@4.59.0':
     optional: true
 
-  '@rollup/rollup-win32-x64-msvc@4.59.0':
-    optional: true
+  '@rollup/rollup-win32-x64-msvc@4.59.0': {}
 
   '@shikijs/core@4.0.2':
     dependencies:
@@ -4179,6 +4253,10 @@ snapshots:
       '@vitest/pretty-format': 4.1.0
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
+
+  abort-controller@3.0.0:
+    dependencies:
+      event-target-shim: 5.0.1
 
   acorn-import-attributes@1.9.5(acorn@8.16.0):
     dependencies:
@@ -4606,6 +4684,8 @@ snapshots:
 
   etag@1.8.1: {}
 
+  event-target-shim@5.0.1: {}
+
   eventemitter3@5.0.4: {}
 
   expect-type@1.3.0: {}
@@ -4648,6 +4728,16 @@ snapshots:
       resolve-pkg-maps: 1.0.0
 
   github-slugger@2.0.0: {}
+
+  grammy@1.41.1:
+    dependencies:
+      '@grammyjs/types': 3.25.0
+      abort-controller: 3.0.0
+      debug: 4.4.3
+      node-fetch: 2.7.0
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
 
   h3@1.15.6:
     dependencies:
@@ -5225,6 +5315,10 @@ snapshots:
 
   node-fetch-native@1.6.7: {}
 
+  node-fetch@2.7.0:
+    dependencies:
+      whatwg-url: 5.0.0
+
   node-mock-http@1.0.4: {}
 
   normalize-path@3.0.0: {}
@@ -5691,6 +5785,8 @@ snapshots:
 
   toidentifier@1.0.1: {}
 
+  tr46@0.0.3: {}
+
   tree-kill@1.2.2: {}
 
   trim-lines@3.0.1: {}
@@ -5884,6 +5980,13 @@ snapshots:
       - msw
 
   web-namespaces@2.0.1: {}
+
+  webidl-conversions@3.0.1: {}
+
+  whatwg-url@5.0.0:
+    dependencies:
+      tr46: 0.0.3
+      webidl-conversions: 3.0.1
 
   which-pm-runs@1.1.0: {}
 

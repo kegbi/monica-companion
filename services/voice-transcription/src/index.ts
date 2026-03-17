@@ -6,8 +6,10 @@ const logger = createLogger("voice-transcription");
 async function main() {
 	const { serve } = await import("@hono/node-server");
 	const { createApp } = await import("./app");
+	const { loadConfig } = await import("./config");
 
-	const app = createApp();
+	const config = loadConfig();
+	const app = createApp(config);
 	const port = Number(process.env.PORT) || 3003;
 
 	serve({ fetch: app.fetch, port }, (info) => {

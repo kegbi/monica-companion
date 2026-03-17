@@ -13,6 +13,10 @@
 	"dependencies": {
 		"@monica-companion/auth": "workspace:*",
 		"@monica-companion/observability": "workspace:*",
+		"@monica-companion/redaction": "workspace:*",
+		"@monica-companion/types": "workspace:*",
+		"grammy": "catalog:",
+		"ioredis": "catalog:",
 		"hono": "catalog:",
 		"@hono/node-server": "catalog:",
 		"zod": "catalog:"

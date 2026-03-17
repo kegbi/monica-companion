@@ -8,6 +8,7 @@ const configSchema = z.object({
 	PENDING_COMMAND_TTL_MINUTES: z.coerce.number().int().positive().default(30),
 	EXPIRY_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
 	MONICA_INTEGRATION_URL: z.string().min(1),
+	DELIVERY_URL: z.string().min(1).optional(),
 });
 
 export interface Config {
@@ -16,6 +17,7 @@ export interface Config {
 	pendingCommandTtlMinutes: number;
 	expirySweepIntervalMs: number;
 	monicaIntegrationUrl: string;
+	deliveryUrl?: string;
 	auth: AuthConfig;
 	guardrails: GuardrailConfig;
 }
@@ -30,6 +32,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 		pendingCommandTtlMinutes: parsed.PENDING_COMMAND_TTL_MINUTES,
 		expirySweepIntervalMs: parsed.EXPIRY_SWEEP_INTERVAL_MS,
 		monicaIntegrationUrl: parsed.MONICA_INTEGRATION_URL,
+		deliveryUrl: parsed.DELIVERY_URL,
 		auth,
 		guardrails,
 	};

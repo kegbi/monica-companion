@@ -7,7 +7,6 @@ export {
 	ContactResolutionBenchmarkCase,
 	IntentBenchmarkCase,
 } from "./benchmark";
-
 export {
 	type CommandType,
 	type ConfirmedCommandPayload,
@@ -22,7 +21,10 @@ export {
 	ReadOnlyCommandPayloadSchema,
 	ReadOnlyCommandType,
 } from "./commands";
-
+export {
+	type ConnectorUserLookupResponse,
+	ConnectorUserLookupResponseSchema,
+} from "./connector-user-lookup";
 export {
 	ContactMatchCandidate,
 	ContactResolutionRequest,
@@ -44,6 +46,13 @@ export {
 	type ServiceDegradedError,
 	ServiceDegradedError as ServiceDegradedErrorSchema,
 } from "./guardrails";
+export { type InboundEvent, InboundEventSchema } from "./inbound-event";
+export {
+	type OutboundContent,
+	OutboundContentSchema,
+	type OutboundMessageIntent,
+	OutboundMessageIntentSchema,
+} from "./outbound-message";
 export {
 	CancelSetupTokenResponse,
 	ConsumeSetupTokenRequest,
@@ -55,6 +64,12 @@ export {
 	SetupTokenStatus,
 	ValidateSetupTokenResponse,
 } from "./setup-token";
+export {
+	type TranscriptionRequestMetadata,
+	TranscriptionRequestMetadataSchema,
+	type TranscriptionResponse,
+	TranscriptionResponseSchema,
+} from "./transcription";
 
 export {
 	MonicaCredentialsResponse,

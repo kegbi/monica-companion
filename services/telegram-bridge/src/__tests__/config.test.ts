@@ -3,6 +3,11 @@ import { loadConfig } from "../config";
 
 const baseEnv = {
 	TELEGRAM_WEBHOOK_SECRET: "my-secret",
+	TELEGRAM_BOT_TOKEN: "123456:ABC-DEF",
+	AI_ROUTER_URL: "http://ai-router:3002",
+	VOICE_TRANSCRIPTION_URL: "http://voice-transcription:3003",
+	USER_MANAGEMENT_URL: "http://user-management:3007",
+	REDIS_URL: "redis://localhost:6379",
 	SERVICE_NAME: "telegram-bridge" as const,
 	JWT_SECRET: "test-jwt-secret",
 };
@@ -18,6 +23,11 @@ describe("loadConfig", () => {
 
 		expect(config.port).toBe(3001);
 		expect(config.telegramWebhookSecret).toBe("my-secret");
+		expect(config.telegramBotToken).toBe("123456:ABC-DEF");
+		expect(config.aiRouterUrl).toBe("http://ai-router:3002");
+		expect(config.voiceTranscriptionUrl).toBe("http://voice-transcription:3003");
+		expect(config.userManagementUrl).toBe("http://user-management:3007");
+		expect(config.redisUrl).toBe("redis://localhost:6379");
 		expect(config.rateLimitWindowMs).toBe(30_000);
 		expect(config.rateLimitMaxRequests).toBe(100);
 		expect(config.auth.serviceName).toBe("telegram-bridge");
@@ -30,14 +40,43 @@ describe("loadConfig", () => {
 		expect(config.port).toBe(3001);
 		expect(config.rateLimitWindowMs).toBe(60_000);
 		expect(config.rateLimitMaxRequests).toBe(60);
+		expect(config.aiRouterTimeoutMs).toBe(10000);
+		expect(config.voiceTranscriptionTimeoutMs).toBe(30000);
+		expect(config.userManagementTimeoutMs).toBe(5000);
 	});
 
 	it("throws when TELEGRAM_WEBHOOK_SECRET is missing", () => {
-		expect(() => loadConfig({ SERVICE_NAME: "telegram-bridge", JWT_SECRET: "s" })).toThrow();
+		const { TELEGRAM_WEBHOOK_SECRET, ...rest } = baseEnv;
+		expect(() => loadConfig(rest)).toThrow();
 	});
 
 	it("throws when TELEGRAM_WEBHOOK_SECRET is empty", () => {
 		expect(() => loadConfig({ ...baseEnv, TELEGRAM_WEBHOOK_SECRET: "" })).toThrow();
+	});
+
+	it("throws when TELEGRAM_BOT_TOKEN is missing", () => {
+		const { TELEGRAM_BOT_TOKEN, ...rest } = baseEnv;
+		expect(() => loadConfig(rest)).toThrow();
+	});
+
+	it("throws when AI_ROUTER_URL is missing", () => {
+		const { AI_ROUTER_URL, ...rest } = baseEnv;
+		expect(() => loadConfig(rest)).toThrow();
+	});
+
+	it("throws when VOICE_TRANSCRIPTION_URL is missing", () => {
+		const { VOICE_TRANSCRIPTION_URL, ...rest } = baseEnv;
+		expect(() => loadConfig(rest)).toThrow();
+	});
+
+	it("throws when USER_MANAGEMENT_URL is missing", () => {
+		const { USER_MANAGEMENT_URL, ...rest } = baseEnv;
+		expect(() => loadConfig(rest)).toThrow();
+	});
+
+	it("throws when REDIS_URL is missing", () => {
+		const { REDIS_URL, ...rest } = baseEnv;
+		expect(() => loadConfig(rest)).toThrow();
 	});
 
 	it("throws when PORT is not a valid number", () => {
@@ -58,13 +97,13 @@ describe("loadConfig", () => {
 	});
 
 	it("throws when SERVICE_NAME is missing", () => {
-		expect(() => loadConfig({ TELEGRAM_WEBHOOK_SECRET: "s", JWT_SECRET: "s" })).toThrow();
+		const { SERVICE_NAME, ...rest } = baseEnv;
+		expect(() => loadConfig(rest)).toThrow();
 	});
 
 	it("throws when JWT_SECRET is missing", () => {
-		expect(() =>
-			loadConfig({ TELEGRAM_WEBHOOK_SECRET: "s", SERVICE_NAME: "telegram-bridge" }),
-		).toThrow();
+		const { JWT_SECRET, ...rest } = baseEnv;
+		expect(() => loadConfig(rest)).toThrow();
 	});
 
 	it("includes previous JWT secret when provided", () => {
@@ -73,5 +112,17 @@ describe("loadConfig", () => {
 			JWT_SECRET_PREVIOUS: "old-secret",
 		});
 		expect(config.auth.jwtSecrets).toEqual(["test-jwt-secret", "old-secret"]);
+	});
+
+	it("overrides timeout defaults when provided", () => {
+		const config = loadConfig({
+			...baseEnv,
+			AI_ROUTER_TIMEOUT_MS: "5000",
+			VOICE_TRANSCRIPTION_TIMEOUT_MS: "15000",
+			USER_MANAGEMENT_TIMEOUT_MS: "3000",
+		});
+		expect(config.aiRouterTimeoutMs).toBe(5000);
+		expect(config.voiceTranscriptionTimeoutMs).toBe(15000);
+		expect(config.userManagementTimeoutMs).toBe(3000);
 	});
 });

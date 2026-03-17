@@ -23,6 +23,7 @@ import {
 	logAuditEvent,
 } from "./setup-token/repository";
 import {
+	findUserByTelegramId,
 	getDecryptedCredentials,
 	getUserPreferences,
 	getUserSchedule,
@@ -274,6 +275,27 @@ export function createApp(config: Config, db: Database) {
 
 		return c.json(result);
 	});
+
+	// --- Connector user lookup (caller: telegram-bridge) ---
+	app.get(
+		"/internal/users/by-connector/:connectorType/:connectorUserId",
+		telegramBridgeAuth,
+		async (c) => {
+			const connectorType = c.req.param("connectorType");
+			const connectorUserId = c.req.param("connectorUserId");
+
+			if (connectorType !== "telegram") {
+				return c.json({ error: "Unsupported connector type" }, 400);
+			}
+
+			const user = await findUserByTelegramId(db, connectorUserId);
+			if (!user) {
+				return c.json({ found: false });
+			}
+
+			return c.json({ found: true, userId: user.id });
+		},
+	);
 
 	// --- Credential endpoint (caller: monica-integration only, audited) ---
 	app.get("/internal/users/:userId/monica-credentials", monicaIntegrationAuth, async (c) => {

@@ -73,10 +73,17 @@ services:
       SERVICE_NAME: telegram-bridge
       JWT_SECRET: ${JWT_SECRET}
       JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
       RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-60}
       USER_MANAGEMENT_URL: http://user-management:3007
+      AI_ROUTER_URL: http://ai-router:3002
+      VOICE_TRANSCRIPTION_URL: http://voice-transcription:3003
+      REDIS_URL: redis://redis:6379
+      AI_ROUTER_TIMEOUT_MS: ${AI_ROUTER_TIMEOUT_MS:-10000}
+      VOICE_TRANSCRIPTION_TIMEOUT_MS: ${VOICE_TRANSCRIPTION_TIMEOUT_MS:-30000}
+      USER_MANAGEMENT_TIMEOUT_MS: ${USER_MANAGEMENT_TIMEOUT_MS:-5000}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_SERVICE_NAME: telegram-bridge
     volumes:
@@ -109,6 +116,7 @@ services:
       PENDING_COMMAND_TTL_MINUTES: ${PENDING_COMMAND_TTL_MINUTES:-30}
       EXPIRY_SWEEP_INTERVAL_MS: ${EXPIRY_SWEEP_INTERVAL_MS:-60000}
       MONICA_INTEGRATION_URL: http://monica-integration:3004
+      DELIVERY_URL: http://delivery:3006
       REDIS_URL: redis://redis:6379
       GUARDRAIL_RATE_LIMIT_PER_USER: ${GUARDRAIL_RATE_LIMIT_PER_USER:-30}
       GUARDRAIL_RATE_WINDOW_SECONDS: ${GUARDRAIL_RATE_WINDOW_SECONDS:-60}
@@ -143,6 +151,8 @@ services:
     environment:
       PORT: 3003
       SERVICE_NAME: voice-transcription
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_SERVICE_NAME: voice-transcription
     volumes:
@@ -226,6 +236,9 @@ services:
     environment:
       PORT: 3006
       SERVICE_NAME: delivery
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
+      TELEGRAM_BRIDGE_URL: http://telegram-bridge:3001
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_SERVICE_NAME: delivery
     volumes:
