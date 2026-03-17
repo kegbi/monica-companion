@@ -31,7 +31,16 @@
 			"Bash(pnpm ls:*)",
 			"Bash(cd:*)",
 			"Bash(npx biome:*)",
-			"Bash(cat:*)"
+			"Bash(cat:*)",
+			"Bash(DATABASE_URL=\"postgresql://monica:monica_dev@localhost:5432/monica_companion\" pnpm --filter @monica-companion/user-management run test 2>&1 | tail -40)",
+			"Bash(DATABASE_URL=\"postgresql://monica:monica_dev@localhost:5432/monica_companion\" pnpm --filter @monica-companion/user-management run test 2>&1 | tail -30)",
+			"Bash(DATABASE_URL=\"postgresql://monica:monica_dev@localhost:5432/monica_companion\" pnpm --filter @monica-companion/user-management run test 2>&1 | head -80)",
+			"Bash(DATABASE_URL=\"postgresql://monica:monica_dev@localhost:5432/monica_companion\" pnpm --filter @monica-companion/user-management run test 2>&1 | tail -20)",
+			"Bash(DATABASE_URL=\"postgresql://monica:monica_dev@localhost:5432/monica_companion\" pnpm test 2>&1 | tail -30)",
+			"Bash(git add:*)",
+			"Bash(git commit:*)",
+			"Bash(node:*)",
+			"Bash(git rm:*)"
 		]
 	},
 	"disabledMcpjsonServers": ["awos-recruitment"]
