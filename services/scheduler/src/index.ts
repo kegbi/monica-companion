@@ -4,6 +4,7 @@ import { createLogger } from "@monica-companion/observability";
 import { Queue, Worker } from "bullmq";
 import IORedis from "ioredis";
 import { telemetry } from "./instrumentation";
+import { createQueueMetrics } from "./lib/queue-metrics";
 
 const logger = createLogger("scheduler");
 
@@ -45,6 +46,9 @@ async function main() {
 		baseUrl: config.userManagementUrl,
 	});
 
+	// Queue metrics (OTel instruments)
+	const queueMetrics = createQueueMetrics();
+
 	// BullMQ queues
 	const commandQueue = new Queue("command-execution", { connection: redis });
 	const reminderQueue = new Queue("reminder-execute", { connection: redis });
@@ -61,12 +65,33 @@ async function main() {
 	const commandWorker = new Worker(
 		"command-execution",
 		async (job) => {
-			await processCommandJob(job.data, {
-				monicaClient,
-				deliveryClient,
-				idempotencyStore,
-				db: db as never,
-			});
+			// Record wait duration (time from enqueue to processing start)
+			if (job.timestamp) {
+				const waitMs = Date.now() - job.timestamp;
+				queueMetrics.recordJobWaitDuration("command-execution", waitMs / 1000);
+			}
+
+			const startMs = Date.now();
+			try {
+				await processCommandJob(job.data, {
+					monicaClient,
+					deliveryClient,
+					idempotencyStore,
+					db: db as never,
+				});
+				queueMetrics.recordJobProcessDuration(
+					"command-execution",
+					"completed",
+					(Date.now() - startMs) / 1000,
+				);
+			} catch (err) {
+				queueMetrics.recordJobProcessDuration(
+					"command-execution",
+					"failed",
+					(Date.now() - startMs) / 1000,
+				);
+				throw err;
+			}
 		},
 		{
 			connection: redis,
@@ -77,7 +102,11 @@ async function main() {
 	);
 
 	commandWorker.on("failed", async (job, error) => {
+		if (job) {
+			queueMetrics.recordRetry("command-execution");
+		}
 		if (job && job.attemptsMade >= config.maxRetries) {
+			queueMetrics.recordDeadLetter("command-execution");
 			await handleDeadLetter(
 				{
 					jobId: job.id ?? "unknown",
@@ -98,11 +127,32 @@ async function main() {
 	const reminderWorker = new Worker(
 		"reminder-execute",
 		async (job) => {
-			await executeReminder(job.data, {
-				monicaClient,
-				deliveryClient,
-				db: db as never,
-			});
+			// Record wait duration
+			if (job.timestamp) {
+				const waitMs = Date.now() - job.timestamp;
+				queueMetrics.recordJobWaitDuration("reminder-execute", waitMs / 1000);
+			}
+
+			const startMs = Date.now();
+			try {
+				await executeReminder(job.data, {
+					monicaClient,
+					deliveryClient,
+					db: db as never,
+				});
+				queueMetrics.recordJobProcessDuration(
+					"reminder-execute",
+					"completed",
+					(Date.now() - startMs) / 1000,
+				);
+			} catch (err) {
+				queueMetrics.recordJobProcessDuration(
+					"reminder-execute",
+					"failed",
+					(Date.now() - startMs) / 1000,
+				);
+				throw err;
+			}
 		},
 		{
 			connection: redis,
@@ -111,6 +161,12 @@ async function main() {
 			removeOnFail: { count: 5000 },
 		},
 	);
+
+	reminderWorker.on("failed", (job) => {
+		if (job) {
+			queueMetrics.recordRetry("reminder-execute");
+		}
+	});
 
 	// --- Reminder poll repeatable job ---
 	await reminderPollQueue.upsertJobScheduler(
@@ -137,6 +193,29 @@ async function main() {
 		},
 	);
 
+	// --- Periodic queue depth poller ---
+	// Polls queue depth every 15s, aligned with the Prometheus scrape interval (15s)
+	// to ensure each scrape sees a fresh gauge value.
+	const QUEUE_DEPTH_POLL_INTERVAL_MS = 15_000;
+	const depthPollInterval = setInterval(async () => {
+		try {
+			for (const [name, queue] of [
+				["command-execution", commandQueue],
+				["reminder-execute", reminderQueue],
+				["reminder-poll", reminderPollQueue],
+			] as const) {
+				const counts = await queue.getJobCounts("waiting", "active", "delayed");
+				queueMetrics.updateQueueDepth(name, "waiting", counts.waiting ?? 0);
+				queueMetrics.updateQueueDepth(name, "active", counts.active ?? 0);
+				queueMetrics.updateQueueDepth(name, "delayed", counts.delayed ?? 0);
+			}
+		} catch (err) {
+			logger.warn("Failed to poll queue depth", {
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
+	}, QUEUE_DEPTH_POLL_INTERVAL_MS);
+
 	// Start HTTP server
 	const port = config.port;
 	serve({ fetch: app.fetch, port }, (info) => {
@@ -146,6 +225,7 @@ async function main() {
 	// Graceful shutdown
 	const shutdown = async () => {
 		logger.info("Shutting down scheduler");
+		clearInterval(depthPollInterval);
 		await commandWorker.close();
 		await reminderWorker.close();
 		await reminderPollWorker.close();

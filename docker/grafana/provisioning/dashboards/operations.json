@@ -2,7 +2,7 @@
 	"annotations": {
 		"list": []
 	},
-	"description": "Operations dashboard with placeholder panels for queues, OpenAI budget, scheduler, and delivery",
+	"description": "Operations dashboard for BullMQ queues, scheduler jobs, and reminder reliability. OpenAI budget metrics live in a dedicated guardrails dashboard. Delivery connector metrics are tracked separately in the delivery service dashboard.",
 	"editable": true,
 	"fiscalYearStartMonth": 0,
 	"graphTooltip": 1,
@@ -10,58 +10,197 @@
 	"links": [],
 	"panels": [
 		{
-			"title": "BullMQ Queue Depth (placeholder)",
-			"type": "text",
-			"gridPos": { "h": 4, "w": 12, "x": 0, "y": 0 },
-			"options": {
-				"mode": "markdown",
-				"content": "Queue depth metrics will be available when BullMQ is wired in Phase 4."
-			}
+			"title": "BullMQ Queue Depth",
+			"type": "timeseries",
+			"gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"fieldConfig": {
+				"defaults": {
+					"custom": {
+						"drawStyle": "line",
+						"lineInterpolation": "smooth",
+						"fillOpacity": 10
+					},
+					"unit": "short"
+				},
+				"overrides": []
+			},
+			"targets": [
+				{
+					"expr": "scheduler_queue_depth",
+					"legendFormat": "{{queue_name}} ({{state}})",
+					"refId": "A"
+				}
+			]
 		},
 		{
-			"title": "BullMQ Processing Rate (placeholder)",
-			"type": "text",
-			"gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
-			"options": {
-				"mode": "markdown",
-				"content": "Processing rate metrics will be available when BullMQ is wired in Phase 4."
-			}
+			"title": "Job Processing Rate",
+			"type": "timeseries",
+			"gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"fieldConfig": {
+				"defaults": {
+					"custom": {
+						"drawStyle": "bars",
+						"fillOpacity": 50
+					},
+					"unit": "ops"
+				},
+				"overrides": []
+			},
+			"targets": [
+				{
+					"expr": "rate(scheduler_queue_job_process_duration_seconds_count[5m])",
+					"legendFormat": "{{queue_name}} ({{status}})",
+					"refId": "A"
+				}
+			]
 		},
 		{
-			"title": "OpenAI Budget Burn Rate (placeholder)",
-			"type": "text",
-			"gridPos": { "h": 4, "w": 24, "x": 0, "y": 4 },
-			"options": {
-				"mode": "markdown",
-				"content": "OpenAI budget metrics will be available when the OpenAI client is implemented in Phase 3."
-			}
+			"title": "Queue Latency p50 / p95",
+			"type": "timeseries",
+			"gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"fieldConfig": {
+				"defaults": {
+					"custom": {
+						"drawStyle": "line",
+						"lineInterpolation": "smooth"
+					},
+					"unit": "s"
+				},
+				"overrides": []
+			},
+			"targets": [
+				{
+					"expr": "histogram_quantile(0.5, sum(rate(scheduler_queue_job_wait_duration_seconds_bucket[5m])) by (le, queue_name))",
+					"legendFormat": "wait p50 {{queue_name}}",
+					"refId": "A"
+				},
+				{
+					"expr": "histogram_quantile(0.95, sum(rate(scheduler_queue_job_wait_duration_seconds_bucket[5m])) by (le, queue_name))",
+					"legendFormat": "wait p95 {{queue_name}}",
+					"refId": "B"
+				},
+				{
+					"expr": "histogram_quantile(0.5, sum(rate(scheduler_queue_job_process_duration_seconds_bucket[5m])) by (le, queue_name))",
+					"legendFormat": "process p50 {{queue_name}}",
+					"refId": "C"
+				},
+				{
+					"expr": "histogram_quantile(0.95, sum(rate(scheduler_queue_job_process_duration_seconds_bucket[5m])) by (le, queue_name))",
+					"legendFormat": "process p95 {{queue_name}}",
+					"refId": "D"
+				}
+			]
 		},
 		{
-			"title": "Scheduler Job Status (placeholder)",
-			"type": "text",
-			"gridPos": { "h": 4, "w": 12, "x": 0, "y": 8 },
-			"options": {
-				"mode": "markdown",
-				"content": "Scheduler job metrics will be available when scheduler jobs are implemented in Phase 4."
-			}
+			"title": "Retry Amplification Ratio",
+			"type": "timeseries",
+			"gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"fieldConfig": {
+				"defaults": {
+					"custom": {
+						"drawStyle": "line",
+						"lineInterpolation": "smooth"
+					},
+					"unit": "percentunit",
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{ "color": "green", "value": null },
+							{ "color": "yellow", "value": 0.1 },
+							{ "color": "red", "value": 0.3 }
+						]
+					}
+				},
+				"overrides": []
+			},
+			"targets": [
+				{
+					"expr": "rate(scheduler_queue_retry_total[5m]) / (rate(scheduler_queue_job_process_duration_seconds_count{status=\"completed\"}[5m]) > 0)",
+					"legendFormat": "retry ratio {{queue_name}}",
+					"refId": "A"
+				}
+			]
 		},
 		{
-			"title": "Scheduler Misfires (placeholder)",
-			"type": "text",
-			"gridPos": { "h": 4, "w": 12, "x": 12, "y": 8 },
-			"options": {
-				"mode": "markdown",
-				"content": "Misfire detection will be available when scheduler DST/window logic is implemented in Phase 4."
-			}
+			"title": "Scheduler Job Status",
+			"type": "stat",
+			"gridPos": { "h": 6, "w": 12, "x": 0, "y": 16 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"fieldConfig": {
+				"defaults": {
+					"unit": "short"
+				},
+				"overrides": []
+			},
+			"targets": [
+				{
+					"expr": "sum(increase(scheduler_queue_job_process_duration_seconds_count{status=\"completed\"}[1h])) by (queue_name)",
+					"legendFormat": "completed {{queue_name}}",
+					"refId": "A"
+				},
+				{
+					"expr": "sum(increase(scheduler_queue_retry_total[1h])) by (queue_name)",
+					"legendFormat": "retried {{queue_name}}",
+					"refId": "B"
+				},
+				{
+					"expr": "sum(increase(scheduler_queue_dead_letter_total[1h])) by (queue_name)",
+					"legendFormat": "dead-lettered {{queue_name}}",
+					"refId": "C"
+				}
+			]
 		},
 		{
-			"title": "Delivery Success/Failure Rate (placeholder)",
-			"type": "text",
-			"gridPos": { "h": 4, "w": 24, "x": 0, "y": 12 },
-			"options": {
-				"mode": "markdown",
-				"content": "Delivery metrics will be available when delivery connectors are implemented in Phase 2."
-			}
+			"title": "Reminder Reliability",
+			"description": "Tracks on-time, late, and missed reminder delivery rates. Replaces the former Delivery placeholder. Delivery connector metrics are tracked in the delivery service dashboard.",
+			"type": "timeseries",
+			"gridPos": { "h": 6, "w": 12, "x": 12, "y": 16 },
+			"datasource": { "type": "prometheus", "uid": "prometheus" },
+			"fieldConfig": {
+				"defaults": {
+					"custom": {
+						"drawStyle": "bars",
+						"fillOpacity": 50,
+						"stacking": { "mode": "normal" }
+					},
+					"unit": "short"
+				},
+				"overrides": [
+					{
+						"matcher": { "id": "byName", "options": "on_time" },
+						"properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+					},
+					{
+						"matcher": { "id": "byName", "options": "late" },
+						"properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }]
+					},
+					{
+						"matcher": { "id": "byName", "options": "missed" },
+						"properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+					}
+				]
+			},
+			"targets": [
+				{
+					"expr": "increase(scheduler_reminder_on_time[1h])",
+					"legendFormat": "on_time",
+					"refId": "A"
+				},
+				{
+					"expr": "increase(scheduler_reminder_late[1h])",
+					"legendFormat": "late",
+					"refId": "B"
+				},
+				{
+					"expr": "increase(scheduler_reminder_missed[1h])",
+					"legendFormat": "missed",
+					"refId": "C"
+				}
+			]
 		}
 	],
 	"schemaVersion": 39,
@@ -72,5 +211,5 @@
 	"timezone": "browser",
 	"title": "Operations & Queues",
 	"uid": "operations",
-	"version": 1
+	"version": 2
 }

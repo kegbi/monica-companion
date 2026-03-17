@@ -143,8 +143,8 @@ groups:
         labels:
           severity: info
 
-      - uid: scheduler-misfire-placeholder
-        title: SchedulerMisfire (placeholder)
+      - uid: scheduler-misfire
+        title: SchedulerMisfire
         condition: A
         data:
           - refId: A
@@ -153,14 +153,60 @@ groups:
               to: 0
             datasourceUid: prometheus
             model:
-              expr: "vector(0)"
+              expr: increase(scheduler_reminder_missed[6h]) > 0
               instant: true
               refId: A
         noDataState: OK
-        execErrState: OK
+        execErrState: Alerting
         for: 1m
         annotations:
-          summary: "Placeholder: Scheduler misfire alert"
-          description: "This alert will be wired when scheduler job metrics are available. It will fire when a scheduled job misses its window by >6 hours."
+          summary: "Scheduler reminder misfire detected"
+          description: "One or more reminders were missed (caught up or skipped) in the last 6 hours. Check scheduler logs for details."
         labels:
-          severity: info
+          severity: warning
+
+      - uid: queue-backlog
+        title: QueueBacklog
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: scheduler_queue_depth{state="waiting"} > 100
+              instant: true
+              refId: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "BullMQ queue backlog on {{ $labels.queue_name }}"
+          description: "Queue {{ $labels.queue_name }} has had more than 100 waiting jobs for over 5 minutes. This may indicate worker saturation or downstream service issues."
+        labels:
+          severity: warning
+
+      - uid: high-retry-rate
+        title: HighRetryRate
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: >
+                (rate(scheduler_queue_retry_total[5m])
+                / (rate(scheduler_queue_job_process_duration_seconds_count{status="completed"}[5m]) > 0)) > 0.3
+              instant: true
+              refId: A
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "High retry rate on {{ $labels.queue_name }}"
+          description: "Queue {{ $labels.queue_name }} retry-to-completion ratio exceeds 30% over the last 5 minutes. This may indicate persistent downstream failures."
+        labels:
+          severity: warning
