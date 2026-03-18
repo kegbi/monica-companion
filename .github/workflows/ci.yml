@@ -130,21 +130,26 @@ jobs:
             --profile app up -d
 
       - name: Wait for services
+        timeout-minutes: 5
         run: |
           services=("http://localhost:3002" "http://localhost:3007" "http://localhost:3006" "http://localhost:3003" "http://localhost:3005")
           for url in "${services[@]}"; do
-            retries=45
+            echo "Waiting for $url ..."
+            retries=60
             while [ $retries -gt 0 ]; do
               if curl -sf "$url/health" > /dev/null 2>&1; then
-                echo "OK: $url"
+                echo "  OK: $url"
                 break
               fi
-              sleep 2
+              sleep 3
               retries=$((retries - 1))
             done
             if [ $retries -eq 0 ]; then
-              echo "FAIL: $url not reachable after 90s"
-              docker compose -f docker-compose.yml -f docker-compose.smoke.yml logs
+              echo "FAIL: $url not reachable after 180s"
+              echo "--- Docker container status ---"
+              docker compose -f docker-compose.yml -f docker-compose.smoke.yml ps -a
+              echo "--- Docker logs ---"
+              docker compose -f docker-compose.yml -f docker-compose.smoke.yml logs --tail=50
               exit 1
             fi
           done
