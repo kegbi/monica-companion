@@ -131,9 +131,9 @@ jobs:
 
       - name: Wait for services
         run: |
-          services=("http://localhost:3002" "http://localhost:3007" "http://localhost:3006" "http://localhost:3003")
+          services=("http://localhost:3002" "http://localhost:3007" "http://localhost:3006" "http://localhost:3003" "http://localhost:3005")
           for url in "${services[@]}"; do
-            retries=15
+            retries=45
             while [ $retries -gt 0 ]; do
               if curl -sf "$url/health" > /dev/null 2>&1; then
                 echo "OK: $url"
@@ -143,7 +143,7 @@ jobs:
               retries=$((retries - 1))
             done
             if [ $retries -eq 0 ]; then
-              echo "FAIL: $url not reachable after 30s"
+              echo "FAIL: $url not reachable after 90s"
               docker compose -f docker-compose.yml -f docker-compose.smoke.yml logs
               exit 1
             fi
