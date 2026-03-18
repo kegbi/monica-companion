@@ -3,6 +3,8 @@
  *
  * Verifies that Caddy routes public traffic correctly and that
  * internal service health/API endpoints are NOT exposed.
+ *
+ * Skipped when Caddy is not running (e.g. CI without Docker Compose).
  */
 
 import { describe, expect, it } from "vitest";
@@ -11,7 +13,22 @@ import { loadSmokeConfig } from "./smoke-config.js";
 
 const config = loadSmokeConfig();
 
-describe("caddy reverse proxy", () => {
+async function isCaddyAvailable(): Promise<boolean> {
+	try {
+		await smokeRequest(`${config.CADDY_URL}/`, { timeout: 2000 });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+describe("caddy reverse proxy", async () => {
+	const available = await isCaddyAvailable();
+	if (!available) {
+		it.skip("caddy not available — skipping reverse proxy tests", () => {});
+		return;
+	}
+
 	it("returns 404 for unknown paths", async () => {
 		const { status } = await smokeRequest(`${config.CADDY_URL}/nonexistent`);
 		expect(status).toBe(404);

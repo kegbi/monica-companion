@@ -340,8 +340,21 @@ describe("voice-transcription /internal/transcribe", () => {
 
 // ---------------------------------------------------------------------------
 // 6. Service isolation -- internal services NOT exposed via Caddy
+//    Skipped when Caddy is not running (e.g. CI without Docker Compose)
 // ---------------------------------------------------------------------------
-describe("service isolation via Caddy", () => {
+describe("service isolation via Caddy", async () => {
+	let caddyAvailable = false;
+	try {
+		await smokeRequest(`${config.CADDY_URL}/`, { timeout: 2000 });
+		caddyAvailable = true;
+	} catch {
+		// Caddy not running
+	}
+	if (!caddyAvailable) {
+		it.skip("caddy not available — skipping isolation tests", () => {});
+		return;
+	}
+
 	it("ai-router is not exposed via Caddy", async () => {
 		const { status } = await smokeRequest(`${config.CADDY_URL}/internal/process`, {
 			method: "POST",

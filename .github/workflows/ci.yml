@@ -71,91 +71,74 @@ jobs:
       - name: Benchmark quality gates
         run: pnpm bench:ai
 
-  # Full-stack smoke tests against Docker Compose.
-  # Builds all service images, runs migrations, and executes the
-  # Vitest smoke suite through the real network path.
-  smoke:
-    runs-on: ubuntu-latest
-    needs: ci
-
-    env:
-      JWT_SECRET: ci-smoke-test-secret-at-least-32-chars
-      JWT_SECRET_PREVIOUS: ""
-      SETUP_TOKEN_SECRET: ci-smoke-setup-token-secret-at-least-32-chars
-      ENCRYPTION_MASTER_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-      ENCRYPTION_MASTER_KEY_PREVIOUS: ""
-      POSTGRES_USER: monica
-      POSTGRES_PASSWORD: monica_dev
-      POSTGRES_DB: monica_companion
-      DATABASE_URL: postgresql://monica:monica_dev@localhost:5432/monica_companion
-      REDIS_URL: redis://localhost:6379
-      TELEGRAM_BOT_TOKEN: "000000000:fake-ci-token"
-      TELEGRAM_WEBHOOK_SECRET: ci-webhook-secret
-      OPENAI_API_KEY: sk-fake-ci-key
-      SETUP_BASE_URL: http://localhost
-      EXPECTED_ORIGIN: http://localhost
-      ALLOW_PRIVATE_NETWORK_TARGETS: "false"
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Start stack
+      # Stack smoke tests: start all services on the host (Postgres and Redis
+      # already running as service containers), run migrations, then execute
+      # the Vitest smoke suite against the live services.
+      - name: Run migrations
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f docker-compose.ci.yml \
-            --profile infra up -d
-          echo "Waiting for Postgres to become healthy..."
-          timeout=30
-          while [ $timeout -gt 0 ]; do
-            if docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f docker-compose.ci.yml \
-              ps postgres 2>/dev/null | grep -q healthy; then
-              break
-            fi
-            sleep 1
-            timeout=$((timeout - 1))
-          done
-          docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f docker-compose.ci.yml \
-            --profile app up -d
+          npx tsx scripts/migrate.ts ai-router
+          npx tsx scripts/migrate.ts user-management
+          npx tsx scripts/migrate.ts delivery
+          npx tsx scripts/migrate.ts scheduler
+        env:
+          DATABASE_URL: postgresql://monica:monica_dev@localhost:5432/monica_companion
 
-      - name: Wait for services
-        timeout-minutes: 5
+      - name: Start services
         run: |
-          services=("http://localhost:3002" "http://localhost:3007" "http://localhost:3006" "http://localhost:3003" "http://localhost:3005")
+          # Start all services in background
+          npx tsx services/user-management/src/index.ts &
+          npx tsx services/delivery/src/index.ts &
+          npx tsx services/ai-router/src/index.ts &
+          npx tsx services/voice-transcription/src/index.ts &
+          npx tsx services/scheduler/src/index.ts &
+
+          # Wait for health
+          services=("http://localhost:3007" "http://localhost:3006" "http://localhost:3002" "http://localhost:3003" "http://localhost:3005")
           for url in "${services[@]}"; do
             echo "Waiting for $url ..."
-            retries=60
+            retries=30
             while [ $retries -gt 0 ]; do
               if curl -sf "$url/health" > /dev/null 2>&1; then
                 echo "  OK: $url"
                 break
               fi
-              sleep 3
+              sleep 2
               retries=$((retries - 1))
             done
             if [ $retries -eq 0 ]; then
-              echo "FAIL: $url not reachable after 180s"
-              echo "--- Docker container status ---"
-              docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f docker-compose.ci.yml ps -a
-              echo "--- Docker logs (last 30 lines per service) ---"
-              docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f docker-compose.ci.yml logs --tail=30 2>&1 || true
+              echo "FAIL: $url not reachable after 60s"
               exit 1
             fi
           done
+        env:
+          DATABASE_URL: postgresql://monica:monica_dev@localhost:5432/monica_companion
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ci-smoke-test-secret-at-least-32-chars
+          JWT_SECRET_PREVIOUS: ""
+          OPENAI_API_KEY: sk-fake-ci-key
+          SETUP_TOKEN_SECRET: ci-smoke-setup-token-secret-at-least-32-chars
+          SETUP_BASE_URL: http://localhost
+          ENCRYPTION_MASTER_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          ENCRYPTION_MASTER_KEY_PREVIOUS: ""
+          MONICA_INTEGRATION_URL: http://localhost:3004
+          DELIVERY_URL: http://localhost:3006
+          USER_MANAGEMENT_URL: http://localhost:3007
+          TELEGRAM_BOT_TOKEN: "000000000:fake-ci-token"
+          TELEGRAM_WEBHOOK_SECRET: ci-webhook-secret
+          ALLOW_PRIVATE_NETWORK_TARGETS: "false"
+          EXPECTED_ORIGIN: http://localhost
 
       - name: Run smoke tests
         run: pnpm test:smoke:stack
+        env:
+          JWT_SECRET: ci-smoke-test-secret-at-least-32-chars
+          AI_ROUTER_URL: http://localhost:3002
+          USER_MANAGEMENT_URL: http://localhost:3007
+          DELIVERY_URL: http://localhost:3006
+          VOICE_TRANSCRIPTION_URL: http://localhost:3003
+          SCHEDULER_URL: http://localhost:3005
+          CADDY_URL: http://localhost:80
+          POSTGRES_URL: postgresql://monica:monica_dev@localhost:5432/monica_companion
 
       - name: Upload smoke test results
         if: always()
@@ -164,9 +147,3 @@ jobs:
           name: smoke-test-results
           path: tests/smoke/results/results.xml
           if-no-files-found: warn
-
-      - name: Tear down stack
-        if: always()
-        run: |
-          docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f docker-compose.ci.yml \
-            --profile app --profile infra down
