@@ -16,7 +16,7 @@ import { createConversationGraph } from "./graph/index.js";
 export function createApp(config: Config, _db: Database, redis: Redis) {
 	const app = new Hono();
 	const metrics: GuardrailMetrics = createGuardrailMetrics();
-	const graph = createConversationGraph();
+	const graph = createConversationGraph({ openaiApiKey: config.openaiApiKey });
 
 	app.use(otelMiddleware());
 

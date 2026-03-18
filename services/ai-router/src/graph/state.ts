@@ -10,6 +10,10 @@
 import { Annotation } from "@langchain/langgraph";
 import { InboundEventSchema } from "@monica-companion/types";
 import { z } from "zod/v4";
+import {
+	type IntentClassificationResult,
+	IntentClassificationResultSchema,
+} from "./intent-schemas.js";
 
 // --- Supporting Zod schemas ---
 
@@ -55,6 +59,8 @@ export const ConversationStateSchema = z.object({
 	resolvedContact: z.record(z.string(), z.unknown()).nullable().default(null),
 	/** Provisional: user preferences (language, timezone, etc.) */
 	userPreferences: z.record(z.string(), z.unknown()).nullable().default(null),
+	/** Intent classification result from LLM */
+	intentClassification: IntentClassificationResultSchema.nullable().default(null),
 	/** The final output of the graph */
 	response: GraphResponseSchema.nullable().default(null),
 });
@@ -80,6 +86,10 @@ export const ConversationAnnotation = Annotation.Root({
 		default: () => null,
 	}),
 	userPreferences: Annotation<Record<string, unknown> | null>({
+		reducer: (_prev, next) => next,
+		default: () => null,
+	}),
+	intentClassification: Annotation<IntentClassificationResult | null>({
 		reducer: (_prev, next) => next,
 		default: () => null,
 	}),

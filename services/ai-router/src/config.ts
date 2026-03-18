@@ -10,7 +10,7 @@ const configSchema = z.object({
 	MONICA_INTEGRATION_URL: z.string().min(1),
 	DELIVERY_URL: z.string().min(1).optional(),
 	INBOUND_ALLOWED_CALLERS: z.string().optional(),
-	OPENAI_API_KEY: z.string().min(1).optional(),
+	OPENAI_API_KEY: z.string().min(1),
 });
 
 export interface Config {
@@ -20,7 +20,7 @@ export interface Config {
 	expirySweepIntervalMs: number;
 	monicaIntegrationUrl: string;
 	deliveryUrl?: string;
-	openaiApiKey?: string;
+	openaiApiKey: string;
 	auth: AuthConfig;
 	guardrails: GuardrailConfig;
 	inboundAllowedCallers: string[];

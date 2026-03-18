@@ -1,4 +1,13 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mockLlmInvoke = vi.fn();
+
+// Mock @langchain/openai to avoid real LLM calls
+vi.mock("@langchain/openai", () => ({
+	ChatOpenAI: vi.fn().mockImplementation(function (this: any) {
+		this.withStructuredOutput = vi.fn().mockReturnValue({ invoke: mockLlmInvoke });
+	}),
+}));
 
 vi.mock("@monica-companion/guardrails", () => ({
 	guardrailMiddleware: vi.fn().mockReturnValue(async (_c: any, next: any) => {
@@ -52,6 +61,7 @@ const mockConfig = {
 	pendingCommandTtlMinutes: 30,
 	expirySweepIntervalMs: 60000,
 	monicaIntegrationUrl: "http://monica-integration:3004",
+	openaiApiKey: "sk-test-key-for-process",
 	inboundAllowedCallers: ["telegram-bridge"],
 	auth: {
 		serviceName: "ai-router" as const,
@@ -79,8 +89,33 @@ const validTextEvent = {
 	text: "Hello bot",
 };
 
+const greetingResult = {
+	intent: "greeting",
+	detectedLanguage: "en",
+	userFacingText: "Hello! How can I help you today?",
+	commandType: null,
+	contactRef: null,
+	commandPayload: null,
+	confidence: 0.99,
+};
+
+const mutatingResult = {
+	intent: "mutating_command",
+	detectedLanguage: "en",
+	userFacingText: "I'll create a note for Jane.",
+	commandType: "create_note",
+	contactRef: "Jane",
+	commandPayload: { body: "our lunch" },
+	confidence: 0.95,
+};
+
 describe("POST /internal/process", () => {
-	it("returns graph response instead of stub { received: true }", async () => {
+	beforeEach(() => {
+		mockLlmInvoke.mockReset();
+	});
+
+	it("returns classified graph response for text_message", async () => {
+		mockLlmInvoke.mockResolvedValueOnce(greetingResult);
 		const app = createApp(mockConfig, mockDb, mockRedis);
 		const res = await app.request("/internal/process", {
 			method: "POST",
@@ -89,12 +124,8 @@ describe("POST /internal/process", () => {
 		});
 		expect(res.status).toBe(200);
 		const body = await res.json();
-		// Should NOT be the old stub
-		expect(body).not.toEqual({ received: true });
-		// Should be a graph response
 		expect(body).toHaveProperty("type", "text");
-		expect(body).toHaveProperty("text");
-		expect(body.text).toContain("text_message");
+		expect(body).toHaveProperty("text", "Hello! How can I help you today?");
 	});
 
 	it("returns 400 for invalid payload", async () => {
@@ -118,6 +149,7 @@ describe("POST /internal/process", () => {
 	});
 
 	it("processes voice_message events", async () => {
+		mockLlmInvoke.mockResolvedValueOnce(mutatingResult);
 		const app = createApp(mockConfig, mockDb, mockRedis);
 		const res = await app.request("/internal/process", {
 			method: "POST",
@@ -133,10 +165,10 @@ describe("POST /internal/process", () => {
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.type).toBe("text");
-		expect(body.text).toContain("voice_message");
+		expect(body.text).toBe("I'll create a note for Jane.");
 	});
 
-	it("processes callback_action events", async () => {
+	it("processes callback_action events without calling LLM", async () => {
 		const app = createApp(mockConfig, mockDb, mockRedis);
 		const res = await app.request("/internal/process", {
 			method: "POST",
@@ -153,22 +185,23 @@ describe("POST /internal/process", () => {
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.type).toBe("text");
-		expect(body.text).toContain("callback_action");
+		expect(body.text).toContain("confirm");
+		// LLM should not have been called
+		expect(mockLlmInvoke).not.toHaveBeenCalled();
 	});
 
-	it("returns 500 with error message when graph invocation fails", async () => {
-		// TODO: Add proper error-path test when graph creation supports dependency injection.
-		// The current graph is compiled once in createApp() and cannot be easily mocked
-		// without restructuring the module. The catch block at app.ts:77 is not covered.
-		// For now, verify the response shape on the happy path.
+	it("returns graceful fallback when LLM fails", async () => {
+		mockLlmInvoke.mockRejectedValueOnce(new Error("LLM timeout"));
 		const app = createApp(mockConfig, mockDb, mockRedis);
 		const res = await app.request("/internal/process", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(validTextEvent),
 		});
+		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.type).toBe("text");
-		expect(typeof body.text).toBe("string");
+		// Should get a graceful fallback, not a 500
+		expect(body.text).toBeTruthy();
 	});
 });

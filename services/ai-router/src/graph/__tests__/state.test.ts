@@ -143,6 +143,37 @@ describe("ConversationStateSchema", () => {
 			expect(result.data.recentTurns).toEqual([]);
 			expect(result.data.activePendingCommand).toBeNull();
 			expect(result.data.response).toBeNull();
+			expect(result.data.intentClassification).toBeNull();
+		}
+	});
+
+	it("accepts valid intentClassification in state", () => {
+		const result = ConversationStateSchema.safeParse({
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			correlationId: "corr-456",
+			inboundEvent: validInboundEvent,
+			intentClassification: {
+				intent: "mutating_command",
+				detectedLanguage: "en",
+				userFacingText: "Creating a note for Jane.",
+				commandType: "create_note",
+				contactRef: "Jane",
+				commandPayload: { body: "lunch" },
+				confidence: 0.95,
+			},
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("defaults intentClassification to null", () => {
+		const result = ConversationStateSchema.safeParse({
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			correlationId: "corr-456",
+			inboundEvent: validInboundEvent,
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.intentClassification).toBeNull();
 		}
 	});
 

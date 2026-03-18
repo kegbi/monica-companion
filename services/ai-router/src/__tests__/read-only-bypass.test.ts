@@ -21,6 +21,7 @@ const baseEnv = {
 	MONICA_INTEGRATION_URL: "http://monica-integration:3004",
 	DELIVERY_URL: "http://delivery:3006",
 	REDIS_URL: "redis://localhost:6379",
+	OPENAI_API_KEY: "sk-test-key-for-bypass",
 };
 
 describe("read-only bypass verification", () => {

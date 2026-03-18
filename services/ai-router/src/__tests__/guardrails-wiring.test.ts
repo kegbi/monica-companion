@@ -7,6 +7,13 @@ const { guardrailMiddlewareSpy } = vi.hoisted(() => {
 	return { guardrailMiddlewareSpy };
 });
 
+// Mock @langchain/openai to avoid real LLM calls
+vi.mock("@langchain/openai", () => ({
+	ChatOpenAI: vi.fn().mockImplementation(function (this: any) {
+		this.withStructuredOutput = vi.fn().mockReturnValue({ invoke: vi.fn() });
+	}),
+}));
+
 vi.mock("@monica-companion/guardrails", () => ({
 	guardrailMiddleware: guardrailMiddlewareSpy,
 	createGuardrailMetrics: vi.fn().mockReturnValue({
@@ -41,6 +48,7 @@ const mockConfig = {
 	pendingCommandTtlMinutes: 30,
 	expirySweepIntervalMs: 60000,
 	monicaIntegrationUrl: "http://monica-integration:3004",
+	openaiApiKey: "sk-test-key-for-guardrails",
 	inboundAllowedCallers: ["telegram-bridge"],
 	auth: {
 		serviceName: "ai-router" as const,

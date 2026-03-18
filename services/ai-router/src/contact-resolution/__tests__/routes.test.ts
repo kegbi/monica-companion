@@ -14,6 +14,13 @@ vi.mock("@monica-companion/observability", () => ({
 	}),
 }));
 
+// Mock @langchain/openai to avoid real LLM calls
+vi.mock("@langchain/openai", () => ({
+	ChatOpenAI: vi.fn().mockImplementation(function (this: any) {
+		this.withStructuredOutput = vi.fn().mockReturnValue({ invoke: vi.fn() });
+	}),
+}));
+
 // Mock guardrails so middleware passes through without Redis
 vi.mock("@monica-companion/guardrails", () => ({
 	guardrailMiddleware: () => async (_c: unknown, next: () => Promise<void>) => {
@@ -56,6 +63,7 @@ const testConfig: Config = {
 	pendingCommandTtlMinutes: 30,
 	expirySweepIntervalMs: 60000,
 	monicaIntegrationUrl: "http://monica-integration:3004",
+	openaiApiKey: "sk-test-key-for-routes",
 	inboundAllowedCallers: ["telegram-bridge"],
 	auth: {
 		serviceName: "ai-router",

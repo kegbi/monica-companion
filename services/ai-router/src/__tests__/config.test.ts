@@ -7,6 +7,7 @@ const baseEnv = {
 	DATABASE_URL: "postgresql://monica:monica_dev@localhost:5432/monica_companion",
 	MONICA_INTEGRATION_URL: "http://monica-integration:3004",
 	REDIS_URL: "redis://localhost:6379",
+	OPENAI_API_KEY: "sk-test-key-for-config",
 };
 
 describe("loadConfig", () => {
@@ -107,13 +108,13 @@ describe("loadConfig", () => {
 		expect(config.inboundAllowedCallers).toEqual(["telegram-bridge", "whatsapp-bridge"]);
 	});
 
-	it("openaiApiKey is undefined when OPENAI_API_KEY not set", () => {
-		const config = loadConfig(baseEnv);
-		expect(config.openaiApiKey).toBeUndefined();
+	it("throws when OPENAI_API_KEY is missing", () => {
+		const { OPENAI_API_KEY, ...env } = baseEnv;
+		expect(() => loadConfig(env)).toThrow();
 	});
 
 	it("parses OPENAI_API_KEY when provided", () => {
-		const config = loadConfig({ ...baseEnv, OPENAI_API_KEY: "sk-test-key-123" });
-		expect(config.openaiApiKey).toBe("sk-test-key-123");
+		const config = loadConfig(baseEnv);
+		expect(config.openaiApiKey).toBe("sk-test-key-for-config");
 	});
 });

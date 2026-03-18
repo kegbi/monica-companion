@@ -1,4 +1,10 @@
-export { createConversationGraph } from "./graph.js";
+export { type ConversationGraphConfig, createConversationGraph } from "./graph.js";
+export {
+	type Intent,
+	type IntentClassificationResult,
+	IntentClassificationResultSchema,
+	IntentSchema,
+} from "./intent-schemas.js";
 export {
 	ConversationAnnotation,
 	type ConversationState,

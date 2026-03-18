@@ -1,0 +1,11 @@
+{
+	"taskId": "intent-classification-command-parsing",
+	"taskGroup": "Intent Classification & Command Parsing",
+	"phase": "smoke-testing",
+	"planAttempts": 1,
+	"codeAttempts": 1,
+	"smokeAttempts": 1,
+	"status": "in-progress",
+	"mode": "auto",
+	"startedAt": "2026-03-18T11:10:00.000Z"
+}
