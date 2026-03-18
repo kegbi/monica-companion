@@ -11,44 +11,19 @@ import type Redis from "ioredis";
 import type { Config } from "./config.js";
 import { contactResolutionRoutes } from "./contact-resolution/routes.js";
 import type { Database } from "./db/connection.js";
+import { createConversationGraph } from "./graph/index.js";
 
 export function createApp(config: Config, _db: Database, redis: Redis) {
 	const app = new Hono();
 	const metrics: GuardrailMetrics = createGuardrailMetrics();
+	const graph = createConversationGraph();
 
 	app.use(otelMiddleware());
 
+	// 1. Health check -- no middleware, stays guardrail-free
 	app.get("/health", (c) => c.json({ status: "ok", service: "ai-router" }));
 
-	// Inbound event processing endpoint (caller: connectors via configurable allowedCallers)
-	// Mounted before guardrail middleware to use its own auth
-	const inbound = new Hono();
-	inbound.use(
-		serviceAuth({
-			audience: "ai-router",
-			secrets: config.auth.jwtSecrets,
-			allowedCallers: config.inboundAllowedCallers,
-		}),
-	);
-	inbound.post("/process", async (c) => {
-		let body: unknown;
-		try {
-			body = await c.req.json();
-		} catch {
-			return c.json({ error: "Invalid request body" }, 400);
-		}
-
-		const parsed = InboundEventSchema.safeParse(body);
-		if (!parsed.success) {
-			return c.json({ error: "Invalid event payload" }, 400);
-		}
-
-		// Stub: acknowledge receipt, full processing deferred to AI Router task group
-		return c.json({ received: true });
-	});
-	app.route("/internal", inbound);
-
-	// Apply guardrail middleware to all other internal routes (GPT-calling routes)
+	// 2. Guardrail middleware for all /internal/* routes
 	const guard = guardrailMiddleware({
 		redis,
 		modelType: "gpt",
@@ -61,10 +36,55 @@ export function createApp(config: Config, _db: Database, redis: Redis) {
 		metrics,
 		service: "ai-router",
 	});
-
 	app.use("/internal/*", guard);
 
-	// Mount contact resolution routes under /internal
+	// 3. Inbound event processing -- behind BOTH guardrails AND service auth
+	const processRoutes = new Hono();
+	processRoutes.use(
+		serviceAuth({
+			audience: "ai-router",
+			secrets: config.auth.jwtSecrets,
+			allowedCallers: config.inboundAllowedCallers,
+		}),
+	);
+	processRoutes.post("/process", async (c) => {
+		let body: unknown;
+		try {
+			body = await c.req.json();
+		} catch {
+			return c.json({ error: "Invalid request body" }, 400);
+		}
+
+		const parsed = InboundEventSchema.safeParse(body);
+		if (!parsed.success) {
+			return c.json({ error: "Invalid event payload" }, 400);
+		}
+
+		const event = parsed.data;
+
+		try {
+			const result = await graph.invoke({
+				userId: event.userId,
+				correlationId: event.correlationId,
+				inboundEvent: event,
+			});
+
+			if (!result.response) {
+				return c.json({ type: "error", text: "No response generated" }, 500);
+			}
+
+			return c.json(result.response);
+		} catch (err) {
+			console.error(
+				`[ai-router] Graph invocation failed correlationId=${event.correlationId}`,
+				err instanceof Error ? err.message : "unknown error",
+			);
+			return c.json({ type: "error", text: "Failed to process event" }, 500);
+		}
+	});
+	app.route("/internal", processRoutes);
+
+	// 4. Contact resolution routes under /internal (existing, unchanged)
 	app.route("/internal", contactResolutionRoutes(config));
 
 	return app;

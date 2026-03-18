@@ -1,2 +1,2 @@
 export { createDb, type Database } from "./connection.js";
-export { pendingCommands } from "./schema.js";
+export { conversationTurns, pendingCommands } from "./schema.js";

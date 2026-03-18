@@ -106,4 +106,14 @@ describe("loadConfig", () => {
 		});
 		expect(config.inboundAllowedCallers).toEqual(["telegram-bridge", "whatsapp-bridge"]);
 	});
+
+	it("openaiApiKey is undefined when OPENAI_API_KEY not set", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.openaiApiKey).toBeUndefined();
+	});
+
+	it("parses OPENAI_API_KEY when provided", () => {
+		const config = loadConfig({ ...baseEnv, OPENAI_API_KEY: "sk-test-key-123" });
+		expect(config.openaiApiKey).toBe("sk-test-key-123");
+	});
 });
