@@ -1,0 +1,86 @@
+# CI overlay — uses host node_modules instead of Docker volume.
+# In CI, pnpm install runs on the host before docker compose up,
+# so we don't need the deps-init container or a separate volume.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f docker-compose.ci.yml ...
+
+services:
+  deps-init:
+    profiles: [never]
+
+  telegram-bridge:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+  ai-router:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      monica-integration:
+        condition: service_started
+    volumes:
+      - .:/app
+
+  voice-transcription:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+  monica-integration:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      user-management:
+        condition: service_started
+    volumes:
+      - .:/app
+
+  scheduler:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      monica-integration:
+        condition: service_started
+      user-management:
+        condition: service_started
+    volumes:
+      - .:/app
+
+  delivery:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+  user-management:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+  web-ui:
+    depends_on: {}
+    volumes:
+      - .:/app

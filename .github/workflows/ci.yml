@@ -114,19 +114,19 @@ jobs:
 
       - name: Start stack
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.smoke.yml \
+          docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f docker-compose.ci.yml \
             --profile infra up -d
           echo "Waiting for Postgres to become healthy..."
           timeout=30
           while [ $timeout -gt 0 ]; do
-            if docker compose -f docker-compose.yml -f docker-compose.smoke.yml \
+            if docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f docker-compose.ci.yml \
               ps postgres 2>/dev/null | grep -q healthy; then
               break
             fi
             sleep 1
             timeout=$((timeout - 1))
           done
-          docker compose -f docker-compose.yml -f docker-compose.smoke.yml \
+          docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f docker-compose.ci.yml \
             --profile app up -d
 
       - name: Wait for services
@@ -147,9 +147,9 @@ jobs:
             if [ $retries -eq 0 ]; then
               echo "FAIL: $url not reachable after 180s"
               echo "--- Docker container status ---"
-              docker compose -f docker-compose.yml -f docker-compose.smoke.yml ps -a
+              docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f docker-compose.ci.yml ps -a
               echo "--- Docker logs (last 30 lines per service) ---"
-              docker compose -f docker-compose.yml -f docker-compose.smoke.yml logs --tail=30 2>&1 || true
+              docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f docker-compose.ci.yml logs --tail=30 2>&1 || true
               exit 1
             fi
           done
@@ -168,5 +168,5 @@ jobs:
       - name: Tear down stack
         if: always()
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.smoke.yml \
+          docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f docker-compose.ci.yml \
             --profile app --profile infra down
