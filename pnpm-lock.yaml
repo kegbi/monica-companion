@@ -100,6 +100,13 @@ catalogs:
 importers:
 
   .:
+    dependencies:
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.1(@opentelemetry/api@1.9.0)(postgres@3.4.8)
+      postgres:
+        specifier: 'catalog:'
+        version: 3.4.8
     devDependencies:
       '@biomejs/biome':
         specifier: 2.4.7

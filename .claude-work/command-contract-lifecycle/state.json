@@ -1,0 +1,11 @@
+{
+	"taskId": "command-contract-lifecycle",
+	"taskGroup": "Command Contract & Lifecycle",
+	"phase": "committing",
+	"planAttempts": 1,
+	"codeAttempts": 1,
+	"smokeAttempts": 1,
+	"status": "in-progress",
+	"mode": "auto",
+	"startedAt": "2026-03-17T02:00:00Z"
+}

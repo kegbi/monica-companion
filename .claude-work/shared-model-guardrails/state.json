@@ -1,0 +1,12 @@
+{
+	"taskId": "shared-model-guardrails",
+	"taskGroup": "Shared-Model Guardrails",
+	"phase": "completed",
+	"planAttempts": 2,
+	"codeAttempts": 1,
+	"smokeAttempts": 1,
+	"status": "completed",
+	"mode": "auto",
+	"startedAt": "2026-03-17T08:00:00Z",
+	"completedAt": "2026-03-17T12:00:00Z"
+}

@@ -104,7 +104,7 @@ services:
     image: node:24.14.0-slim
     profiles: [app]
     working_dir: /app
-    command: sh -c "./node_modules/.bin/tsx services/ai-router/src/index.ts"
+    command: sh -c "./node_modules/.bin/tsx scripts/migrate.ts ai-router && ./node_modules/.bin/tsx services/ai-router/src/index.ts"
     expose:
       - "3002"
     environment:
@@ -219,7 +219,7 @@ services:
     image: node:24.14.0-slim
     profiles: [app]
     working_dir: /app
-    command: sh -c "./node_modules/.bin/tsx services/scheduler/src/index.ts"
+    command: sh -c "./node_modules/.bin/tsx scripts/migrate.ts scheduler && ./node_modules/.bin/tsx services/scheduler/src/index.ts"
     expose:
       - "3005"
     environment:
@@ -260,7 +260,7 @@ services:
     image: node:24.14.0-slim
     profiles: [app]
     working_dir: /app
-    command: sh -c "./node_modules/.bin/tsx services/delivery/src/index.ts"
+    command: sh -c "./node_modules/.bin/tsx scripts/migrate.ts delivery && ./node_modules/.bin/tsx services/delivery/src/index.ts"
     expose:
       - "3006"
     environment:
@@ -290,7 +290,7 @@ services:
     image: node:24.14.0-slim
     profiles: [app]
     working_dir: /app
-    command: sh -c "./node_modules/.bin/tsx services/user-management/src/index.ts"
+    command: sh -c "./node_modules/.bin/tsx scripts/migrate.ts user-management && ./node_modules/.bin/tsx services/user-management/src/index.ts"
     expose:
       - "3007"
     environment:

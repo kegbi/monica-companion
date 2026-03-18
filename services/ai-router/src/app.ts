@@ -34,31 +34,32 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 	// 1. Health check -- no middleware, stays guardrail-free
 	app.get("/health", (c) => c.json({ status: "ok", service: "ai-router" }));
 
-	// 2. Guardrail middleware for all /internal/* routes
-	const guard = guardrailMiddleware({
-		redis,
-		modelType: "gpt",
-		rateLimit: config.guardrails.rateLimitPerUser,
-		rateWindowSeconds: config.guardrails.rateWindowSeconds,
-		maxConcurrency: config.guardrails.concurrencyPerUser,
-		budgetLimitUsd: config.guardrails.budgetLimitUsd,
-		budgetAlarmThresholdPct: config.guardrails.budgetAlarmThresholdPct,
-		costEstimator: () => config.guardrails.costPerRequestUsd,
-		metrics,
-		service: "ai-router",
-	});
-	app.use("/internal/*", guard);
-
-	// 3. Inbound event processing -- behind BOTH guardrails AND service auth
-	const processRoutes = new Hono();
-	processRoutes.use(
+	// 2. Internal routes sub-app: auth → guardrails → handler (correct ordering)
+	//    serviceAuth MUST run first so userId is in context before guardrails checks it.
+	const internal = new Hono();
+	internal.use(
 		serviceAuth({
 			audience: "ai-router",
 			secrets: config.auth.jwtSecrets,
 			allowedCallers: config.inboundAllowedCallers,
 		}),
 	);
-	processRoutes.post("/process", async (c) => {
+	internal.use(
+		"/process",
+		guardrailMiddleware({
+			redis,
+			modelType: "gpt",
+			rateLimit: config.guardrails.rateLimitPerUser,
+			rateWindowSeconds: config.guardrails.rateWindowSeconds,
+			maxConcurrency: config.guardrails.concurrencyPerUser,
+			budgetLimitUsd: config.guardrails.budgetLimitUsd,
+			budgetAlarmThresholdPct: config.guardrails.budgetAlarmThresholdPct,
+			costEstimator: () => config.guardrails.costPerRequestUsd,
+			metrics,
+			service: "ai-router",
+		}),
+	);
+	internal.post("/process", async (c) => {
 		let body: unknown;
 		try {
 			body = await c.req.json();
@@ -93,9 +94,9 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 			return c.json({ type: "error", text: "Failed to process event" }, 500);
 		}
 	});
-	app.route("/internal", processRoutes);
+	app.route("/internal", internal);
 
-	// 4. Contact resolution routes under /internal (existing, unchanged)
+	// 3. Contact resolution routes (own per-endpoint auth, no LLM guardrails needed)
 	app.route("/internal", contactResolutionRoutes(config));
 
 	return app;
