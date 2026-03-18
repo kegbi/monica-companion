@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { IntentClassificationResult } from "../../intent-schemas.js";
+import type { PendingCommandRef, TurnSummary } from "../../state.js";
 import { createClassifyIntentNode } from "../classify-intent.js";
 
 function makeMockClassifier(result: IntentClassificationResult) {
@@ -167,5 +168,104 @@ describe("createClassifyIntentNode", () => {
 
 		const update = await node(state);
 		expect(update.intentClassification!.intent).toBe("out_of_scope");
+	});
+
+	// --- New: conversation context passed to LLM ---
+
+	it("includes conversation history in system prompt when recentTurns exist", async () => {
+		const classifier = makeMockClassifier(mutatingResult);
+		const node = createClassifyIntentNode(classifier);
+
+		const recentTurns: TurnSummary[] = [
+			{
+				role: "user",
+				summary: "Requested create_note for Jane",
+				createdAt: "2026-01-01T00:00:00Z",
+				correlationId: "corr-1",
+			},
+		];
+
+		await node(makeState({ recentTurns }));
+		const systemMessage = classifier.invoke.mock.calls[0][0][0];
+		expect(systemMessage.content).toContain("Conversation History");
+		expect(systemMessage.content).toContain("Requested create_note for Jane");
+	});
+
+	it("includes active pending command in system prompt when present", async () => {
+		const classifier = makeMockClassifier(mutatingResult);
+		const node = createClassifyIntentNode(classifier);
+
+		const activePendingCommand: PendingCommandRef = {
+			pendingCommandId: "cmd-123",
+			version: 1,
+			status: "draft",
+			commandType: "create_note",
+		};
+
+		await node(makeState({ activePendingCommand }));
+		const systemMessage = classifier.invoke.mock.calls[0][0][0];
+		expect(systemMessage.content).toContain("Active Pending Command");
+		expect(systemMessage.content).toContain("create_note");
+	});
+
+	it("constructs synthetic message for callback_action with active pending command", async () => {
+		const classifier = makeMockClassifier({
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Selected Jane Doe for the note.",
+			commandType: "create_note",
+			contactRef: "Jane Doe",
+			commandPayload: { body: "lunch" },
+			confidence: 0.9,
+		});
+		const node = createClassifyIntentNode(classifier);
+
+		const activePendingCommand: PendingCommandRef = {
+			pendingCommandId: "cmd-123",
+			version: 1,
+			status: "draft",
+			commandType: "create_note",
+		};
+
+		const state = makeState({
+			activePendingCommand,
+			inboundEvent: {
+				type: "callback_action" as const,
+				userId: "550e8400-e29b-41d4-a716-446655440000",
+				sourceRef: "telegram:msg:101",
+				correlationId: "corr-123",
+				action: "disambiguate",
+				data: "jane-doe-id",
+			},
+		});
+
+		const update = await node(state);
+		// When there's an active pending command AND a callback, it SHOULD call the LLM
+		expect(classifier.invoke).toHaveBeenCalled();
+		// The synthetic message should describe the callback action
+		const humanMessage = classifier.invoke.mock.calls[0][0][1];
+		expect(humanMessage.content).toContain("disambiguate");
+		expect(humanMessage.content).toContain("jane-doe-id");
+	});
+
+	it("does not call LLM for callback_action without active pending command", async () => {
+		const classifier = makeMockClassifier(greetingResult);
+		const node = createClassifyIntentNode(classifier);
+
+		const state = makeState({
+			activePendingCommand: null,
+			inboundEvent: {
+				type: "callback_action" as const,
+				userId: "550e8400-e29b-41d4-a716-446655440000",
+				sourceRef: "telegram:msg:101",
+				correlationId: "corr-123",
+				action: "confirm",
+				data: "cmd-123",
+			},
+		});
+
+		const update = await node(state);
+		expect(classifier.invoke).not.toHaveBeenCalled();
+		expect(update.intentClassification!.intent).toBe("clarification_response");
 	});
 });

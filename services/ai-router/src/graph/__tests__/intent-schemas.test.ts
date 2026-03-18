@@ -138,6 +138,82 @@ describe("IntentClassificationResultSchema", () => {
 		expect(result.success).toBe(false);
 	});
 
+	it("accepts needsClarification with clarificationReason and disambiguationOptions", () => {
+		const input = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Which Jane did you mean?",
+			commandType: "create_note",
+			contactRef: "Jane",
+			commandPayload: { body: "lunch" },
+			confidence: 0.7,
+			needsClarification: true,
+			clarificationReason: "ambiguous_contact",
+			disambiguationOptions: [
+				{ label: "Jane Doe", value: "jane-doe-id" },
+				{ label: "Jane Smith", value: "jane-smith-id" },
+			],
+		};
+		const result = IntentClassificationResultSchema.safeParse(input);
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.needsClarification).toBe(true);
+			expect(result.data.clarificationReason).toBe("ambiguous_contact");
+			expect(result.data.disambiguationOptions).toHaveLength(2);
+		}
+	});
+
+	it("defaults needsClarification to false when not provided", () => {
+		const input = {
+			intent: "greeting",
+			detectedLanguage: "en",
+			userFacingText: "Hello!",
+			commandType: null,
+			contactRef: null,
+			commandPayload: null,
+			confidence: 0.99,
+		};
+		const result = IntentClassificationResultSchema.safeParse(input);
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.needsClarification).toBe(false);
+		}
+	});
+
+	it("accepts all valid clarificationReason values", () => {
+		for (const reason of ["ambiguous_contact", "missing_fields", "unclear_intent"]) {
+			const input = {
+				intent: "mutating_command",
+				detectedLanguage: "en",
+				userFacingText: "Need clarification",
+				commandType: "create_note",
+				contactRef: null,
+				commandPayload: null,
+				confidence: 0.5,
+				needsClarification: true,
+				clarificationReason: reason,
+			};
+			const result = IntentClassificationResultSchema.safeParse(input);
+			expect(result.success, `clarificationReason "${reason}" should be accepted`).toBe(true);
+		}
+	});
+
+	it("rejects invalid clarificationReason value", () => {
+		const input = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "test",
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: null,
+			confidence: 0.5,
+			needsClarification: true,
+			clarificationReason: "invalid_reason",
+		};
+		const result = IntentClassificationResultSchema.safeParse(input);
+		expect(result.success).toBe(false);
+	});
+
 	it("uses z.enum for commandType covering all V1 command types", () => {
 		// Verify all V1 command types are accepted
 		const v1CommandTypes = [

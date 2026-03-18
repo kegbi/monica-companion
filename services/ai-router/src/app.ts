@@ -5,18 +5,29 @@ import {
 	guardrailMiddleware,
 } from "@monica-companion/guardrails";
 import { otelMiddleware } from "@monica-companion/observability";
+import { redactString } from "@monica-companion/redaction";
 import { InboundEventSchema } from "@monica-companion/types";
 import { Hono } from "hono";
 import type Redis from "ioredis";
 import type { Config } from "./config.js";
 import { contactResolutionRoutes } from "./contact-resolution/routes.js";
 import type { Database } from "./db/connection.js";
+import { getRecentTurns, insertTurnSummary } from "./db/turn-repository.js";
 import { createConversationGraph } from "./graph/index.js";
+import { getActivePendingCommandForUser } from "./pending-command/repository.js";
 
-export function createApp(config: Config, _db: Database, redis: Redis) {
+export function createApp(config: Config, db: Database, redis: Redis) {
 	const app = new Hono();
 	const metrics: GuardrailMetrics = createGuardrailMetrics();
-	const graph = createConversationGraph({ openaiApiKey: config.openaiApiKey });
+	const graph = createConversationGraph({
+		openaiApiKey: config.openaiApiKey,
+		db,
+		maxConversationTurns: config.maxConversationTurns,
+		getRecentTurns,
+		getActivePendingCommandForUser,
+		insertTurnSummary,
+		redactString,
+	});
 
 	app.use(otelMiddleware());
 

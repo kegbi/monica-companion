@@ -33,19 +33,32 @@ const mutatingResult: IntentClassificationResult = {
 	confidence: 0.95,
 };
 
-const callbackResult: IntentClassificationResult = {
-	intent: "clarification_response",
-	detectedLanguage: "en",
-	userFacingText: "Received callback: confirm",
-	commandType: null,
-	contactRef: null,
-	commandPayload: null,
-	confidence: 1.0,
-};
+const mockDb = {} as any;
+
+const mockGetRecentTurns = vi.fn().mockResolvedValue([]);
+const mockGetActivePendingCommandForUser = vi.fn().mockResolvedValue(null);
+const mockInsertTurnSummary = vi.fn().mockResolvedValue({});
+const mockRedactString = vi.fn().mockImplementation((s: string) => s);
+
+function makeConfig() {
+	return {
+		openaiApiKey: "sk-test-key",
+		db: mockDb,
+		maxConversationTurns: 10,
+		getRecentTurns: mockGetRecentTurns,
+		getActivePendingCommandForUser: mockGetActivePendingCommandForUser,
+		insertTurnSummary: mockInsertTurnSummary,
+		redactString: mockRedactString,
+	};
+}
 
 describe("createConversationGraph", () => {
 	beforeEach(() => {
 		mockInvoke.mockReset();
+		mockGetRecentTurns.mockReset().mockResolvedValue([]);
+		mockGetActivePendingCommandForUser.mockReset().mockResolvedValue(null);
+		mockInsertTurnSummary.mockReset().mockResolvedValue({});
+		mockRedactString.mockReset().mockImplementation((s: string) => s);
 	});
 
 	const makeState = (overrides: Record<string, unknown> = {}) => ({
@@ -62,14 +75,14 @@ describe("createConversationGraph", () => {
 	});
 
 	it("returns a compiled graph", () => {
-		const graph = createConversationGraph({ openaiApiKey: "sk-test-key" });
+		const graph = createConversationGraph(makeConfig());
 		expect(graph).toBeDefined();
 		expect(typeof graph.invoke).toBe("function");
 	});
 
 	it("processes a text_message and returns a valid graph response", async () => {
 		mockInvoke.mockResolvedValueOnce(greetingResult);
-		const graph = createConversationGraph({ openaiApiKey: "sk-test-key" });
+		const graph = createConversationGraph(makeConfig());
 		const result = await graph.invoke(makeState());
 
 		expect(result.response).not.toBeNull();
@@ -83,7 +96,7 @@ describe("createConversationGraph", () => {
 
 	it("sets intentClassification in graph state", async () => {
 		mockInvoke.mockResolvedValueOnce(mutatingResult);
-		const graph = createConversationGraph({ openaiApiKey: "sk-test-key" });
+		const graph = createConversationGraph(makeConfig());
 		const result = await graph.invoke(makeState());
 
 		expect(result.intentClassification).toEqual(mutatingResult);
@@ -91,7 +104,7 @@ describe("createConversationGraph", () => {
 
 	it("processes a voice_message event", async () => {
 		mockInvoke.mockResolvedValueOnce(mutatingResult);
-		const graph = createConversationGraph({ openaiApiKey: "sk-test-key" });
+		const graph = createConversationGraph(makeConfig());
 		const result = await graph.invoke(
 			makeState({
 				inboundEvent: {
@@ -113,7 +126,7 @@ describe("createConversationGraph", () => {
 	});
 
 	it("processes a callback_action event without calling LLM", async () => {
-		const graph = createConversationGraph({ openaiApiKey: "sk-test-key" });
+		const graph = createConversationGraph(makeConfig());
 		const result = await graph.invoke(
 			makeState({
 				inboundEvent: {
@@ -133,13 +146,13 @@ describe("createConversationGraph", () => {
 		if (parsed.success) {
 			expect(parsed.data.type).toBe("text");
 		}
-		// LLM should not be called for callback_action
+		// LLM should not be called for callback_action without active pending command
 		expect(mockInvoke).not.toHaveBeenCalled();
 	});
 
 	it("preserves userId and correlationId through the graph", async () => {
 		mockInvoke.mockResolvedValueOnce(greetingResult);
-		const graph = createConversationGraph({ openaiApiKey: "sk-test-key" });
+		const graph = createConversationGraph(makeConfig());
 		const result = await graph.invoke(makeState());
 
 		expect(result.userId).toBe("550e8400-e29b-41d4-a716-446655440000");
@@ -148,11 +161,46 @@ describe("createConversationGraph", () => {
 
 	it("handles LLM errors gracefully", async () => {
 		mockInvoke.mockRejectedValueOnce(new Error("LLM timeout"));
-		const graph = createConversationGraph({ openaiApiKey: "sk-test-key" });
+		const graph = createConversationGraph(makeConfig());
 		const result = await graph.invoke(makeState());
 
 		expect(result.response).not.toBeNull();
 		expect(result.intentClassification!.intent).toBe("out_of_scope");
 		expect(result.intentClassification!.confidence).toBe(0);
+	});
+
+	// --- New topology tests ---
+
+	it("loads context from DB via loadContext node", async () => {
+		mockInvoke.mockResolvedValueOnce(greetingResult);
+		const graph = createConversationGraph(makeConfig());
+		await graph.invoke(makeState());
+
+		expect(mockGetRecentTurns).toHaveBeenCalledWith(
+			mockDb,
+			"550e8400-e29b-41d4-a716-446655440000",
+			10,
+		);
+		expect(mockGetActivePendingCommandForUser).toHaveBeenCalledWith(
+			mockDb,
+			"550e8400-e29b-41d4-a716-446655440000",
+		);
+	});
+
+	it("persists turn summaries via persistTurn node", async () => {
+		mockInvoke.mockResolvedValueOnce(greetingResult);
+		const graph = createConversationGraph(makeConfig());
+		await graph.invoke(makeState());
+
+		// Should insert user turn and assistant turn
+		expect(mockInsertTurnSummary).toHaveBeenCalledTimes(2);
+	});
+
+	it("passes turn summaries through redaction", async () => {
+		mockInvoke.mockResolvedValueOnce(greetingResult);
+		const graph = createConversationGraph(makeConfig());
+		await graph.invoke(makeState());
+
+		expect(mockRedactString).toHaveBeenCalledTimes(2);
 	});
 });

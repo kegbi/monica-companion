@@ -1,5 +1,9 @@
 export { type ConversationGraphConfig, createConversationGraph } from "./graph.js";
 export {
+	type ClarificationReason,
+	ClarificationReasonSchema,
+	type DisambiguationOption,
+	DisambiguationOptionSchema,
 	type Intent,
 	type IntentClassificationResult,
 	IntentClassificationResultSchema,

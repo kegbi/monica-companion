@@ -53,6 +53,19 @@ vi.mock("@monica-companion/auth", () => ({
 	}),
 }));
 
+vi.mock("@monica-companion/redaction", () => ({
+	redactString: vi.fn().mockImplementation((s: string) => s),
+}));
+
+vi.mock("../db/turn-repository.js", () => ({
+	getRecentTurns: vi.fn().mockResolvedValue([]),
+	insertTurnSummary: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock("../pending-command/repository.js", () => ({
+	getActivePendingCommandForUser: vi.fn().mockResolvedValue(null),
+}));
+
 import { createApp } from "../app.js";
 
 const mockConfig = {
@@ -62,6 +75,7 @@ const mockConfig = {
 	expirySweepIntervalMs: 60000,
 	monicaIntegrationUrl: "http://monica-integration:3004",
 	openaiApiKey: "sk-test-key-for-process",
+	maxConversationTurns: 10,
 	inboundAllowedCallers: ["telegram-bridge"],
 	auth: {
 		serviceName: "ai-router" as const,

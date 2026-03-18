@@ -3,11 +3,12 @@
  *
  * Maps the intentClassification state field to a GraphResponse.
  *
- * This node is intentionally separate from classifyIntent to serve as an
- * extension point: later tasks will add richer response formatting here
- * (confirmation prompts with inline keyboards, disambiguation prompts,
- * read-query result formatting after data fetch, etc.) without modifying
- * the classification node. Per review LOW-1.
+ * When needsClarification is true:
+ * - Without disambiguationOptions: produces a "text" response (simple clarification)
+ * - With disambiguationOptions: produces a "disambiguation_prompt" response
+ *
+ * Per review MEDIUM-1: use `text` type for clarification without options,
+ * `disambiguation_prompt` for clarification with options.
  */
 
 import type { ConversationAnnotation, GraphResponse } from "../state.js";
@@ -17,7 +18,6 @@ type Update = typeof ConversationAnnotation.Update;
 
 /**
  * Formats the classification result into a GraphResponse.
- * Currently all intents produce a simple text response using userFacingText.
  */
 export function formatResponseNode(state: State): Update {
 	const classification = state.intentClassification;
@@ -30,6 +30,28 @@ export function formatResponseNode(state: State): Update {
 		return { response };
 	}
 
+	// Handle clarification with disambiguation options
+	if (
+		classification.needsClarification &&
+		classification.disambiguationOptions &&
+		classification.disambiguationOptions.length > 0
+	) {
+		const response: GraphResponse = {
+			type: "disambiguation_prompt",
+			text: classification.userFacingText,
+			options: classification.disambiguationOptions,
+		};
+
+		// Include pending command reference if available
+		if (state.activePendingCommand) {
+			response.pendingCommandId = state.activePendingCommand.pendingCommandId;
+			response.version = state.activePendingCommand.version;
+		}
+
+		return { response };
+	}
+
+	// All other cases (including clarification without options) use text type
 	const response: GraphResponse = {
 		type: "text",
 		text: classification.userFacingText,

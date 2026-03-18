@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { IntentClassificationResult } from "../../intent-schemas.js";
-import { GraphResponseSchema } from "../../state.js";
+import { GraphResponseSchema, type PendingCommandRef } from "../../state.js";
 import { formatResponseNode } from "../format-response.js";
 
-function makeState(intentClassification: IntentClassificationResult | null) {
+function makeState(
+	intentClassification: IntentClassificationResult | null,
+	overrides: Record<string, unknown> = {},
+) {
 	return {
 		userId: "550e8400-e29b-41d4-a716-446655440000",
 		correlationId: "corr-123",
@@ -20,6 +23,7 @@ function makeState(intentClassification: IntentClassificationResult | null) {
 		userPreferences: null,
 		response: null,
 		intentClassification,
+		...overrides,
 	};
 }
 
@@ -152,5 +156,132 @@ describe("formatResponseNode", () => {
 				`should produce valid GraphResponse for ${classification.intent}`,
 			).toBe(true);
 		}
+	});
+
+	// --- New: clarification and disambiguation responses ---
+
+	it("produces text response for needsClarification without options", () => {
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Which contact did you mean?",
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: null,
+			confidence: 0.5,
+			needsClarification: true,
+			clarificationReason: "missing_fields",
+		};
+
+		const update = formatResponseNode(makeState(classification));
+		expect(update.response).toEqual({
+			type: "text",
+			text: "Which contact did you mean?",
+		});
+	});
+
+	it("produces disambiguation_prompt for needsClarification with options", () => {
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Which Jane did you mean?",
+			commandType: "create_note",
+			contactRef: "Jane",
+			commandPayload: null,
+			confidence: 0.6,
+			needsClarification: true,
+			clarificationReason: "ambiguous_contact",
+			disambiguationOptions: [
+				{ label: "Jane Doe", value: "jane-doe-id" },
+				{ label: "Jane Smith", value: "jane-smith-id" },
+			],
+		};
+
+		const update = formatResponseNode(makeState(classification));
+		expect(update.response).toEqual({
+			type: "disambiguation_prompt",
+			text: "Which Jane did you mean?",
+			options: [
+				{ label: "Jane Doe", value: "jane-doe-id" },
+				{ label: "Jane Smith", value: "jane-smith-id" },
+			],
+		});
+	});
+
+	it("includes pendingCommandId and version from active pending command on disambiguation", () => {
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Which Jane?",
+			commandType: "create_note",
+			contactRef: "Jane",
+			commandPayload: null,
+			confidence: 0.6,
+			needsClarification: true,
+			clarificationReason: "ambiguous_contact",
+			disambiguationOptions: [
+				{ label: "Jane Doe", value: "jane-doe-id" },
+				{ label: "Jane Smith", value: "jane-smith-id" },
+			],
+		};
+
+		const activePendingCommand: PendingCommandRef = {
+			pendingCommandId: "cmd-456",
+			version: 2,
+			status: "draft",
+			commandType: "create_note",
+		};
+
+		const update = formatResponseNode(makeState(classification, { activePendingCommand }));
+		expect(update.response).toEqual({
+			type: "disambiguation_prompt",
+			text: "Which Jane?",
+			options: [
+				{ label: "Jane Doe", value: "jane-doe-id" },
+				{ label: "Jane Smith", value: "jane-smith-id" },
+			],
+			pendingCommandId: "cmd-456",
+			version: 2,
+		});
+	});
+
+	it("produces valid GraphResponse for clarification without options", () => {
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "What note would you like to add?",
+			commandType: "create_note",
+			contactRef: "Jane",
+			commandPayload: null,
+			confidence: 0.5,
+			needsClarification: true,
+			clarificationReason: "missing_fields",
+		};
+
+		const update = formatResponseNode(makeState(classification));
+		const parsed = GraphResponseSchema.safeParse(update.response);
+		expect(parsed.success).toBe(true);
+	});
+
+	it("produces valid GraphResponse for disambiguation with options", () => {
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Which Jane?",
+			commandType: "create_note",
+			contactRef: "Jane",
+			commandPayload: null,
+			confidence: 0.6,
+			needsClarification: true,
+			clarificationReason: "ambiguous_contact",
+			disambiguationOptions: [
+				{ label: "Jane Doe", value: "jane-doe-id" },
+				{ label: "Jane Smith", value: "jane-smith-id" },
+			],
+		};
+
+		const update = formatResponseNode(makeState(classification));
+		const parsed = GraphResponseSchema.safeParse(update.response);
+		expect(parsed.success).toBe(true);
 	});
 });

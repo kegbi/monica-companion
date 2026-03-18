@@ -1,0 +1,11 @@
+{
+	"taskId": "multi-turn-conversation",
+	"taskGroup": "Multi-Turn Conversation & Context Preservation",
+	"phase": "code-review",
+	"planAttempts": 1,
+	"codeAttempts": 1,
+	"smokeAttempts": 0,
+	"status": "in-progress",
+	"mode": "auto",
+	"startedAt": "2026-03-18T12:30:00.000Z"
+}

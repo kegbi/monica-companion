@@ -17,6 +17,7 @@
 		"@monica-companion/auth": "workspace:*",
 		"@monica-companion/guardrails": "workspace:*",
 		"@monica-companion/observability": "workspace:*",
+		"@monica-companion/redaction": "workspace:*",
 		"@monica-companion/types": "workspace:*",
 		"ioredis": "catalog:",
 		"hono": "catalog:",

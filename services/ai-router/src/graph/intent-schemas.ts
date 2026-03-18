@@ -46,6 +46,21 @@ export type Intent = z.infer<typeof IntentSchema>;
  * TODO: Validate commandPayload against typed per-command schemas during
  * pending-command creation (End-to-End Pipeline Wiring task).
  */
+export const ClarificationReasonSchema = z.enum([
+	"ambiguous_contact",
+	"missing_fields",
+	"unclear_intent",
+]);
+
+export type ClarificationReason = z.infer<typeof ClarificationReasonSchema>;
+
+export const DisambiguationOptionSchema = z.object({
+	label: z.string(),
+	value: z.string(),
+});
+
+export type DisambiguationOption = z.infer<typeof DisambiguationOptionSchema>;
+
 export const IntentClassificationResultSchema = z.object({
 	intent: IntentSchema,
 	detectedLanguage: z.string(),
@@ -54,6 +69,9 @@ export const IntentClassificationResultSchema = z.object({
 	contactRef: z.string().nullable(),
 	commandPayload: z.record(z.string(), z.unknown()).nullable(),
 	confidence: z.number().min(0).max(1),
+	needsClarification: z.boolean().default(false),
+	clarificationReason: ClarificationReasonSchema.optional(),
+	disambiguationOptions: z.array(DisambiguationOptionSchema).optional(),
 });
 
 export type IntentClassificationResult = z.infer<typeof IntentClassificationResultSchema>;

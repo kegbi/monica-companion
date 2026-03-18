@@ -117,4 +117,18 @@ describe("loadConfig", () => {
 		const config = loadConfig(baseEnv);
 		expect(config.openaiApiKey).toBe("sk-test-key-for-config");
 	});
+
+	it("applies default MAX_CONVERSATION_TURNS of 10", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.maxConversationTurns).toBe(10);
+	});
+
+	it("coerces MAX_CONVERSATION_TURNS correctly", () => {
+		const config = loadConfig({ ...baseEnv, MAX_CONVERSATION_TURNS: "20" });
+		expect(config.maxConversationTurns).toBe(20);
+	});
+
+	it("rejects MAX_CONVERSATION_TURNS of 0", () => {
+		expect(() => loadConfig({ ...baseEnv, MAX_CONVERSATION_TURNS: "0" })).toThrow();
+	});
 });

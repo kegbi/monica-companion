@@ -11,6 +11,7 @@ const configSchema = z.object({
 	DELIVERY_URL: z.string().min(1).optional(),
 	INBOUND_ALLOWED_CALLERS: z.string().optional(),
 	OPENAI_API_KEY: z.string().min(1),
+	MAX_CONVERSATION_TURNS: z.coerce.number().int().positive().default(10),
 });
 
 export interface Config {
@@ -21,6 +22,7 @@ export interface Config {
 	monicaIntegrationUrl: string;
 	deliveryUrl?: string;
 	openaiApiKey: string;
+	maxConversationTurns: number;
 	auth: AuthConfig;
 	guardrails: GuardrailConfig;
 	inboundAllowedCallers: string[];
@@ -50,6 +52,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 		monicaIntegrationUrl: parsed.MONICA_INTEGRATION_URL,
 		deliveryUrl: parsed.DELIVERY_URL,
 		openaiApiKey: parsed.OPENAI_API_KEY,
+		maxConversationTurns: parsed.MAX_CONVERSATION_TURNS,
 		auth,
 		guardrails,
 		inboundAllowedCallers: parseAllowedCallers(parsed.INBOUND_ALLOWED_CALLERS),

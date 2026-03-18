@@ -329,6 +329,9 @@ importers:
       '@monica-companion/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@monica-companion/redaction':
+        specifier: workspace:*
+        version: link:../../packages/redaction
       '@monica-companion/types':
         specifier: workspace:*
         version: link:../../packages/types
