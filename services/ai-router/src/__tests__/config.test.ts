@@ -93,4 +93,17 @@ describe("loadConfig", () => {
 		expect(config.guardrails.rateLimitPerUser).toBe(50);
 		expect(config.guardrails.budgetLimitUsd).toBe(200);
 	});
+
+	it("defaults inboundAllowedCallers to ['telegram-bridge']", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.inboundAllowedCallers).toEqual(["telegram-bridge"]);
+	});
+
+	it("parses INBOUND_ALLOWED_CALLERS from comma-separated env var", () => {
+		const config = loadConfig({
+			...baseEnv,
+			INBOUND_ALLOWED_CALLERS: "telegram-bridge,whatsapp-bridge",
+		});
+		expect(config.inboundAllowedCallers).toEqual(["telegram-bridge", "whatsapp-bridge"]);
+	});
 });

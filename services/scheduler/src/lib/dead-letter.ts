@@ -18,6 +18,8 @@ export interface DeadLetterPayload {
 	executionId: string;
 	userId: string;
 	correlationId: string;
+	connectorType: string;
+	connectorRoutingId: string;
 	error: string;
 	attemptCount: number;
 	payload: unknown;
@@ -64,8 +66,8 @@ export async function handleDeadLetter(
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						userId: data.userId,
-						connectorType: "telegram",
-						connectorRoutingId: "",
+						connectorType: data.connectorType,
+						connectorRoutingId: data.connectorRoutingId,
 						correlationId: data.correlationId,
 						content: {
 							type: "error",

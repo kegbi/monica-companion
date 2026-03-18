@@ -1,4 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@opentelemetry/api", () => ({
+	trace: {
+		getTracer: () => ({
+			startActiveSpan: (_name: string, fn: (span: unknown) => unknown) =>
+				fn({
+					setAttribute: () => {},
+					end: () => {},
+				}),
+		}),
+	},
+}));
+
+vi.mock("drizzle-orm", () => ({
+	sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values }),
+}));
+
 import { executeReminder, type ReminderExecutorDeps } from "../workers/reminder-executor";
 
 function createMockDeps(): ReminderExecutorDeps {
@@ -33,7 +50,7 @@ function createMockDeps(): ReminderExecutorDeps {
 
 const testJobData = {
 	userId: "user-1",
-	connectorType: "telegram" as const,
+	connectorType: "telegram",
 	connectorRoutingId: "chat-1",
 	correlationId: "corr-reminder-1",
 	windowId: "window-1",
@@ -93,5 +110,18 @@ describe("executeReminder", () => {
 			new Response(JSON.stringify({ error: "Failed" }), { status: 500 }),
 		);
 		await expect(executeReminder(testJobData, deps)).rejects.toThrow();
+	});
+
+	it("passes through non-telegram connectorType to delivery intent", async () => {
+		const whatsappJob = {
+			...testJobData,
+			connectorType: "whatsapp",
+			connectorRoutingId: "wa-chat-99",
+		};
+		await executeReminder(whatsappJob, deps);
+		const callArgs = (deps.deliveryClient.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+		const body = JSON.parse(callArgs[1].body);
+		expect(body.connectorType).toBe("whatsapp");
+		expect(body.connectorRoutingId).toBe("wa-chat-99");
 	});
 });

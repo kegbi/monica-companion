@@ -1,13 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-	type ConfirmedCommandPayload,
 	ConfirmedCommandPayloadSchema,
-	type MutatingCommandPayload,
 	MutatingCommandPayloadSchema,
 	MutatingCommandType,
 	PendingCommandRecordSchema,
 	PendingCommandStatus,
-	type ReadOnlyCommandPayload,
 	ReadOnlyCommandPayloadSchema,
 	ReadOnlyCommandType,
 } from "../commands.js";
@@ -337,5 +334,27 @@ describe("ConfirmedCommandPayloadSchema", () => {
 			commandType: "query_birthday",
 		});
 		expect(result.success).toBe(false);
+	});
+
+	it("accepts optional connectorType and connectorRoutingId", () => {
+		const result = ConfirmedCommandPayloadSchema.safeParse({
+			...validConfirmed,
+			connectorType: "telegram",
+			connectorRoutingId: "chat-123",
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.connectorType).toBe("telegram");
+			expect(result.data.connectorRoutingId).toBe("chat-123");
+		}
+	});
+
+	it("parses without connectorType and connectorRoutingId (backward compat)", () => {
+		const result = ConfirmedCommandPayloadSchema.safeParse(validConfirmed);
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.connectorType).toBeUndefined();
+			expect(result.data.connectorRoutingId).toBeUndefined();
+		}
 	});
 });

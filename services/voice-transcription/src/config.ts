@@ -13,6 +13,7 @@ const voiceTranscriptionConfigSchema = z.object({
 		.default(25 * 1024 * 1024),
 	FETCH_URL_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
 	WHISPER_COST_PER_MINUTE_USD: z.coerce.number().positive().default(0.006),
+	INBOUND_ALLOWED_CALLERS: z.string().optional(),
 });
 
 export interface Config {
@@ -25,6 +26,19 @@ export interface Config {
 	whisperCostPerMinuteUsd: number;
 	redisUrl: string;
 	guardrails: GuardrailConfig;
+	inboundAllowedCallers: string[];
+}
+
+/**
+ * Parses INBOUND_ALLOWED_CALLERS from a comma-separated env var.
+ * Defaults to ["telegram-bridge"] when not set.
+ */
+function parseAllowedCallers(raw: string | undefined): string[] {
+	if (!raw) return ["telegram-bridge"];
+	return raw
+		.split(",")
+		.map((s) => s.trim())
+		.filter((s) => s.length > 0);
 }
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
@@ -42,5 +56,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 		whisperCostPerMinuteUsd: parsed.WHISPER_COST_PER_MINUTE_USD,
 		redisUrl: guardrails.redisUrl,
 		guardrails,
+		inboundAllowedCallers: parseAllowedCallers(parsed.INBOUND_ALLOWED_CALLERS),
 	};
 }

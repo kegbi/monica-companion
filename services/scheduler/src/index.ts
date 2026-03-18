@@ -61,6 +61,47 @@ async function main() {
 		commandQueue,
 	});
 
+	/**
+	 * Resolves connector routing for dead-letter notifications.
+	 * Tries the command payload first, then falls back to user-management.
+	 */
+	async function resolveConnectorRoutingForDeadLetter(command: {
+		userId: string;
+		connectorType?: string;
+		connectorRoutingId?: string;
+	}): Promise<{ connectorType: string; connectorRoutingId: string }> {
+		if (command.connectorType && command.connectorRoutingId) {
+			return {
+				connectorType: command.connectorType,
+				connectorRoutingId: command.connectorRoutingId,
+			};
+		}
+
+		try {
+			const response = await userManagementClient.fetch(
+				`/internal/users/${command.userId}/schedule`,
+				{ method: "GET" },
+			);
+			if (response.ok) {
+				const schedule = (await response.json()) as {
+					connectorType: string;
+					connectorRoutingId: string;
+				};
+				return {
+					connectorType: schedule.connectorType,
+					connectorRoutingId: schedule.connectorRoutingId,
+				};
+			}
+		} catch {
+			// Fall through to default
+		}
+
+		// Last resort: cannot resolve routing, dead-letter notification will fail
+		// at delivery validation (connectorRoutingId min(1)), which is acceptable
+		// because dead-letter notification is best-effort.
+		return { connectorType: "unknown", connectorRoutingId: "unresolved" };
+	}
+
 	// --- Command execution worker ---
 	const commandWorker = new Worker(
 		"command-execution",
@@ -76,6 +117,7 @@ async function main() {
 				await processCommandJob(job.data, {
 					monicaClient,
 					deliveryClient,
+					userManagementClient,
 					idempotencyStore,
 					db: db as never,
 				});
@@ -107,6 +149,7 @@ async function main() {
 		}
 		if (job && job.attemptsMade >= config.maxRetries) {
 			queueMetrics.recordDeadLetter("command-execution");
+			const routing = await resolveConnectorRoutingForDeadLetter(job.data.command);
 			await handleDeadLetter(
 				{
 					jobId: job.id ?? "unknown",
@@ -114,6 +157,8 @@ async function main() {
 					executionId: job.data.executionId,
 					userId: job.data.command.userId,
 					correlationId: job.data.correlationId,
+					connectorType: routing.connectorType,
+					connectorRoutingId: routing.connectorRoutingId,
 					error: error.message,
 					attemptCount: job.attemptsMade,
 					payload: job.data.command.payload,

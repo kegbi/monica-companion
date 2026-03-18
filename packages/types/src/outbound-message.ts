@@ -41,7 +41,7 @@ export type OutboundContent = z.infer<typeof OutboundContentSchema>;
 
 export const OutboundMessageIntentSchema = z.object({
 	userId: z.string().min(1),
-	connectorType: z.enum(["telegram"]),
+	connectorType: z.string().min(1),
 	connectorRoutingId: z.string().min(1),
 	correlationId: z.string().min(1),
 	content: OutboundContentSchema,

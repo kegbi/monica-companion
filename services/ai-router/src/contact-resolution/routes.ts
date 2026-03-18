@@ -11,7 +11,7 @@ const logger = createLogger("contact-resolution");
 
 /**
  * Contact resolution routes.
- * POST /internal/resolve-contact -- callers: telegram-bridge
+ * POST /internal/resolve-contact -- callers: configurable via INBOUND_ALLOWED_CALLERS
  */
 export function contactResolutionRoutes(config: Config) {
 	const routes = new Hono();
@@ -19,7 +19,7 @@ export function contactResolutionRoutes(config: Config) {
 	const auth = serviceAuth({
 		audience: "ai-router",
 		secrets: config.auth.jwtSecrets,
-		allowedCallers: ["telegram-bridge"],
+		allowedCallers: config.inboundAllowedCallers,
 	});
 
 	routes.post("/resolve-contact", auth, async (c) => {

@@ -83,10 +83,23 @@ describe("OutboundMessageIntentSchema", () => {
 		});
 	});
 
-	it("rejects unsupported connector type", () => {
+	it("accepts any non-empty connector type string (connector-neutral)", () => {
+		for (const connectorType of ["telegram", "whatsapp", "signal", "matrix"]) {
+			const result = OutboundMessageIntentSchema.safeParse({
+				userId: "550e8400-e29b-41d4-a716-446655440000",
+				connectorType,
+				connectorRoutingId: "chat-12345",
+				correlationId: "corr-abc",
+				content: { type: "text", text: "hello" },
+			});
+			expect(result.success).toBe(true);
+		}
+	});
+
+	it("rejects empty connector type string", () => {
 		const result = OutboundMessageIntentSchema.safeParse({
 			userId: "550e8400-e29b-41d4-a716-446655440000",
-			connectorType: "slack",
+			connectorType: "",
 			connectorRoutingId: "chat-12345",
 			correlationId: "corr-abc",
 			content: { type: "text", text: "hello" },

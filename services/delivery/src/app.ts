@@ -11,10 +11,6 @@ import { deliveryAudits } from "./db/schema";
 const logger = createLogger("delivery");
 const tracer = trace.getTracer("delivery");
 
-const CONNECTOR_URL_MAP: Record<string, (config: Config) => string> = {
-	telegram: (config) => config.telegramBridgeUrl,
-};
-
 export interface AppDeps {
 	db: Database;
 }
@@ -52,8 +48,10 @@ export function createApp(config: Config, deps: AppDeps) {
 			}
 
 			const intent = parsed.data;
-			const urlResolver = CONNECTOR_URL_MAP[intent.connectorType];
-			if (!urlResolver) {
+
+			// Resolve connector URL from config-driven registry
+			const connectorBaseUrl = config.connectorRegistry[intent.connectorType];
+			if (!connectorBaseUrl) {
 				span.end();
 				return c.json({ status: "rejected", error: "Unsupported connector type" }, 400);
 			}
@@ -88,10 +86,12 @@ export function createApp(config: Config, deps: AppDeps) {
 			span.setAttribute("delivery.connector_type", intent.connectorType);
 			span.setAttribute("delivery.content_type", intent.content.type);
 
-			const connectorBaseUrl = urlResolver(config);
+			// Derive audience from connector type using config helper
+			const audience = config.connectorAudience(intent.connectorType);
+
 			const connectorClient = createServiceClient({
 				issuer: "delivery",
-				audience: intent.connectorType === "telegram" ? "telegram-bridge" : "telegram-bridge",
+				audience,
 				secret: config.auth.jwtSecrets[0],
 				baseUrl: connectorBaseUrl,
 				fetch: config.fetchFn,

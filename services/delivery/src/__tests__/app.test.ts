@@ -6,7 +6,8 @@ import { createApp } from "../app";
 const JWT_SECRET = "test-secret-256-bit-minimum-key!";
 
 const testConfig = {
-	telegramBridgeUrl: "http://telegram-bridge:3001",
+	connectorRegistry: { telegram: "http://telegram-bridge:3001" } as Record<string, string>,
+	connectorAudience: (connectorType: string) => `${connectorType}-bridge`,
 	databaseUrl: "postgresql://test:test@localhost:5432/test",
 	httpTimeoutMs: 10_000,
 	auth: {
@@ -55,10 +56,11 @@ function createMockDb() {
 function createTestApp(overrides?: {
 	fetchFn?: typeof globalThis.fetch;
 	db?: ReturnType<typeof createMockDb>;
+	config?: Partial<typeof testConfig>;
 }) {
 	const db = overrides?.db ?? createMockDb();
 	const deps: AppDeps = { db: db as never };
-	const config = { ...testConfig, fetchFn: overrides?.fetchFn };
+	const config = { ...testConfig, ...overrides?.config, fetchFn: overrides?.fetchFn };
 	const app = createApp(config, deps);
 	return { app, db };
 }
@@ -117,7 +119,7 @@ describe("delivery app", () => {
 		expect(body.error).toBeDefined();
 	});
 
-	it("POST /internal/deliver returns 400 for unsupported connector with rejected audit", async () => {
+	it("POST /internal/deliver returns 400 for unsupported connector type (not in registry)", async () => {
 		const token = await signServiceToken({
 			issuer: "ai-router",
 			audience: "delivery",
@@ -132,11 +134,45 @@ describe("delivery app", () => {
 			},
 			body: JSON.stringify({
 				...validIntent,
+				connectorType: "unsupported",
+			}),
+		});
+		expect(res.status).toBe(400);
+		const body = await res.json();
+		expect(body.error).toContain("Unsupported connector type");
+	});
+
+	it("POST /internal/deliver resolves whatsapp connector from registry", async () => {
+		const token = await signServiceToken({
+			issuer: "ai-router",
+			audience: "delivery",
+			secret: JWT_SECRET,
+		});
+		const mockFetch = vi.fn(async () => new Response(JSON.stringify({ ok: true })));
+		const { app } = createTestApp({
+			fetchFn: mockFetch as never,
+			config: {
+				connectorRegistry: {
+					telegram: "http://telegram-bridge:3001",
+					whatsapp: "http://whatsapp-bridge:3010",
+				},
+			},
+		});
+
+		const res = await app.request("/internal/deliver", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				...validIntent,
 				connectorType: "whatsapp",
 			}),
 		});
-		// Note: will be 400 because OutboundMessageIntentSchema validates connectorType as enum ["telegram"]
-		expect(res.status).toBe(400);
+		expect(res.status).toBe(200);
+		const fetchCall = mockFetch.mock.calls[0];
+		expect(fetchCall[0]).toBe("http://whatsapp-bridge:3010/internal/send");
 	});
 
 	it("POST /internal/deliver returns 200 with delivered audit for valid intent", async () => {

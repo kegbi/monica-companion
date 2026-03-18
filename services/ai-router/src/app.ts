@@ -20,14 +20,14 @@ export function createApp(config: Config, _db: Database, redis: Redis) {
 
 	app.get("/health", (c) => c.json({ status: "ok", service: "ai-router" }));
 
-	// Inbound event processing endpoint (caller: telegram-bridge)
+	// Inbound event processing endpoint (caller: connectors via configurable allowedCallers)
 	// Mounted before guardrail middleware to use its own auth
 	const inbound = new Hono();
 	inbound.use(
 		serviceAuth({
 			audience: "ai-router",
 			secrets: config.auth.jwtSecrets,
-			allowedCallers: ["telegram-bridge"],
+			allowedCallers: config.inboundAllowedCallers,
 		}),
 	);
 	inbound.post("/process", async (c) => {

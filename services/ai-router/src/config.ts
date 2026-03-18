@@ -9,6 +9,7 @@ const configSchema = z.object({
 	EXPIRY_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
 	MONICA_INTEGRATION_URL: z.string().min(1),
 	DELIVERY_URL: z.string().min(1).optional(),
+	INBOUND_ALLOWED_CALLERS: z.string().optional(),
 });
 
 export interface Config {
@@ -20,6 +21,19 @@ export interface Config {
 	deliveryUrl?: string;
 	auth: AuthConfig;
 	guardrails: GuardrailConfig;
+	inboundAllowedCallers: string[];
+}
+
+/**
+ * Parses INBOUND_ALLOWED_CALLERS from a comma-separated env var.
+ * Defaults to ["telegram-bridge"] when not set.
+ */
+function parseAllowedCallers(raw: string | undefined): string[] {
+	if (!raw) return ["telegram-bridge"];
+	return raw
+		.split(",")
+		.map((s) => s.trim())
+		.filter((s) => s.length > 0);
 }
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
@@ -35,5 +49,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 		deliveryUrl: parsed.DELIVERY_URL,
 		auth,
 		guardrails,
+		inboundAllowedCallers: parseAllowedCallers(parsed.INBOUND_ALLOWED_CALLERS),
 	};
 }

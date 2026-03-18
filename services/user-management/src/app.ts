@@ -285,16 +285,19 @@ export function createApp(config: Config, db: Database) {
 			const connectorType = c.req.param("connectorType");
 			const connectorUserId = c.req.param("connectorUserId");
 
-			if (connectorType !== "telegram") {
-				return c.json({ error: "Unsupported connector type" }, 400);
+			// Dispatch by connector type. Adding a new connector requires
+			// a new case here with the appropriate lookup function.
+			switch (connectorType) {
+				case "telegram": {
+					const user = await findUserByTelegramId(db, connectorUserId);
+					if (!user) {
+						return c.json({ found: false });
+					}
+					return c.json({ found: true, userId: user.id });
+				}
+				default:
+					return c.json({ error: "Unsupported connector type" }, 400);
 			}
-
-			const user = await findUserByTelegramId(db, connectorUserId);
-			if (!user) {
-				return c.json({ found: false });
-			}
-
-			return c.json({ found: true, userId: user.id });
 		},
 	);
 

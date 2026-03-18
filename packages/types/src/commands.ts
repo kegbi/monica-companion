@@ -231,5 +231,12 @@ export const ConfirmedCommandPayloadSchema = z.object({
 	idempotencyKey: z.string(),
 	correlationId: z.string(),
 	confirmedAt: z.string(),
+	/**
+	 * Optional connector routing fields. When present, scheduler uses these
+	 * directly for delivery intents. When absent, scheduler resolves them
+	 * from user-management (similar to how reminder-poller works).
+	 */
+	connectorType: z.string().min(1).optional(),
+	connectorRoutingId: z.string().min(1).optional(),
 });
 export type ConfirmedCommandPayload = z.infer<typeof ConfirmedCommandPayloadSchema>;

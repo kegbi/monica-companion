@@ -12,7 +12,7 @@ export interface ReminderExecutorDeps {
 
 export interface ReminderJobData {
 	userId: string;
-	connectorType: "telegram";
+	connectorType: string;
 	connectorRoutingId: string;
 	correlationId: string;
 	windowId: string;

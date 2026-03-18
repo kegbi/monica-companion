@@ -21,7 +21,7 @@ export function createApp(config: Config, redis: Redis, whisperClient: WhisperCl
 		serviceAuth({
 			audience: "voice-transcription",
 			secrets: config.auth.jwtSecrets,
-			allowedCallers: ["telegram-bridge"],
+			allowedCallers: config.inboundAllowedCallers,
 		}),
 	);
 

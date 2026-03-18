@@ -9,6 +9,7 @@ const tracer = trace.getTracer("scheduler");
 export interface CommandWorkerDeps {
 	monicaClient: ServiceClient;
 	deliveryClient: ServiceClient;
+	userManagementClient: ServiceClient;
 	idempotencyStore: IdempotencyStore;
 	db: { execute: (query: unknown) => Promise<unknown> };
 }
@@ -17,6 +18,47 @@ export interface CommandJobData {
 	executionId: string;
 	command: ConfirmedCommandPayload;
 	correlationId: string;
+}
+
+interface ConnectorRouting {
+	connectorType: string;
+	connectorRoutingId: string;
+}
+
+/**
+ * Resolves connector routing for delivery intents.
+ * Uses fields from the confirmed command payload if present,
+ * otherwise looks them up from user-management (per F1 review finding).
+ */
+async function resolveConnectorRouting(
+	command: ConfirmedCommandPayload,
+	deps: CommandWorkerDeps,
+): Promise<ConnectorRouting> {
+	if (command.connectorType && command.connectorRoutingId) {
+		return {
+			connectorType: command.connectorType,
+			connectorRoutingId: command.connectorRoutingId,
+		};
+	}
+
+	const response = await deps.userManagementClient.fetch(
+		`/internal/users/${command.userId}/schedule`,
+		{ method: "GET" },
+	);
+
+	if (!response.ok) {
+		throw new Error(`user-management returned ${response.status} when resolving connector routing`);
+	}
+
+	const schedule = (await response.json()) as {
+		connectorType: string;
+		connectorRoutingId: string;
+	};
+
+	return {
+		connectorType: schedule.connectorType,
+		connectorRoutingId: schedule.connectorRoutingId,
+	};
 }
 
 /**
@@ -57,6 +99,9 @@ export async function processCommandJob(
 			// Complete idempotency key
 			await deps.idempotencyStore.complete(command.idempotencyKey, result);
 
+			// Resolve connector routing for delivery intent
+			const routing = await resolveConnectorRouting(command, deps);
+
 			// Send success delivery intent (best-effort, don't block on failure)
 			try {
 				await deps.deliveryClient.fetch("/internal/deliver", {
@@ -64,8 +109,8 @@ export async function processCommandJob(
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						userId: command.userId,
-						connectorType: "telegram",
-						connectorRoutingId: "",
+						connectorType: routing.connectorType,
+						connectorRoutingId: routing.connectorRoutingId,
 						correlationId,
 						content: {
 							type: "text",

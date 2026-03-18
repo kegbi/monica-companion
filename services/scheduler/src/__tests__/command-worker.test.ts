@@ -1,4 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@opentelemetry/api", () => ({
+	trace: {
+		getTracer: () => ({
+			startActiveSpan: (_name: string, fn: (span: unknown) => unknown) =>
+				fn({
+					setAttribute: () => {},
+					end: () => {},
+				}),
+		}),
+	},
+}));
+
 import { type CommandWorkerDeps, processCommandJob } from "../workers/command-worker";
 
 function createMockDeps(): CommandWorkerDeps {
@@ -13,6 +26,20 @@ function createMockDeps(): CommandWorkerDeps {
 		},
 		deliveryClient: {
 			fetch: vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 })),
+		},
+		userManagementClient: {
+			fetch: vi.fn().mockResolvedValue(
+				new Response(
+					JSON.stringify({
+						reminderCadence: "daily",
+						reminderTime: "08:00",
+						timezone: "UTC",
+						connectorType: "telegram",
+						connectorRoutingId: "chat-resolved-123",
+					}),
+					{ status: 200, headers: { "Content-Type": "application/json" } },
+				),
+			),
 		},
 		idempotencyStore: {
 			check: vi.fn(),
@@ -86,5 +113,46 @@ describe("processCommandJob", () => {
 	it("sends success delivery intent on completion", async () => {
 		await processCommandJob(testJobData, deps);
 		expect(deps.deliveryClient.fetch).toHaveBeenCalled();
+	});
+
+	it("resolves connectorType and connectorRoutingId from user-management when absent from job data", async () => {
+		await processCommandJob(testJobData, deps);
+		// Should have called user-management to resolve connector routing
+		expect(deps.userManagementClient.fetch).toHaveBeenCalledWith(
+			expect.stringContaining("/internal/users/"),
+			expect.anything(),
+		);
+		// Delivery intent should use resolved values
+		const deliveryCall = (deps.deliveryClient.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+		const body = JSON.parse(deliveryCall[1].body);
+		expect(body.connectorType).toBe("telegram");
+		expect(body.connectorRoutingId).toBe("chat-resolved-123");
+	});
+
+	it("uses connectorType and connectorRoutingId from job data when present", async () => {
+		const jobWithConnector = {
+			...testJobData,
+			command: {
+				...testJobData.command,
+				connectorType: "whatsapp",
+				connectorRoutingId: "wa-chat-456",
+			},
+		};
+		await processCommandJob(jobWithConnector, deps);
+		// Should NOT have called user-management
+		expect(deps.userManagementClient.fetch).not.toHaveBeenCalled();
+		// Delivery intent should use provided values
+		const deliveryCall = (deps.deliveryClient.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+		const body = JSON.parse(deliveryCall[1].body);
+		expect(body.connectorType).toBe("whatsapp");
+		expect(body.connectorRoutingId).toBe("wa-chat-456");
+	});
+
+	it("regression: connectorRoutingId is never empty string (F3 bug)", async () => {
+		await processCommandJob(testJobData, deps);
+		const deliveryCall = (deps.deliveryClient.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+		const body = JSON.parse(deliveryCall[1].body);
+		expect(body.connectorRoutingId).not.toBe("");
+		expect(body.connectorRoutingId.length).toBeGreaterThan(0);
 	});
 });
