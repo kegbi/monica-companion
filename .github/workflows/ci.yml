@@ -91,12 +91,12 @@ jobs:
 
       - name: Start services
         run: |
-          # Start all services in background
-          npx tsx services/user-management/src/index.ts &
-          npx tsx services/delivery/src/index.ts &
-          npx tsx services/ai-router/src/index.ts &
-          npx tsx services/voice-transcription/src/index.ts &
-          npx tsx services/scheduler/src/index.ts &
+          # Start all services in background (each needs its own SERVICE_NAME)
+          SERVICE_NAME=user-management npx tsx services/user-management/src/index.ts &
+          SERVICE_NAME=delivery npx tsx services/delivery/src/index.ts &
+          SERVICE_NAME=ai-router npx tsx services/ai-router/src/index.ts &
+          SERVICE_NAME=voice-transcription npx tsx services/voice-transcription/src/index.ts &
+          SERVICE_NAME=scheduler npx tsx services/scheduler/src/index.ts &
 
           # Wait for health
           services=("http://localhost:3007" "http://localhost:3006" "http://localhost:3002" "http://localhost:3003" "http://localhost:3005")
