@@ -74,6 +74,12 @@ jobs:
       # Stack smoke tests: start all services on the host (Postgres and Redis
       # already running as service containers), run migrations, then execute
       # the Vitest smoke suite against the live services.
+      - name: Reset database for smoke tests
+        run: |
+          PGPASSWORD=monica_dev psql -h localhost -U monica -d postgres \
+            -c "DROP DATABASE IF EXISTS monica_companion;" \
+            -c "CREATE DATABASE monica_companion;"
+
       - name: Run migrations
         run: |
           npx tsx scripts/migrate.ts ai-router
