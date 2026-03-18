@@ -133,6 +133,8 @@ jobs:
           TELEGRAM_WEBHOOK_SECRET: ci-webhook-secret
           ALLOW_PRIVATE_NETWORK_TARGETS: "false"
           EXPECTED_ORIGIN: http://localhost
+          TELEGRAM_BRIDGE_URL: http://localhost:3001
+          CONNECTOR_URL_TELEGRAM: http://localhost:3001
 
       - name: Run smoke tests
         run: pnpm test:smoke:stack
