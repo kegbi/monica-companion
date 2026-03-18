@@ -35,6 +35,7 @@ const testConfig = {
 	fetchUrlTimeoutMs: 15000,
 	whisperCostPerMinuteUsd: 0.006,
 	redisUrl: "redis://localhost:6379",
+	inboundAllowedCallers: ["telegram-bridge"],
 	guardrails: {
 		redisUrl: "redis://localhost:6379",
 		rateLimitPerUser: 30,

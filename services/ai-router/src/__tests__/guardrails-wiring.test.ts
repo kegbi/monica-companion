@@ -41,6 +41,7 @@ const mockConfig = {
 	pendingCommandTtlMinutes: 30,
 	expirySweepIntervalMs: 60000,
 	monicaIntegrationUrl: "http://monica-integration:3004",
+	inboundAllowedCallers: ["telegram-bridge"],
 	auth: {
 		serviceName: "ai-router" as const,
 		jwtSecrets: ["test-secret"],
