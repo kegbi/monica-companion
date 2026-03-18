@@ -15,6 +15,10 @@
 		"test:smoke:monica": "pnpm --filter @monica-companion/monica-api-lib test:smoke",
 		"prepare": "husky"
 	},
+	"dependencies": {
+		"drizzle-orm": "catalog:",
+		"postgres": "catalog:"
+	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.7",
 		"husky": "9.1.7",

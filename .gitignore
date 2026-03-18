@@ -40,5 +40,3 @@ scripts/.env.smoke
 # Smoke test results
 smoke-results/
 
-# Orchestrator work directory
-.claude-work/

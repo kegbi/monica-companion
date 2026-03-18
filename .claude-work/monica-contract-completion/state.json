@@ -1,0 +1,12 @@
+{
+	"taskId": "monica-contract-completion",
+	"taskGroup": "Monica Contract Completion",
+	"phase": "completed",
+	"planAttempts": 1,
+	"codeAttempts": 1,
+	"smokeAttempts": 0,
+	"status": "completed",
+	"mode": "auto",
+	"startedAt": "2026-03-16T16:30:00Z",
+	"completedAt": "2026-03-16T19:00:00Z"
+}

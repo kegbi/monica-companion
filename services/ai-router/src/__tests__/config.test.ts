@@ -7,6 +7,7 @@ const baseEnv = {
 	DATABASE_URL: "postgresql://monica:monica_dev@localhost:5432/monica_companion",
 	MONICA_INTEGRATION_URL: "http://monica-integration:3004",
 	REDIS_URL: "redis://localhost:6379",
+	OPENAI_API_KEY: "sk-test-key-for-config",
 };
 
 describe("loadConfig", () => {
@@ -105,5 +106,29 @@ describe("loadConfig", () => {
 			INBOUND_ALLOWED_CALLERS: "telegram-bridge,whatsapp-bridge",
 		});
 		expect(config.inboundAllowedCallers).toEqual(["telegram-bridge", "whatsapp-bridge"]);
+	});
+
+	it("throws when OPENAI_API_KEY is missing", () => {
+		const { OPENAI_API_KEY, ...env } = baseEnv;
+		expect(() => loadConfig(env)).toThrow();
+	});
+
+	it("parses OPENAI_API_KEY when provided", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.openaiApiKey).toBe("sk-test-key-for-config");
+	});
+
+	it("applies default MAX_CONVERSATION_TURNS of 10", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.maxConversationTurns).toBe(10);
+	});
+
+	it("coerces MAX_CONVERSATION_TURNS correctly", () => {
+		const config = loadConfig({ ...baseEnv, MAX_CONVERSATION_TURNS: "20" });
+		expect(config.maxConversationTurns).toBe(20);
+	});
+
+	it("rejects MAX_CONVERSATION_TURNS of 0", () => {
+		expect(() => loadConfig({ ...baseEnv, MAX_CONVERSATION_TURNS: "0" })).toThrow();
 	});
 });

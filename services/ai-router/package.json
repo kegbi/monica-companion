@@ -17,13 +17,17 @@
 		"@monica-companion/auth": "workspace:*",
 		"@monica-companion/guardrails": "workspace:*",
 		"@monica-companion/observability": "workspace:*",
+		"@monica-companion/redaction": "workspace:*",
 		"@monica-companion/types": "workspace:*",
 		"ioredis": "catalog:",
 		"hono": "catalog:",
 		"@hono/node-server": "catalog:",
 		"zod": "catalog:",
 		"drizzle-orm": "catalog:",
-		"postgres": "catalog:"
+		"postgres": "catalog:",
+		"@langchain/langgraph": "catalog:",
+		"@langchain/openai": "catalog:",
+		"@langchain/core": "catalog:"
 	},
 	"devDependencies": {
 		"@types/node": "catalog:",

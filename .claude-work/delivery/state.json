@@ -1,0 +1,12 @@
+{
+	"taskId": "delivery",
+	"taskGroup": "Delivery",
+	"phase": "completed",
+	"planAttempts": 1,
+	"codeAttempts": 1,
+	"smokeAttempts": 1,
+	"status": "completed",
+	"completedAt": "2026-03-17T19:30:00.000Z",
+	"mode": "auto",
+	"startedAt": "2026-03-17T17:00:00.000Z"
+}
