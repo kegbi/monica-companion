@@ -10,6 +10,31 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:17.9-alpine
+        env:
+          POSTGRES_USER: monica
+          POSTGRES_PASSWORD: monica_dev
+          POSTGRES_DB: monica_companion
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U monica"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+      redis:
+        image: redis:8.6.1-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,9 +57,14 @@ jobs:
       - name: Build
         run: pnpm build
 
-      # All Monica API tests use mocked fixtures. No real Monica instance is contacted.
+      # Unit + integration tests. PostgreSQL and Redis service containers
+      # are available at localhost so integration tests run against real DBs.
       - name: Test
         run: pnpm test
+        env:
+          DATABASE_URL: postgresql://monica:monica_dev@localhost:5432/monica_companion
+          TEST_DATABASE_URL: postgresql://monica:monica_dev@localhost:5432/monica_companion
+          REDIS_URL: redis://localhost:6379
 
       # Benchmark quality gates: fails the build if accuracy thresholds are not met.
       # Thresholds: contact-resolution >= 95%, read >= 92%, write >= 90%, false-positive mutation < 1%.

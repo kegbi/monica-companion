@@ -56,6 +56,7 @@ const testConfig: Config = {
 	pendingCommandTtlMinutes: 30,
 	expirySweepIntervalMs: 60000,
 	monicaIntegrationUrl: "http://monica-integration:3004",
+	inboundAllowedCallers: ["telegram-bridge"],
 	auth: {
 		serviceName: "ai-router",
 		jwtSecrets: ["test-secret-that-is-long-enough-for-hs256"],
