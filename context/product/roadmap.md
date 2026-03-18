@@ -129,6 +129,6 @@ _Use real usage data to validate that the separate service split remains justifi
   - [x] Validate that keeping `delivery` and `voice-transcription` as separate deployables in V1 continues to be justified by operational needs and connector roadmap.
   - [x] Verify that read-only interactions continue to bypass the queued execution path and still meet latency targets.
 
-- [ ] **Connector-Ready Contracts**
-  - [ ] Keep connector-neutral contracts clean without leaking Telegram-specific assumptions.
-  - [ ] Add future-connector work only after the Telegram workflow meets the acceptance criteria.
+- [x] **Connector-Ready Contracts**
+  - [x] Keep connector-neutral contracts clean without leaking Telegram-specific assumptions.
+  - [x] Add future-connector work only after the Telegram workflow meets the acceptance criteria.
