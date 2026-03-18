@@ -38,8 +38,8 @@ async function main() {
 }
 
 main().catch((err) => {
-	logger.error("Failed to start ai-router", {
-		error: err instanceof Error ? err.message : String(err),
-	});
+	const msg = err instanceof Error ? err.message : String(err);
+	logger.error("Failed to start ai-router", { error: msg });
+	console.error("[ai-router] Fatal:", msg);
 	process.exit(1);
 });

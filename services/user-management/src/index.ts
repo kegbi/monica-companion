@@ -28,8 +28,8 @@ async function main() {
 }
 
 main().catch((err) => {
-	logger.error("Failed to start user-management", {
-		error: err instanceof Error ? err.message : String(err),
-	});
+	const msg = err instanceof Error ? err.message : String(err);
+	logger.error("Failed to start user-management", { error: msg });
+	console.error("[user-management] Fatal:", msg);
 	process.exit(1);
 });

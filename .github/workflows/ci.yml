@@ -70,3 +70,98 @@ jobs:
       # Thresholds: contact-resolution >= 95%, read >= 92%, write >= 90%, false-positive mutation < 1%.
       - name: Benchmark quality gates
         run: pnpm bench:ai
+
+  # Full-stack smoke tests against Docker Compose.
+  # Builds all service images, runs migrations, and executes the
+  # Vitest smoke suite through the real network path.
+  smoke:
+    runs-on: ubuntu-latest
+    needs: ci
+
+    env:
+      JWT_SECRET: ci-smoke-test-secret-at-least-32-chars
+      JWT_SECRET_PREVIOUS: ""
+      SETUP_TOKEN_SECRET: ci-smoke-setup-token-secret-at-least-32-chars
+      ENCRYPTION_MASTER_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      ENCRYPTION_MASTER_KEY_PREVIOUS: ""
+      POSTGRES_USER: monica
+      POSTGRES_PASSWORD: monica_dev
+      POSTGRES_DB: monica_companion
+      DATABASE_URL: postgresql://monica:monica_dev@localhost:5432/monica_companion
+      REDIS_URL: redis://localhost:6379
+      TELEGRAM_BOT_TOKEN: "000000000:fake-ci-token"
+      TELEGRAM_WEBHOOK_SECRET: ci-webhook-secret
+      OPENAI_API_KEY: sk-fake-ci-key
+      SETUP_BASE_URL: http://localhost
+      EXPECTED_ORIGIN: http://localhost
+      ALLOW_PRIVATE_NETWORK_TARGETS: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start stack
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.smoke.yml \
+            --profile infra up -d
+          echo "Waiting for Postgres to become healthy..."
+          timeout=30
+          while [ $timeout -gt 0 ]; do
+            if docker compose -f docker-compose.yml -f docker-compose.smoke.yml \
+              ps postgres 2>/dev/null | grep -q healthy; then
+              break
+            fi
+            sleep 1
+            timeout=$((timeout - 1))
+          done
+          docker compose -f docker-compose.yml -f docker-compose.smoke.yml \
+            --profile app up -d
+
+      - name: Wait for services
+        run: |
+          services=("http://localhost:3002" "http://localhost:3007" "http://localhost:3006" "http://localhost:3003")
+          for url in "${services[@]}"; do
+            retries=15
+            while [ $retries -gt 0 ]; do
+              if curl -sf "$url/health" > /dev/null 2>&1; then
+                echo "OK: $url"
+                break
+              fi
+              sleep 2
+              retries=$((retries - 1))
+            done
+            if [ $retries -eq 0 ]; then
+              echo "FAIL: $url not reachable after 30s"
+              docker compose -f docker-compose.yml -f docker-compose.smoke.yml logs
+              exit 1
+            fi
+          done
+
+      - name: Run smoke tests
+        run: pnpm test:smoke:stack
+
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: tests/smoke/results/results.xml
+          if-no-files-found: warn
+
+      - name: Tear down stack
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.smoke.yml \
+            --profile app --profile infra down

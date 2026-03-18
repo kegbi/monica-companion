@@ -13,6 +13,8 @@
 		"test": "pnpm -r run test",
 		"bench:ai": "pnpm --filter @monica-companion/ai-router bench",
 		"test:smoke:monica": "pnpm --filter @monica-companion/monica-api-lib test:smoke",
+		"test:smoke:stack": "npx vitest run --config tests/smoke/vitest.config.ts",
+		"test:smoke:stack:full": "bash tests/smoke/run.sh",
 		"prepare": "husky"
 	},
 	"dependencies": {
@@ -24,7 +26,8 @@
 		"husky": "9.1.7",
 		"lint-staged": "16.4.0",
 		"tsx": "catalog:",
-		"typescript": "5.9.3"
+		"typescript": "5.9.3",
+		"vitest": "catalog:"
 	},
 	"lint-staged": {
 		"*.{ts,tsx,js,jsx,json}": "biome check --write --no-errors-on-unmatched"

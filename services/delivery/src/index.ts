@@ -30,8 +30,8 @@ async function main() {
 }
 
 main().catch((err) => {
-	logger.error("Failed to start delivery", {
-		error: err instanceof Error ? err.message : String(err),
-	});
+	const msg = err instanceof Error ? err.message : String(err);
+	logger.error("Failed to start delivery", { error: msg });
+	console.error("[delivery] Fatal:", msg);
 	process.exit(1);
 });

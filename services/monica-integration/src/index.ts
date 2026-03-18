@@ -26,8 +26,8 @@ async function main() {
 }
 
 main().catch((err) => {
-	logger.error("Failed to start monica-integration", {
-		error: err instanceof Error ? err.message : String(err),
-	});
+	const msg = err instanceof Error ? err.message : String(err);
+	logger.error("Failed to start monica-integration", { error: msg });
+	console.error("[monica-integration] Fatal:", msg);
 	process.exit(1);
 });

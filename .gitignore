@@ -39,4 +39,5 @@ scripts/.env.smoke
 
 # Smoke test results
 smoke-results/
+tests/smoke/results/*.xml
 

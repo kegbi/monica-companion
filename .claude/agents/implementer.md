@@ -75,6 +75,16 @@ If you receive a smoke test failure report:
 - Fix the underlying issue (not just the symptom).
 - Run unit/integration tests again to verify no regressions.
 
+## Smoke Test Maintenance
+
+When implementing new endpoints, services, or behaviors, keep the executable smoke test suite (`tests/smoke/`) up to date:
+
+- **New endpoints**: Add test cases to the appropriate `tests/smoke/*.smoke.test.ts` file (e.g., `auth.smoke.test.ts` for auth-related endpoints, `middleware.smoke.test.ts` for middleware behaviors).
+- **New services**: Add the service to `tests/smoke/health.smoke.test.ts` (health check entry) and expose its port in `docker-compose.smoke.yml`.
+- **New reverse proxy routes**: Add cases to `tests/smoke/reverse-proxy.smoke.test.ts`.
+- After adding or modifying smoke tests, run `pnpm test:smoke:stack` against the running stack to verify the new tests pass.
+- Always run `pnpm biome check --write` on any modified smoke test `.ts` files.
+
 ## Output
 
 When done, write a summary to the file path specified in your prompt:

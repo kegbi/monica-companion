@@ -1,0 +1,26 @@
+# Smoke test overlay — exposes internal service ports to the host
+# so the Vitest smoke suite can reach them from outside Docker.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.smoke.yml --profile app up -d
+
+services:
+  ai-router:
+    ports:
+      - "3002:3002"
+
+  voice-transcription:
+    ports:
+      - "3003:3003"
+
+  delivery:
+    ports:
+      - "3006:3006"
+
+  user-management:
+    ports:
+      - "3007:3007"
+
+  scheduler:
+    ports:
+      - "3005:3005"

@@ -8,7 +8,10 @@ const configSchema = z.object({
 	SETUP_BASE_URL: z.string().min(1),
 	SETUP_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(15),
 	ENCRYPTION_MASTER_KEY: z.string().min(32),
-	ENCRYPTION_MASTER_KEY_PREVIOUS: z.string().min(32).optional(),
+	ENCRYPTION_MASTER_KEY_PREVIOUS: z
+		.string()
+		.transform((s) => (s === "" ? undefined : s))
+		.pipe(z.string().min(32).optional()),
 });
 
 /**
