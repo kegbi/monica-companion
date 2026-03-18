@@ -8,7 +8,7 @@ The first release is successful when all of the following are met.
 
 - [ ] A user in a private Telegram chat can send a voice message describing a contact action, and the system transcribes, parses, and executes it against MonicaHQ after confirmation or safe auto-confirmation.
 - [ ] A user can send a text message with the same result as voice.
-- [ ] Voice and text input works in any language supported by OpenAI Whisper and the selected GPT model.
+- [ ] Voice and text input works in any language supported by OpenAI `gpt-4o-transcribe` (transcription) and `gpt-5.4-mini` (intent parsing and NLU).
 - [ ] A labeled benchmark of at least 200 utterances exists before release: 100 write intents, 60 read/query intents, and 40 clarification/disambiguation turns, including at least 50 voice samples.
 - [ ] Read/query accuracy on that benchmark is at least 92%.
 - [ ] Write intent and action-proposal accuracy on that benchmark is at least 90%.
@@ -106,4 +106,5 @@ The first release is successful when all of the following are met.
 
 - [ ] CI uses mocked Monica contract tests and does not call a real Monica instance.
 - [ ] A controlled real-Monica smoke test suite exists outside normal CI, such as nightly or release-candidate execution.
-- [ ] Production release requires the latest controlled real-Monica smoke suite to pass.
+- [ ] LLM smoke tests cover command parsing (all V1 command types), multi-stage dialog (clarification round-trips), context preservation (pronoun/reference resolution across turns), and out-of-scope rejection scenarios.
+- [ ] Production release requires the latest controlled real-Monica smoke suite and LLM smoke suite to pass, with all acceptance-criteria thresholds met.

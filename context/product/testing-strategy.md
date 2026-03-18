@@ -1,6 +1,6 @@
-# Testing Strategy: Monica API
+# Testing Strategy
 
-This document describes the two-tier testing approach for Monica API interactions and the release gate policy.
+This document describes the testing approach for Monica API interactions, LLM smoke tests, and the release gate policy.
 
 ---
 
@@ -79,14 +79,57 @@ The `monica-smoke.yml` GitHub Actions workflow:
 
 ---
 
+## LLM Smoke Suite
+
+**Location:** `services/ai-router/src/__smoke__/`
+
+**What it tests:**
+- `command-parsing.smoke.test.ts` — Send representative text messages covering all V1 command types (contact create, note create, activity log, field updates, read queries) through the live `telegram-bridge → ai-router` path and verify correct command payloads are produced.
+- `dialog-clarification.smoke.test.ts` — Simulate multi-turn dialogs: ambiguous input → clarification prompt → user response → correct command. Verify pending command stays in `draft` through clarification and transitions to `pending_confirmation` only when resolved.
+- `context-preservation.smoke.test.ts` — Send consecutive messages with implicit references ("add note to John" → "also update his birthday") and verify pronoun/reference resolution using `conversation_turns` context.
+- `out-of-scope.smoke.test.ts` — Send out-of-domain queries and verify polite decline without pending command creation or mutation triggers.
+
+**Key design decisions:**
+- Tests run via Docker Compose against the live `ai-router` service (connected to real PostgreSQL, Redis, and mocked Monica).
+- Benchmark evaluation compares LangGraph output intent/command payloads against labeled ground-truth using the metrics defined in `acceptance-criteria.md`.
+- Tests verify that command parsing confidence scores are appropriate for the auto-confirmation feature.
+
+### Running Locally
+
+**Prerequisites:** Docker, Docker Compose, and the benchmark fixture files.
+
+```bash
+# 1. Start the app stack (including ai-router, postgres, redis)
+docker compose --profile app up -d
+
+# 2. Run LLM smoke tests
+pnpm test:smoke:llm
+
+# 3. Tear down
+docker compose --profile app down -v
+```
+
+### Running in CI
+
+A `llm-smoke.yml` GitHub Actions workflow:
+- Runs on demand or post-merge to main.
+- Spins up the full app stack with real PostgreSQL and Redis.
+- Runs all smoke tests and generates benchmark evaluation metrics.
+- Uploads JUnit XML and benchmark metrics as workflow artifacts.
+- Blocks release if any acceptance-criteria thresholds are not met.
+
+---
+
 ## Release Gate Policy
 
-**Production release requires the latest controlled real-Monica smoke suite to have passed.**
+**Production release requires both:**
+1. The latest controlled real-Monica smoke suite to have passed.
+2. The latest LLM smoke suite to have passed with all acceptance-criteria thresholds met (read accuracy ≥ 92%, write accuracy ≥ 90%, contact-resolution precision ≥ 95%, false-positive mutation rate < 1%).
 
 For V1, this is enforced via manual verification:
-1. Before a production release, check that the most recent `Monica Smoke Tests` workflow run passed.
-2. The workflow badge in the repository provides at-a-glance status.
-3. If the latest nightly run failed, investigate and resolve before releasing.
+1. Before a production release, check that the most recent `Monica Smoke Tests` and `LLM Smoke Tests` workflow runs passed.
+2. The workflow badges in the repository provide at-a-glance status.
+3. If the latest run failed, investigate and resolve before releasing.
 
 A formal automated release gate (e.g., required status check on a release branch) can be added when a deployment pipeline is established.
 

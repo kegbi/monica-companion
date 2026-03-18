@@ -9,7 +9,7 @@
 
 ### 1.1. Project Vision & Purpose
 
-Enable MonicaHQ (v4) users to capture and retrieve relationship information effortlessly through voice and text messages in their favorite messaging apps. After a phone call or meeting, users should be able to talk into their phone, send a quick voice note, and have the AI handle the rest — transcribing, identifying the right contact, and saving the information to MonicaHQ. No more forgetting details or dreading manual data entry. The system supports multiple languages from day one — users can speak and type in any language supported by OpenAI Whisper and GPT.
+Enable MonicaHQ (v4) users to capture and retrieve relationship information effortlessly through voice and text messages in their favorite messaging apps. After a phone call or meeting, users should be able to talk into their phone, send a quick voice note, and have the AI handle the rest — transcribing, identifying the right contact, and saving the information to MonicaHQ. No more forgetting details or dreading manual data entry. The system supports multiple languages from day one — users can speak and type in any language supported by OpenAI `gpt-4o-transcribe` and `gpt-5.4-mini`.
 
 ### 1.2. Target Audience
 
@@ -44,8 +44,8 @@ Individuals who use MonicaHQ v4 (self-hosted or the hosted instance at app.monic
 
 ### 2.1. Core Features
 
-- **Voice & Text Message Processing:** Accept voice messages and text commands via Telegram in any language. Transcribe voice to text using AI (OpenAI Whisper), then parse the intent. Multi-language support is built-in from day one — the AI detects the user's language and responds accordingly.
-- **Smart Contact Resolution:** AI identifies the target contact from a minimized internal contact projection rather than raw Monica records. The projection includes display name, aliases/nicknames, relationship labels, and key dates needed for matching. Ambiguity is handled via Telegram inline keyboards (clickable buttons) — if there are multiple "Sherry"s, the system presents buttons to choose. Users can also reply via text or voice message (voice is always transcribed and handled as text throughout the entire flow, including disambiguations and confirmations). Skips confirmation when the match is unambiguous (full name, unique relationship like "my brother").
+- **Voice & Text Message Processing:** Accept voice messages and text commands via Telegram in any language. Transcribe voice to text using OpenAI `gpt-4o-transcribe`, then parse intent using LangGraph TS plus `gpt-5.4-mini` with multi-turn conversation context awareness. Multi-language support is built-in from day one — the AI detects the user's language from the utterance and generates all responses in the same language.
+- **Smart Contact Resolution:** AI identifies the target contact from a minimized internal contact projection rather than raw Monica records and supports multi-turn pronoun/reference resolution (e.g., "add note to John" followed by "also update his birthday") using stored conversation turn summaries. The projection includes display name, aliases/nicknames, relationship labels, and key dates needed for matching. Ambiguity is handled via Telegram inline keyboards (clickable buttons) — if there are multiple "Sherry"s, the system presents buttons to choose. Users can also reply via text or voice message (voice is always transcribed and handled as text throughout the entire flow, including disambiguations and confirmations). Skips confirmation when the match is unambiguous (full name, unique relationship like "my brother").
 - **Basic Create/Update/Query Operations:** Create new contacts, add notes, log activities, update contact details (birthday, phone, email), and query information. V1 supports simple direct lookups only ("What's Sarah's birthday?", "What's Alex's phone number?"). Contact or activity deletion flows are not part of V1. Complex queries ("who haven't I talked to in 3 months") are deferred to a future version.
 - **Configurable Confirmation Flow:** Users can configure whether actions require explicit approval or execute automatically. AI always asks for clarification when information is ambiguous, regardless of setting. Confirmations use Telegram inline keyboards (Yes/Edit/Cancel buttons). Users can also reply via text or voice message — the Telegram bridge always transcribes voice to text before processing.
 - **Versioned Pending Action Lifecycle:** Every mutating command is tracked as a versioned pending action with the lifecycle `draft -> pending_confirmation -> confirmed -> executed -> expired/cancelled`. Clarifications and edits update the draft version, and stale confirmations are rejected instead of executing the wrong action.
@@ -86,8 +86,8 @@ Individuals who use MonicaHQ v4 (self-hosted or the hosted instance at app.monic
 - Each user connects to their own MonicaHQ instance (custom server URL + API key) at a canonical public HTTPS base URL. Loopback, RFC1918, link-local, and redirect targets into blocked networks are rejected by default. Trusted single-tenant deployments may opt into a narrowly scoped local-network override outside the hosted default.
 - Telegram bot as the sole messaging connector.
 - Web-based setup page for secure credential entry and preference configuration (never via Telegram chat), protected by 15-minute one-time setup links, one-active-token-per-user rules, invalidation on reissue/cancel, and CSRF/origin checks.
-- Voice message transcription (via OpenAI Whisper API) with multi-language support from day one.
-- Natural language understanding to parse user intent and extract contact references, in any language.
+- Voice message transcription (via OpenAI `gpt-4o-transcribe`, with `whisper-1` as fallback) with multi-language support and language detection from day one.
+- Natural language understanding via LangGraph TS plus OpenAI `gpt-5.4-mini` to parse user intent and extract contact references, with multi-turn conversation awareness and pronoun resolution, in any language.
 - Smart contact disambiguation via Telegram inline keyboards (buttons). Voice and text replies accepted at every stage — voice is always transcribed first.
 - Basic create/update/query operations: create contacts, add notes, log activities, update key fields (birthday, phone, email, address), and run simple field lookups.
 - Simple direct queries only (field lookups like birthday, phone, last note). Complex/aggregation queries deferred.
@@ -111,6 +111,7 @@ Individuals who use MonicaHQ v4 (self-hosted or the hosted instance at app.monic
 - Alerting rules for repeated failures and high latency.
 - Idempotency/dedupe to prevent duplicate command execution from Telegram retries.
 - Log redaction to sanitize sensitive data (API keys, personal info) from logs, traces, queue payloads, dead letters, and support tooling.
+- Conversation turn persistence: compressed turn summaries stored in PostgreSQL `conversation_turns` table (default 30-day retention) to enable multi-turn pronoun resolution and context awareness.
 - Data retention and deletion rules for conversation history, command logs, delivery audits, traces, and dead letters.
 - Per-service `/health` endpoints for Docker readiness/liveness probes on the internal network only.
 - Public ingress limited to the Telegram webhook and onboarding web UI. Telegram webhook requests must present the configured `X-Telegram-Bot-Api-Secret-Token` and pass ingress rate/body-size controls.

@@ -36,7 +36,7 @@ Logical architecture and initial Telegram-only V1 deployment profile: **16 conta
 **Why separate:** AI prompting, conversation state, and command synthesis evolve independently from connector and Monica integration concerns.
 
 **Responsibilities:**
-- Parse free-form text into structured command drafts using LangGraph TS plus OpenAI GPT.
+- Parse free-form text into structured command drafts using LangGraph TS plus OpenAI `gpt-5.4-mini` (with Zod structured outputs, medium reasoning effort).
 - Detect language and generate user-facing copy in the same language.
 - Resolve contacts against the minimized `ContactResolutionSummary` projection exposed by `monica-integration`.
 - Own pending-command state in PostgreSQL, including correlation IDs, version numbers, source message references, TTL, and the lifecycle `draft -> pending_confirmation -> confirmed -> executed -> expired/cancelled`.
@@ -60,7 +60,7 @@ Logical architecture and initial Telegram-only V1 deployment profile: **16 conta
 **Responsibilities:**
 - Accept a connector-neutral transcription request consisting of either binary audio upload or a short-lived fetch URL plus media metadata.
 - Never accept Telegram-specific file IDs or connector-native handles directly.
-- Transcribe through OpenAI Whisper API with timeout handling.
+- Transcribe through OpenAI `gpt-4o-transcribe` (default) or `whisper-1` (legacy fallback) using the `/v1/audio/transcriptions` endpoint with `json` response format, including timeout handling and language detection.
 - Return normalized text plus confidence/error metadata.
 - Return clear user-safe failures when transcription cannot complete.
 
@@ -282,7 +282,7 @@ Rules:
 ## Reliability & Scheduling
 
 - All external API calls (MonicaHQ, OpenAI, Telegram) have explicit timeout handling.
-- Transport-level quick retries belong to the edge client talking to the dependency (`monica-integration` for Monica, connector client for Telegram, transcription client for Whisper). Scheduler owns only job-level retries.
+- Transport-level quick retries belong to the edge client talking to the dependency (`monica-integration` for Monica, connector client for Telegram, `voice-transcription` service for audio transcription). Scheduler owns only job-level retries.
 - Reminder schedules are stored with an IANA timezone and executed against local wall-clock time.
 - If a configured local time does not exist because of DST spring-forward, the reminder fires at the next valid local minute.
 - If a local time repeats because of DST fall-back, dedupe keys ensure the reminder is sent only once for that schedule window.

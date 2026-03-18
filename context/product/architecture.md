@@ -25,8 +25,8 @@
 - **Package Manager:** pnpm with workspaces for the monorepo
 - **Target Monorepo Structure:** Shared packages (`types`, `utils`, `monica-api-lib`, `auth`, `idempotency`, `redaction`) plus logical service packages (`ai-router`, `telegram-bridge`, `voice-transcription`, `monica-integration`, `scheduler`, `delivery`, `user-management`, `web-ui`). The initial V1 deployment profile uses 8 application containers, one per service boundary.
 - **AI Framework:** LangGraph TS orchestrates LLM-powered command routing, disambiguation flows, and multi-turn conversation management.
-- **LLM Provider:** OpenAI GPT models handle NLU and command parsing. V1 uses a shared operator-provided API key with per-user request-size limits, concurrency caps, budget alarms, and an operator kill switch.
-- **Speech-to-Text Boundary:** OpenAI Whisper API transcribes voice messages in any supported language through a dedicated connector-neutral `voice-transcription` service. The contract is binary upload or short-lived fetch URL plus media metadata.
+- **LLM Provider:** OpenAI `gpt-5.4-mini` (400K context, structured outputs, reasoning tokens) handles intent parsing and command extraction with medium reasoning effort. V1 uses a shared operator-provided API key with per-user request-size limits, concurrency caps, budget alarms, and an operator kill switch.
+- **Speech-to-Text Boundary:** OpenAI `gpt-4o-transcribe` (default) or `whisper-1` (legacy fallback) transcribes voice messages in any supported language through a dedicated connector-neutral `voice-transcription` service using the `/v1/audio/transcriptions` endpoint with `json` response format. The contract is binary upload or short-lived fetch URL plus media metadata.
 - **Outbound Delivery Boundary:** Connector-neutral `delivery` routes outbound message intents to the correct connector while keeping platform formatting in the connector.
 - **Telegram Bot Framework:** grammY
 - **Validation & Schemas:** Zod runtime validation for API contracts, command payloads, and configuration
@@ -36,7 +36,7 @@
 
 ## 2. Data & Persistence
 
-- **Primary Database:** PostgreSQL stores user accounts, setup-token state, configurations, pending commands, conversation summaries, command logs, idempotency keys, and delivery audit records.
+- **Primary Database:** PostgreSQL stores user accounts, setup-token state, configurations, pending commands, conversation turn summaries (in `conversation_turns` table with 30-day retention), command logs, idempotency keys, and delivery audit records.
 - **ORM:** Drizzle ORM
 - **Job Queue & Caching:** Redis backs BullMQ queues and optional short-lived caches.
 - **Job Scheduler:** BullMQ runs confirmed mutating commands and scheduled reminder jobs. Read-only queries stay synchronous in `ai-router`. Scheduler owns job-level retries, backoff ceilings, dead-letter handling, and schedule-window dedupe. Edge clients own only quick transport retries.
@@ -44,7 +44,7 @@
 
 ### 2.1. Data Governance
 
-- **Conversation state:** Store minimal turn summaries and pending-command metadata needed for multi-turn flows. Avoid storing raw Monica payloads in AI state.
+- **Conversation state:** Persist compressed turn summaries (not raw utterances or full LLM responses) in the `conversation_turns` PostgreSQL table, loaded into LangGraph state on each invocation (default: most recent 10 turns). Pending-command metadata is stored separately. Avoid storing raw Monica payloads or uncompressed LLM responses in persistent AI state.
 - **Retention:** Conversation summaries and pending-command records are retained for 30 days after completion. Command logs and delivery audits are retained for 90 days. Traces, logs, and dead-letter payloads are retained for 14 days unless security investigation policy requires a shorter emergency purge.
 - **Audio handling:** Voice audio is processed transiently for transcription and is not retained after transcription succeeds or fails, aside from minimal operational metadata.
 - **Deletion:** Disconnecting an account revokes setup tokens immediately, deletes Monica credentials immediately, and schedules user-specific conversational/audit data for purge within 30 days, excluding minimal security audit entries required for abuse or incident response.
@@ -76,7 +76,7 @@
 ## 4. External Services & APIs
 
 - **MonicaHQ v4 API:** Accessed only through `monica-integration`, which wraps `monica-api-lib`. The service normalizes Monica base URLs, requires canonical HTTPS by default, rejects loopback/RFC1918/link-local/blocked redirect targets after DNS resolution, and exposes a Monica-agnostic internal contract to other services. The detailed endpoint contract remains in `context/product/monica-api-scope.md`.
-- **OpenAI API:** GPT handles intent parsing and Whisper handles transcription. If budget or quota is exhausted, the system raises alerts, stops new mutating AI work via operator kill switch, and returns a degraded user-facing failure message instead of silent timeouts.
+- **OpenAI API:** `gpt-5.4-mini` (structured outputs, medium reasoning) handles intent parsing and command extraction; `gpt-4o-transcribe` (default) or `whisper-1` (fallback) handles voice transcription. If budget or quota is exhausted, the system raises alerts, stops new mutating AI work via operator kill switch, and returns a degraded user-facing failure message instead of silent timeouts.
 - **Telegram Bot API:** grammY webhook mode receives text, voice, and inline-keyboard interactions. `telegram-bridge` requires the configured `X-Telegram-Bot-Api-Secret-Token`, enforces request-size/rate limits, and converts connector-specific events into internal command or reply envelopes.
 - **Delivery Boundary:** Receives connector-neutral message intents from `ai-router` and `scheduler`, resolves the target connector, and forwards the payload. Connector services own platform-specific formatting and transport calls.
 - **Web UI:** Astro serves the onboarding page. Setup access uses 15-minute one-time signed tokens bound to Telegram user identity and step. Only one active setup token exists per Telegram user; reissuing invalidates the previous token. Form submissions go to `user-management` over HTTPS with CSRF/origin protection and replay-safe token consumption.
@@ -100,7 +100,7 @@
 ## 6. Testing & Code Quality
 
 - **Test Framework:** Vitest
-- **CI Test Strategy:** Unit tests per service, integration tests against real PostgreSQL and Redis, mocked Monica contract tests using fixtures aligned to `context/product/monica-api-scope.md`, and end-to-end tests for critical user journeys.
+- **CI Test Strategy:** Unit tests per service, integration tests against real PostgreSQL and Redis, mocked Monica contract tests using fixtures aligned to `context/product/monica-api-scope.md`, end-to-end tests for critical user journeys, and LLM smoke tests covering command parsing, multi-stage dialog flows, context preservation, and out-of-scope rejection scenarios.
 - **Controlled Real-Monica Verification:** Real Monica smoke tests run only in a gated environment outside normal CI, such as nightly or a release-candidate workflow. Production release requires the latest smoke run to pass.
 - **Linter & Formatter:** Biome
 - **Pre-commit Hooks:** Husky plus lint-staged
