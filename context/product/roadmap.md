@@ -177,14 +177,14 @@ _Wire the LLM brain into the existing infrastructure. The plumbing (pending comm
   - [x] Handle stale/expired/version-mismatched confirmations with clear user-facing rejection messages.
   - [x] Wire callback actions (confirm/edit/cancel from Telegram buttons) through the LangGraph graph so edits re-enter the parsing pipeline with updated context.
 
-- [ ] **LLM Smoke Tests & Benchmark Activation**
-  - [ ] **Command parsing smoke tests:** Docker Compose smoke tests that send representative text messages through the live `telegram-bridge → ai-router` path and verify that correct command types and payloads are produced. Cover all V1 command types: contact create, note create, activity log, field updates, and read queries.
-  - [ ] **Multi-stage dialog smoke tests:** Smoke tests that simulate a full clarification round-trip: initial ambiguous message → system asks clarification → user replies → system produces correct command. Verify the pending command stays in `draft` through clarification and transitions to `pending_confirmation` only when resolved.
-  - [ ] **Context preservation smoke tests:** Smoke tests that send two consecutive messages where the second references the first ("add a note to John" → "also update his birthday to March 5th") and verify the second message resolves "his" to John without re-asking.
-  - [ ] **Out-of-scope rejection smoke tests:** Verify that messages outside the Monica domain ("what's the weather?") produce a polite decline and do NOT create pending commands or trigger mutations.
-  - [ ] **Activate pending intent benchmark cases** in `read-intents.ts`, `write-intents.ts`, and `clarification-turns.ts`. Implement the intent evaluation path in `evaluate.ts` that calls the LangGraph pipeline and compares structured output against expected labels.
-  - [ ] **Implement false-positive mutation rate tracking** in the benchmark evaluator — replace the hardcoded `0` with actual measurement of cases where a read/clarification input incorrectly produced a mutating command.
-  - [ ] Gate release on acceptance-criteria thresholds: read accuracy ≥ 92%, write accuracy ≥ 90%, contact-resolution precision ≥ 95%, false-positive mutation rate < 1%.
+- [x] **LLM Smoke Tests & Benchmark Activation**
+  - [x] **Command parsing smoke tests:** Docker Compose smoke tests that send representative text messages through the live `telegram-bridge → ai-router` path and verify that correct command types and payloads are produced. Cover all V1 command types: contact create, note create, activity log, field updates, and read queries.
+  - [x] **Multi-stage dialog smoke tests:** Smoke tests that simulate a full clarification round-trip: initial ambiguous message → system asks clarification → user replies → system produces correct command. Verify the pending command stays in `draft` through clarification and transitions to `pending_confirmation` only when resolved.
+  - [x] **Context preservation smoke tests:** Smoke tests that send two consecutive messages where the second references the first ("add a note to John" → "also update his birthday to March 5th") and verify the second message resolves "his" to John without re-asking.
+  - [x] **Out-of-scope rejection smoke tests:** Verify that messages outside the Monica domain ("what's the weather?") produce a polite decline and do NOT create pending commands or trigger mutations.
+  - [x] **Activate pending intent benchmark cases** in `read-intents.ts`, `write-intents.ts`, and `clarification-turns.ts`. Implement the intent evaluation path in `evaluate.ts` that calls the LangGraph pipeline and compares structured output against expected labels.
+  - [x] **Implement false-positive mutation rate tracking** in the benchmark evaluator — replace the hardcoded `0` with actual measurement of cases where a read/clarification input incorrectly produced a mutating command.
+  - [x] Gate release on acceptance-criteria thresholds: read accuracy ≥ 92%, write accuracy ≥ 90%, contact-resolution precision ≥ 95%, false-positive mutation rate < 1%.
 
 ---
 
