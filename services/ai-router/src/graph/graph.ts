@@ -62,6 +62,13 @@ export interface ConversationGraphConfig {
 		to: PendingCommandStatus,
 	) => Promise<PendingCommandRow | null>;
 	getPendingCommand: (db: Database, id: string) => Promise<PendingCommandRow | null>;
+	updateDraftPayload: (
+		db: Database,
+		id: string,
+		expectedVersion: number,
+		newPayload: MutatingCommandPayload,
+		ttlMinutes: number,
+	) => Promise<PendingCommandRow | null>;
 	schedulerClient: SchedulerClient;
 	deliveryClient: DeliveryClient;
 	userManagementClient: UserManagementClient;
@@ -89,6 +96,7 @@ export function createConversationGraph(config: ConversationGraphConfig) {
 		createPendingCommand: config.createPendingCommand,
 		transitionStatus: config.transitionStatus,
 		getPendingCommand: config.getPendingCommand,
+		updateDraftPayload: config.updateDraftPayload,
 		buildConfirmedPayload,
 		schedulerClient: config.schedulerClient,
 		userManagementClient: config.userManagementClient,

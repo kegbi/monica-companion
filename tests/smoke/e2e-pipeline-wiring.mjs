@@ -239,6 +239,54 @@ await test("accepts callback_action event type", async () => {
 	}
 });
 
+// ── 9. Delivery Contract Validation ──
+console.log("\n[Delivery Contract Validation]");
+await test("delivery /internal/deliver accepts valid OutboundMessageIntent", async () => {
+	const token = await makeToken("ai-router", "delivery", TEST_USER);
+	const r = await fetch(`${DELIVERY}/internal/deliver`, {
+		method: "POST",
+		headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+		body: JSON.stringify({
+			userId: TEST_USER,
+			connectorType: "telegram",
+			connectorRoutingId: "12345",
+			correlationId: randomUUID(),
+			content: { type: "text", text: "smoke test delivery" },
+		}),
+	});
+	const body = await r.text();
+	// Not 400/401/403 proves auth + schema validation passed.
+	// 200 or 502/504 (telegram-bridge not connected) are both acceptable.
+	assert(
+		r.status !== 400 && r.status !== 401 && r.status !== 403,
+		`delivery rejected valid payload: ${r.status} ${body}`,
+	);
+	console.log(`    -> status ${r.status} (contract accepted${r.status !== 200 ? ", downstream may be unavailable" : ""})`);
+});
+
+// ── 10. Scheduler Contract Validation ──
+console.log("\n[Scheduler Contract Validation]");
+await test("scheduler /internal/execute accepts valid ConfirmedCommandPayload", async () => {
+	const token = await makeToken("ai-router", "scheduler", TEST_USER);
+	const pendingCommandId = randomUUID();
+	const r = await fetch(`${SCHEDULER}/internal/execute`, {
+		method: "POST",
+		headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+		body: JSON.stringify({
+			pendingCommandId,
+			userId: TEST_USER,
+			commandType: "create_note",
+			payload: { type: "create_note", contactId: 1, body: "smoke test note" },
+			idempotencyKey: `${pendingCommandId}:v1`,
+			correlationId: randomUUID(),
+			confirmedAt: new Date().toISOString(),
+		}),
+	});
+	const body = await r.text();
+	assert(r.status === 202, `expected 202, got ${r.status} ${body}`);
+	console.log(`    -> status ${r.status} (command queued)`);
+});
+
 // ── Summary ──
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed > 0 ? 1 : 0);

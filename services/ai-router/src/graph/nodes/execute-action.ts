@@ -11,10 +11,11 @@
  * - callback_action edit → transitions to draft
  */
 
-import type {
-	ConfirmedCommandPayload,
-	MutatingCommandPayload,
-	PendingCommandStatus,
+import {
+	type ConfirmedCommandPayload,
+	type MutatingCommandPayload,
+	MutatingCommandPayloadSchema,
+	type PendingCommandStatus,
 } from "@monica-companion/types";
 import type { Database } from "../../db/connection.js";
 import type { SchedulerClient } from "../../lib/scheduler-client.js";
@@ -44,6 +45,13 @@ export interface ExecuteActionDeps {
 		to: PendingCommandStatus,
 	) => Promise<PendingCommandRow | null>;
 	getPendingCommand: (db: Database, id: string) => Promise<PendingCommandRow | null>;
+	updateDraftPayload: (
+		db: Database,
+		id: string,
+		expectedVersion: number,
+		newPayload: MutatingCommandPayload,
+		ttlMinutes: number,
+	) => Promise<PendingCommandRow | null>;
 	buildConfirmedPayload: (record: PendingCommandRow) => ConfirmedCommandPayload;
 	schedulerClient: Pick<SchedulerClient, "execute">;
 	userManagementClient: Pick<UserManagementClient, "getPreferences">;
@@ -89,7 +97,7 @@ export function createExecuteActionNode(deps: ExecuteActionDeps) {
 
 		// Clarification responses without callback (text follow-up to a draft)
 		if (intent === "clarification_response") {
-			return { actionOutcome: { type: "passthrough" } as ActionOutcome };
+			return handleClarificationResponse(state, deps);
 		}
 
 		// Mutating commands
@@ -98,6 +106,54 @@ export function createExecuteActionNode(deps: ExecuteActionDeps) {
 		}
 
 		return { actionOutcome: { type: "passthrough" } as ActionOutcome };
+	};
+}
+
+/**
+ * Shared helper: transition a draft to pending_confirmation and check auto-confirm.
+ * Used by handleMutatingCommand, handleClarificationResponse, and handleSelect
+ * to avoid DRY violation (review MEDIUM-1).
+ */
+async function transitionToConfirmationAndCheckAutoConfirm(
+	state: State,
+	deps: ExecuteActionDeps,
+	draftRow: PendingCommandRow,
+): Promise<Update> {
+	const pendingRow = await deps.transitionStatus(
+		deps.db,
+		draftRow.id,
+		draftRow.version,
+		"draft",
+		"pending_confirmation",
+	);
+
+	if (!pendingRow) {
+		return { actionOutcome: { type: "passthrough" } as ActionOutcome };
+	}
+
+	const shouldAutoConfirm = await checkAutoConfirm(
+		deps,
+		state.userId,
+		state.correlationId,
+		state.intentClassification?.confidence ?? 0,
+	);
+
+	if (shouldAutoConfirm) {
+		return autoConfirm(deps, pendingRow);
+	}
+
+	return {
+		actionOutcome: {
+			type: "pending_created",
+			pendingCommandId: pendingRow.id,
+			version: pendingRow.version,
+		} as ActionOutcome,
+		activePendingCommand: {
+			pendingCommandId: pendingRow.id,
+			version: pendingRow.version,
+			status: "pending_confirmation",
+			commandType: pendingRow.commandType,
+		},
 	};
 }
 
@@ -111,6 +167,23 @@ async function handleMutatingCommand(state: State, deps: ExecuteActionDeps): Pro
 		type: intentClassification.commandType,
 		...(intentClassification.commandPayload ?? {}),
 	} as MutatingCommandPayload;
+
+	// Step 1: Validate complete payloads against MutatingCommandPayloadSchema.
+	// When needsClarification is false, the LLM claims the payload is complete --
+	// strict validation catches malformed payloads before they enter the lifecycle.
+	// When needsClarification is true, skip validation: the payload is intentionally
+	// incomplete and will be validated after clarification resolves.
+	if (!intentClassification.needsClarification) {
+		const validated = MutatingCommandPayloadSchema.safeParse(payload);
+		if (!validated.success) {
+			// LOW-1 from review: log structured warning (no PII)
+			console.warn("[execute-action] payload validation failed for complete mutating command", {
+				commandType: intentClassification.commandType,
+				correlationId,
+			});
+			return { actionOutcome: { type: "passthrough" } as ActionOutcome };
+		}
+	}
 
 	// Create the pending command in draft status
 	const created = await deps.createPendingCommand(deps.db, {
@@ -135,44 +208,56 @@ async function handleMutatingCommand(state: State, deps: ExecuteActionDeps): Pro
 		};
 	}
 
-	// Transition to pending_confirmation
-	const pendingRow = await deps.transitionStatus(
-		deps.db,
-		created.id,
-		created.version,
-		"draft",
-		"pending_confirmation",
-	);
+	return transitionToConfirmationAndCheckAutoConfirm(state, deps, created);
+}
 
-	if (!pendingRow) {
+async function handleClarificationResponse(state: State, deps: ExecuteActionDeps): Promise<Update> {
+	const { intentClassification, activePendingCommand } = state;
+
+	// Fall through to passthrough if no active draft or no commandPayload from LLM
+	if (
+		!activePendingCommand ||
+		activePendingCommand.status !== "draft" ||
+		!intentClassification ||
+		!intentClassification.commandType ||
+		!intentClassification.commandPayload
+	) {
 		return { actionOutcome: { type: "passthrough" } as ActionOutcome };
 	}
 
-	// Check auto-confirmation eligibility
-	const shouldAutoConfirm = await checkAutoConfirm(
-		deps,
-		userId,
-		correlationId,
-		intentClassification.confidence,
+	const newPayload = {
+		type: intentClassification.commandType,
+		...(intentClassification.commandPayload ?? {}),
+	} as MutatingCommandPayload;
+
+	const updatedRow = await deps.updateDraftPayload(
+		deps.db,
+		activePendingCommand.pendingCommandId,
+		activePendingCommand.version,
+		newPayload,
+		deps.pendingCommandTtlMinutes,
 	);
 
-	if (shouldAutoConfirm) {
-		return autoConfirm(deps, pendingRow);
+	// Race condition: draft was modified concurrently
+	if (!updatedRow) {
+		return { actionOutcome: { type: "passthrough" } as ActionOutcome };
 	}
 
-	return {
-		actionOutcome: {
-			type: "pending_created",
-			pendingCommandId: pendingRow.id,
-			version: pendingRow.version,
-		} as ActionOutcome,
-		activePendingCommand: {
-			pendingCommandId: pendingRow.id,
-			version: pendingRow.version,
-			status: "pending_confirmation",
-			commandType: pendingRow.commandType,
-		},
-	};
+	// If clarification is still incomplete, stay in draft
+	if (intentClassification.needsClarification) {
+		return {
+			actionOutcome: { type: "edit_draft" } as ActionOutcome,
+			activePendingCommand: {
+				pendingCommandId: updatedRow.id,
+				version: updatedRow.version,
+				status: "draft",
+				commandType: updatedRow.commandType,
+			},
+		};
+	}
+
+	// Clarification resolved: transition to pending_confirmation
+	return transitionToConfirmationAndCheckAutoConfirm(state, deps, updatedRow);
 }
 
 async function checkAutoConfirm(
@@ -263,6 +348,15 @@ async function handleCallbackAction(state: State, deps: ExecuteActionDeps): Prom
 		};
 	}
 
+	// Step 4: Handle select callbacks before version check.
+	// Disambiguation buttons encode data as "select:{contactValue}:0" (version always 0).
+	// After telegram-bridge strips the prefix, ai-router gets "{contactValue}:0".
+	// parseCallbackData returns { pendingCommandId: contactValue, version: 0 }.
+	// The version check would always reject these as stale, so we branch early.
+	if (action === "select") {
+		return handleSelect(state, deps, parsed);
+	}
+
 	// Version mismatch check
 	if (parsed.version !== activePendingCommand.version) {
 		return {
@@ -281,6 +375,16 @@ async function handleCallbackAction(state: State, deps: ExecuteActionDeps): Prom
 			actionOutcome: {
 				type: "stale_rejected",
 				reason: "Command not found. It may have been deleted.",
+			} as ActionOutcome,
+		};
+	}
+
+	// Step 2: Check TTL expiry even if the sweep hasn't run yet
+	if (command.expiresAt instanceof Date && command.expiresAt < new Date()) {
+		return {
+			actionOutcome: {
+				type: "stale_rejected",
+				reason: "This command has expired. Please start a new request.",
 			} as ActionOutcome,
 		};
 	}
@@ -306,10 +410,6 @@ async function handleCallbackAction(state: State, deps: ExecuteActionDeps): Prom
 			return handleCancel(deps, command);
 		case "edit":
 			return handleEdit(deps, command);
-		case "select":
-			// Selection (disambiguation) is handled by the LLM re-processing
-			// in classifyIntent. We just pass through here.
-			return { actionOutcome: { type: "passthrough" } as ActionOutcome };
 		default:
 			return { actionOutcome: { type: "passthrough" } as ActionOutcome };
 	}
@@ -394,4 +494,106 @@ async function handleEdit(deps: ExecuteActionDeps, command: PendingCommandRow): 
 	}
 
 	return { actionOutcome: { type: "edit_draft" } as ActionOutcome };
+}
+
+/**
+ * Handle a select (disambiguation) callback.
+ * parsed.pendingCommandId contains the selected contact value (not a real command ID).
+ * The actual pending command is looked up via state.activePendingCommand.
+ */
+async function handleSelect(
+	state: State,
+	deps: ExecuteActionDeps,
+	parsed: { pendingCommandId: string; version: number },
+): Promise<Update> {
+	const { activePendingCommand, intentClassification } = state;
+
+	// LOW-2 from review: guard against LLM fallback producing out_of_scope with confidence 0.
+	// If the LLM failed during the select callback, the fallback has intent: "out_of_scope"
+	// and confidence: 0, which would incorrectly trigger a state transition.
+	if (
+		!intentClassification ||
+		intentClassification.intent === "out_of_scope" ||
+		intentClassification.intent === "greeting"
+	) {
+		return { actionOutcome: { type: "passthrough" } as ActionOutcome };
+	}
+
+	if (!activePendingCommand) {
+		return {
+			actionOutcome: {
+				type: "stale_rejected",
+				reason: "No active command found for this action.",
+			} as ActionOutcome,
+		};
+	}
+
+	// Fetch the real draft from DB using activePendingCommand (not parsed.pendingCommandId)
+	const command = await deps.getPendingCommand(deps.db, activePendingCommand.pendingCommandId);
+
+	if (!command || command.status !== "draft") {
+		return {
+			actionOutcome: {
+				type: "stale_rejected",
+				reason: "Command not found or not in draft status.",
+			} as ActionOutcome,
+		};
+	}
+
+	// Check TTL expiry
+	if (command.expiresAt instanceof Date && command.expiresAt < new Date()) {
+		return {
+			actionOutcome: {
+				type: "stale_rejected",
+				reason: "This command has expired. Please start a new request.",
+			} as ActionOutcome,
+		};
+	}
+
+	// Parse the selected value as a contactId (Monica contact IDs are numeric)
+	const selectedValue = parsed.pendingCommandId;
+	const contactId = Number(selectedValue);
+	if (Number.isNaN(contactId)) {
+		return {
+			actionOutcome: {
+				type: "stale_rejected",
+				reason: "Invalid selection value.",
+			} as ActionOutcome,
+		};
+	}
+
+	// Merge the selected contactId into the existing draft payload
+	const existingPayload = command.payload as Record<string, unknown>;
+	const mergedPayload = {
+		...existingPayload,
+		contactId,
+	} as MutatingCommandPayload;
+
+	const updatedRow = await deps.updateDraftPayload(
+		deps.db,
+		command.id,
+		command.version,
+		mergedPayload,
+		deps.pendingCommandTtlMinutes,
+	);
+
+	if (!updatedRow) {
+		return { actionOutcome: { type: "passthrough" } as ActionOutcome };
+	}
+
+	// If clarification is still incomplete, stay in draft
+	if (intentClassification.needsClarification) {
+		return {
+			actionOutcome: { type: "edit_draft" } as ActionOutcome,
+			activePendingCommand: {
+				pendingCommandId: updatedRow.id,
+				version: updatedRow.version,
+				status: "draft",
+				commandType: updatedRow.commandType,
+			},
+		};
+	}
+
+	// Clarification resolved: transition to pending_confirmation
+	return transitionToConfirmationAndCheckAutoConfirm(state, deps, updatedRow);
 }

@@ -22,6 +22,7 @@ import {
 	getActivePendingCommandForUser,
 	getPendingCommand,
 	transitionStatus,
+	updateDraftPayload,
 } from "./pending-command/repository.js";
 
 export function createApp(config: Config, db: Database, redis: Redis) {
@@ -69,6 +70,7 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 		createPendingCommand,
 		transitionStatus,
 		getPendingCommand,
+		updateDraftPayload,
 		schedulerClient,
 		deliveryClient,
 		userManagementClient,
