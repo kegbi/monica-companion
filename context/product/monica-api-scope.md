@@ -890,31 +890,31 @@ HTTP status codes: `200` (success), `201` (created), `404` (not found), `422` (v
 ## Source Code References (v4.1.1)
 
 Source: [monicahq/monica v4.1.1](https://github.com/monicahq/monica/tree/v4.1.1).
-Local copy: `references/remote/` (gitignored; see `AGENTS.md` for re-download instructions).
+Local copy: `references/remote/app/` (gitignored; see `AGENTS.md` for re-download instructions).
 
 These files are the definitive source for response shapes and validation rules:
 
 | Concern | Local path |
 |---------|------------|
-| Full contact shape | `references/remote/app/Http/Resources/Contact/ContactBase.php` |
-| Embedded contact shape | `references/remote/app/Http/Resources/Contact/ContactShort.php` |
-| Reminder response | `references/remote/app/Http/Resources/Reminder/Reminder.php` |
-| Upcoming reminder response | `references/remote/app/Http/Resources/Reminder/ReminderOutbox.php` |
-| Note response | `references/remote/app/Http/Resources/Note/Note.php` |
-| Activity response | `references/remote/app/Http/Resources/Activity/Activity.php` |
-| ContactField response | `references/remote/app/Http/Resources/ContactField/ContactField.php` |
-| Address response | `references/remote/app/Http/Resources/Address/Address.php` |
-| Reminder create validation | `references/remote/app/Services/Contact/Reminder/CreateReminder.php` |
-| Activity create validation | `references/remote/app/Services/Account/Activity/Activity/CreateActivity.php` |
-| ContactField create validation | `references/remote/app/Services/Contact/ContactField/CreateContactField.php` |
-| Note create validation | `references/remote/app/Http/Controllers/Api/ApiNoteController.php` (inline) |
-| Relationship response | `references/remote/app/Http/Resources/Relationship/Relationship.php` |
-| RelationshipShort response | `references/remote/app/Http/Resources/Relationship/RelationshipShort.php` |
-| Relationship controller | `references/remote/app/Http/Controllers/Api/ApiRelationshipController.php` |
-| Relationship create validation | `references/remote/app/Services/Contact/Relationship/CreateRelationship.php` |
-| RelationshipType response | `references/remote/app/Http/Resources/RelationshipType/RelationshipType.php` |
-| RelationshipTypeGroup response | `references/remote/app/Http/Resources/RelationshipTypeGroup/RelationshipTypeGroup.php` |
-| Tag response | `references/remote/app/Http/Resources/Tag/Tag.php` |
-| Gender response | `references/remote/app/Http/Resources/Gender/Gender.php` |
-| API routes | `references/remote/routes/api.php` |
-| Pagination defaults | `references/remote/app/Http/Controllers/Api/ApiController.php` (`limitPerPage = 0` → Laravel default 15) |
+| Full contact shape | `references/remote/app/app/Http/Resources/Contact/ContactBase.php` |
+| Embedded contact shape | `references/remote/app/app/Http/Resources/Contact/ContactShort.php` |
+| Reminder response | `references/remote/app/app/Http/Resources/Reminder/Reminder.php` |
+| Upcoming reminder response | `references/remote/app/app/Http/Resources/Reminder/ReminderOutbox.php` |
+| Note response | `references/remote/app/app/Http/Resources/Note/Note.php` |
+| Activity response | `references/remote/app/app/Http/Resources/Activity/Activity.php` |
+| ContactField response | `references/remote/app/app/Http/Resources/ContactField/ContactField.php` |
+| Address response | `references/remote/app/app/Http/Resources/Address/Address.php` |
+| Reminder create validation | `references/remote/app/app/Services/Contact/Reminder/CreateReminder.php` |
+| Activity create validation | `references/remote/app/app/Services/Account/Activity/Activity/CreateActivity.php` |
+| ContactField create validation | `references/remote/app/app/Services/Contact/ContactField/CreateContactField.php` |
+| Note create validation | `references/remote/app/app/Http/Controllers/Api/ApiNoteController.php` (inline) |
+| Relationship response | `references/remote/app/app/Http/Resources/Relationship/Relationship.php` |
+| RelationshipShort response | `references/remote/app/app/Http/Resources/Relationship/RelationshipShort.php` |
+| Relationship controller | `references/remote/app/app/Http/Controllers/Api/ApiRelationshipController.php` |
+| Relationship create validation | `references/remote/app/app/Services/Contact/Relationship/CreateRelationship.php` |
+| RelationshipType response | `references/remote/app/app/Http/Resources/RelationshipType/RelationshipType.php` |
+| RelationshipTypeGroup response | `references/remote/app/app/Http/Resources/RelationshipTypeGroup/RelationshipTypeGroup.php` |
+| Tag response | `references/remote/app/app/Http/Resources/Tag/Tag.php` |
+| Gender response | `references/remote/app/app/Http/Resources/Gender/Gender.php` |
+| API routes | `references/remote/app/routes/api.php` |
+| Pagination defaults | `references/remote/app/app/Http/Controllers/Api/ApiController.php` (`limitPerPage = 0` → Laravel default 15) |

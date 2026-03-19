@@ -13,23 +13,43 @@ These documents describe the planned Monica Companion target state unless a docu
 | Service descriptions, responsibilities, communication flow | `context/product/service-architecture.md` |
 | V1 acceptance criteria | `context/product/acceptance-criteria.md` |
 | Monica v4 API endpoints and contracts | `context/product/monica-api-scope.md` |
-| Monica v4.1.1 reference source code | `references/remote/` (gitignored) |
+| Monica v4.1.1 reference source code | `references/remote/app/` (gitignored) |
+| Monica Docker image (entrypoint, Dockerfile) | `references/remote/docker/` (gitignored) |
 | V1 deployment profile ADR | `context/spec/adr-v1-deployment-profile.md` |
 | Engineering rules and coding standards | `.claude/rules/` |
 
 ## Reference Source Code
 
-The Monica v4.1.1 source code is downloaded at `references/remote/` for typechecking and contract verification. Key paths:
+The `references/remote/` directory contains gitignored reference repos for contract verification:
+
+- **`references/remote/app/`** — Monica v4.1.1 application source
+- **`references/remote/docker/`** — Monica Docker image definitions (entrypoint, Dockerfiles)
+
+### App source key paths
 
 | Concern | Path |
 |---|---|
-| API response shapes (Resource classes) | `references/remote/app/Http/Resources/` |
-| Service validation rules | `references/remote/app/Services/` |
-| API controllers | `references/remote/app/Http/Controllers/Api/` |
-| Eloquent models | `references/remote/app/Models/` |
-| API route definitions | `references/remote/routes/api.php` |
+| API response shapes (Resource classes) | `references/remote/app/app/Http/Resources/` |
+| Service validation rules | `references/remote/app/app/Services/` |
+| API controllers | `references/remote/app/app/Http/Controllers/Api/` |
+| Eloquent models | `references/remote/app/app/Models/` |
+| API route definitions | `references/remote/app/routes/api.php` |
 
-This directory is gitignored. Re-download with:
+### Docker image key paths
+
+| Concern | Path |
+|---|---|
+| v4 Apache entrypoint | `references/remote/docker/4/apache/entrypoint.sh` |
+| v4 Apache Dockerfile | `references/remote/docker/4/apache/Dockerfile` |
+
+### Re-download
+
 ```sh
-curl -sL "https://github.com/monicahq/monica/archive/refs/tags/v4.1.1.tar.gz" | tar xz --strip-components=1 -C references/remote/
+# App source (v4.1.1)
+mkdir -p references/remote/app
+curl -sL "https://github.com/monicahq/monica/archive/refs/tags/v4.1.1.tar.gz" | tar xz --strip-components=1 -C references/remote/app/
+
+# Docker image definitions
+mkdir -p references/remote/docker
+curl -sL "https://github.com/monicahq/docker/archive/refs/heads/main.tar.gz" | tar xz --strip-components=1 -C references/remote/docker/
 ```

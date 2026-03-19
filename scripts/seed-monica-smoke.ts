@@ -17,12 +17,10 @@
  *   1 - Fatal error (see stderr for details)
  */
 
-import { execSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const MONICA_BASE_URL = process.env.MONICA_SMOKE_URL || "http://localhost:8180";
-const MONICA_CONTAINER = process.env.MONICA_SMOKE_CONTAINER || "monica-smoke";
 const HEALTH_TIMEOUT_MS = 300_000;
 const HEALTH_POLL_INTERVAL_MS = 3_000;
 
@@ -195,26 +193,8 @@ async function registerUser(): Promise<void> {
 async function getApiToken(): Promise<string> {
 	console.log("Obtaining API token...");
 
-	// Ensure Passport keys and personal access client exist
-	try {
-		execSync(`docker exec ${MONICA_CONTAINER} php artisan passport:keys --force`, {
-			encoding: "utf-8",
-			timeout: 30_000,
-		});
-		console.log("  Passport keys generated");
-	} catch {
-		console.log("  Passport keys may already exist");
-	}
-
-	try {
-		execSync(
-			`docker exec ${MONICA_CONTAINER} php artisan passport:client --personal --name="SmokeTest" --no-interaction`,
-			{ encoding: "utf-8", timeout: 30_000 },
-		);
-		console.log("  Personal access client created");
-	} catch {
-		console.log("  Personal access client may already exist");
-	}
+	// Passport keys and personal access client are created by the Docker
+	// entrypoint on first boot (see references/remote/docker/4/apache/entrypoint.sh).
 
 	// Fresh login to get authenticated session
 	console.log("  Logging in...");
