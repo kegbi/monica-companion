@@ -41,9 +41,10 @@ jobs:
 
       - name: Create Monica .env
         run: |
-          # Monica's Docker entrypoint copies .env.example to .env if missing.
-          # By bind-mounting a pre-created .env we skip that default and avoid
-          # needing to sleep + patch after the container starts.
+          # The entrypoint's inline PHP uses getenv() for DB credentials
+          # before Laravel boots, so -e flags are needed for the entrypoint.
+          # Apache PHP workers don't inherit Docker -e vars, so they read
+          # the .env file instead. We need both.
           cat > /tmp/monica-smoke.env <<'ENVEOF'
           APP_ENV=local
           APP_DEBUG=true
@@ -59,7 +60,6 @@ jobs:
           MAIL_MAILER=log
           HASH_DRIVER=bcrypt
           ENVEOF
-          # Strip leading whitespace from heredoc
           sed -i 's/^[[:space:]]*//' /tmp/monica-smoke.env
 
       - name: Start Monica container
@@ -68,6 +68,13 @@ jobs:
             --name monica-smoke \
             --network host \
             -v /tmp/monica-smoke.env:/var/www/html/.env \
+            -e APP_KEY=base64:eJGRxF0b1S7KPkUmhoeIQl/sM4LhOqGPVHNxAdT+sOA= \
+            -e DB_CONNECTION=mysql \
+            -e DB_HOST=127.0.0.1 \
+            -e DB_PORT=3306 \
+            -e DB_DATABASE=monica \
+            -e DB_USERNAME=monica \
+            -e DB_PASSWORD=smoke_db_password \
             monica:4.1.2
 
       - name: Setup pnpm
