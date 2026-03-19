@@ -232,35 +232,46 @@ async function getApiToken(): Promise<string> {
 	}
 	console.log("  Logged in successfully");
 
-	// Fetch a page with the authenticated session to get a fresh CSRF token
-	const dashResponse = await fetch(`${MONICA_BASE_URL}/settings/api`, {
-		headers: { Cookie: sessionCookies },
-		redirect: "manual",
+	// Collect all cookies: combine initial + post-login, keeping only name=value
+	const allCookies = [
+		...(loginPage.headers.getSetCookie?.() ?? []),
+		...(loginResponse.headers.getSetCookie?.() ?? []),
+	]
+		.map((c) => c.split(";")[0])
+		.join("; ");
+	console.log(`  Session cookies: ${allCookies.replace(/=.{10,}/g, "=***")}`);
+
+	// Follow the redirect to establish session, then get fresh CSRF
+	const dashResponse = await fetch(`${MONICA_BASE_URL}/dashboard`, {
+		headers: { Cookie: allCookies },
 	});
-	// Follow redirect if needed
-	let dashHtml: string;
-	if (dashResponse.status === 302) {
-		const redirectUrl = dashResponse.headers.get("location") || `${MONICA_BASE_URL}/dashboard`;
-		const followResponse = await fetch(redirectUrl, {
-			headers: { Cookie: sessionCookies },
-		});
-		dashHtml = await followResponse.text();
-	} else {
-		dashHtml = await dashResponse.text();
-	}
+	const dashHtml = await dashResponse.text();
+	console.log(`  Dashboard: HTTP ${dashResponse.status}, length: ${dashHtml.length}`);
+
 	const freshCsrf =
 		dashHtml.match(/content="([^"]+)"\s+name="csrf-token"/) ||
 		dashHtml.match(/name="csrf-token"\s+content="([^"]+)"/);
-	const csrfToken = freshCsrf ? freshCsrf[1] : csrfMatch[1];
+	if (!freshCsrf) {
+		// Log a snippet to debug what page we got
+		console.log(`  Dashboard HTML snippet: ${dashHtml.slice(0, 300)}`);
+		fatal("Could not find CSRF token on dashboard page (session may not be authenticated)");
+	}
+	const csrfToken = freshCsrf[1];
 
 	// Create a personal access token via the Passport API
 	console.log("  Creating personal access token...");
+	// Also collect any new cookies from the dashboard response
+	const dashCookies = [
+		allCookies,
+		...(dashResponse.headers.getSetCookie?.() ?? []).map((c) => c.split(";")[0]),
+	].join("; ");
+
 	const tokenResponse = await fetch(`${MONICA_BASE_URL}/oauth/personal-access-tokens`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
 			Accept: "application/json",
-			Cookie: sessionCookies,
+			Cookie: dashCookies,
 			"X-CSRF-TOKEN": csrfToken,
 		},
 		body: JSON.stringify({ name: "smoke-test", scopes: [] }),
