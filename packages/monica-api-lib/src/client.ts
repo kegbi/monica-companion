@@ -131,15 +131,12 @@ export class MonicaApiClient {
 	}
 
 	async getUpcomingReminders(monthOffset: number): Promise<z.infer<typeof ReminderOutbox>[]> {
-		return paginateAll(async (page) => {
-			const params = new URLSearchParams({ page: String(page) });
-			const response = await this.request(
-				"GET",
-				`/reminders/upcoming/${monthOffset}?${params.toString()}`,
-			);
-			const body = await response.json();
-			return PaginatedResponse(ReminderOutbox).parse(body);
-		});
+		// The upcoming reminders endpoint returns a flat { data: [...] } response
+		// without pagination links/meta, unlike other list endpoints.
+		const response = await this.request("GET", `/reminders/upcoming/${monthOffset}`);
+		const body = await response.json();
+		const parsed = z.object({ data: z.array(ReminderOutbox) }).parse(body);
+		return parsed.data;
 	}
 
 	async listGenders(): Promise<z.infer<typeof Gender>[]> {
