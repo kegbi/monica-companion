@@ -128,6 +128,7 @@ jobs:
           ENCRYPTION_MASTER_KEY_PREVIOUS: ""
           MONICA_INTEGRATION_URL: http://localhost:3004
           DELIVERY_URL: http://localhost:3006
+          SCHEDULER_URL: http://localhost:3005
           USER_MANAGEMENT_URL: http://localhost:3007
           TELEGRAM_BOT_TOKEN: "000000000:fake-ci-token"
           TELEGRAM_WEBHOOK_SECRET: ci-webhook-secret
