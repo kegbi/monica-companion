@@ -35,7 +35,6 @@ git log --oneline -10
 Stage all implementation files using specific file paths. Use the file list from `impl-summary.md`.
 
 **NEVER stage:**
-- `.claude-work/` files
 - `.env` or credential files
 - `node_modules/`
 

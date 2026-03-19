@@ -241,6 +241,5 @@ Update state: `"phase": "completed"`, `"status": "completed"`, set `"completedAt
 ## Rules
 
 - Never skip plan review, code review, or smoke tests.
-- Never stage `.claude-work/` files in commits.
 - Keep orchestrator context minimal — only track task IDs, phases, and verdicts. All details live in files.
 - Each agent prompt must include the task-specific file paths. The agent definition in `.claude/agents/` provides the role and behavior.
