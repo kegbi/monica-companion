@@ -125,10 +125,12 @@ function dockerExec(cmd: string): string {
  * any shell quoting issues with PHP $variables.
  */
 function dockerTinker(phpCode: string): string {
-	const b64 = Buffer.from(phpCode).toString("base64");
+	// Strip <?php tag — tinker evaluates raw PHP expressions
+	const code = phpCode.replace(/^<\?php\s*/m, "");
+	const b64 = Buffer.from(code).toString("base64");
 	try {
 		return execSync(
-			`echo ${b64} | docker exec -i ${MONICA_CONTAINER} bash -c "base64 -d > /tmp/_tinker.php && php artisan tinker /tmp/_tinker.php"`,
+			`echo ${b64} | docker exec -i ${MONICA_CONTAINER} bash -c "base64 -d | php artisan tinker"`,
 			{ encoding: "utf-8", timeout: 60_000 },
 		).trim();
 	} catch (err) {
