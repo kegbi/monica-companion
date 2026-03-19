@@ -119,27 +119,36 @@ function dockerExec(cmd: string): string {
 	}
 }
 
+/**
+ * Run a PHP script inside the Monica container via artisan tinker.
+ * Writes the script to a temp file inside the container to avoid
+ * shell quoting issues with $variables in PHP code.
+ */
+function dockerTinker(phpCode: string): string {
+	dockerExec(
+		`bash -c 'echo "${Buffer.from(phpCode).toString("base64")}" | base64 -d > /tmp/_tinker.php'`,
+	);
+	return dockerExec("php artisan tinker /tmp/_tinker.php");
+}
+
 async function registerUser(): Promise<void> {
 	console.log("Registering test user via artisan...");
 
 	try {
-		// Monica v4 uses a tinker command to create users since there's no CLI signup command.
-		// We use artisan tinker to run the registration logic directly.
-		const tinkerScript = [
-			`$user = new \\App\\Models\\User\\User;`,
-			`$user->first_name = '${TEST_USER.first_name}';`,
-			`$user->last_name = '${TEST_USER.last_name}';`,
-			`$user->email = '${TEST_USER.email}';`,
-			`$user->password = bcrypt('${TEST_USER.password}');`,
-			`$user->locale = 'en';`,
-			`$user->save();`,
-			`$account = \\App\\Models\\Account\\Account::create([]);`,
-			`$user->account_id = $account->id;`,
-			`$user->save();`,
-			`echo 'USER_ID=' . $user->id;`,
-		].join(" ");
-
-		const output = dockerExec(`php artisan tinker --execute="${tinkerScript}"`);
+		const phpCode = `<?php
+$user = new \\App\\Models\\User\\User;
+$user->first_name = '${TEST_USER.first_name}';
+$user->last_name = '${TEST_USER.last_name}';
+$user->email = '${TEST_USER.email}';
+$user->password = bcrypt('${TEST_USER.password}');
+$user->locale = 'en';
+$user->save();
+$account = \\App\\Models\\Account\\Account::create([]);
+$user->account_id = $account->id;
+$user->save();
+echo 'USER_ID=' . $user->id;
+`;
+		const output = dockerTinker(phpCode);
 		console.log(`  ${output}`);
 		console.log("  User registered successfully");
 	} catch (err) {
@@ -174,14 +183,13 @@ async function getApiToken(): Promise<string> {
 	}
 
 	// Create a personal access token via tinker
-	const tinkerScript = [
-		`$user = \\App\\Models\\User\\User::where('email', '${TEST_USER.email}')->firstOrFail();`,
-		`$token = $user->createToken('smoke-test');`,
-		`echo $token->accessToken;`,
-	].join(" ");
-
 	try {
-		const token = dockerExec(`php artisan tinker --execute="${tinkerScript}"`);
+		const phpCode = `<?php
+$user = \\App\\Models\\User\\User::where('email', '${TEST_USER.email}')->firstOrFail();
+$token = $user->createToken('smoke-test');
+echo $token->accessToken;
+`;
+		const token = dockerTinker(phpCode);
 		if (!token || token.length < 10) {
 			fatal(`Got invalid token: ${token.slice(0, 20)}...`);
 		}
