@@ -121,14 +121,21 @@ function dockerExec(cmd: string): string {
 
 /**
  * Run a PHP script inside the Monica container via artisan tinker.
- * Writes the script to a temp file inside the container to avoid
- * shell quoting issues with $variables in PHP code.
+ * Uses base64 encoding piped through docker exec stdin to avoid
+ * any shell quoting issues with PHP $variables.
  */
 function dockerTinker(phpCode: string): string {
-	dockerExec(
-		`bash -c 'echo "${Buffer.from(phpCode).toString("base64")}" | base64 -d > /tmp/_tinker.php'`,
-	);
-	return dockerExec("php artisan tinker /tmp/_tinker.php");
+	const b64 = Buffer.from(phpCode).toString("base64");
+	try {
+		return execSync(
+			`echo ${b64} | docker exec -i ${MONICA_CONTAINER} bash -c "base64 -d > /tmp/_tinker.php && php artisan tinker /tmp/_tinker.php"`,
+			{ encoding: "utf-8", timeout: 60_000 },
+		).trim();
+	} catch (err) {
+		// biome-ignore lint/suspicious/noExplicitAny: execSync error has stderr property not in Error type
+		const message = err instanceof Error ? (err as any).stderr || err.message : String(err);
+		throw new Error(`dockerTinker failed: ${message}`);
+	}
 }
 
 async function registerUser(): Promise<void> {
