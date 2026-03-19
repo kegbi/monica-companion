@@ -102,111 +102,161 @@ async function waitForMonica(): Promise<void> {
 	fatal(`Monica did not become healthy within ${HEALTH_TIMEOUT_MS / 1000}s`);
 }
 
-// ── Step 2: Register a user via artisan inside the container ──────────
+// ── Step 2: Register a user via the web registration form ─────────────
+
+async function registerUser(): Promise<void> {
+	console.log("Registering test user via web form...");
+
+	try {
+		// Step 1: GET the register page to obtain a CSRF token
+		const pageResponse = await fetch(`${MONICA_BASE_URL}/register`, {
+			redirect: "manual",
+		});
+		const pageHtml = await pageResponse.text();
+
+		// Extract CSRF token from the HTML meta tag or hidden input
+		const csrfMatch =
+			pageHtml.match(/name="_token"\s+value="([^"]+)"/) ||
+			pageHtml.match(/content="([^"]+)"\s+name="csrf-token"/) ||
+			pageHtml.match(/name="csrf-token"\s+content="([^"]+)"/);
+		if (!csrfMatch) {
+			throw new Error("Could not find CSRF token in registration page");
+		}
+		const csrfToken = csrfMatch[1];
+
+		// Extract cookies from the response (laravel_session)
+		const cookies = (pageResponse.headers.getSetCookie?.() ?? []).join("; ");
+
+		// Step 2: POST the registration form
+		const formData = new URLSearchParams({
+			_token: csrfToken,
+			email: TEST_USER.email,
+			password: TEST_USER.password,
+			password_confirmation: TEST_USER.password,
+			first_name: TEST_USER.first_name,
+			last_name: TEST_USER.last_name,
+			policy: "on",
+			lang: "en",
+		});
+
+		const registerResponse = await fetch(`${MONICA_BASE_URL}/register`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/x-www-form-urlencoded",
+				Cookie: cookies,
+			},
+			body: formData.toString(),
+			redirect: "manual",
+		});
+
+		// 302 redirect to /dashboard = success
+		if (registerResponse.status === 302 || registerResponse.status === 200) {
+			console.log(`  Registration succeeded (HTTP ${registerResponse.status})`);
+		} else {
+			const body = await registerResponse.text().catch(() => "");
+			throw new Error(
+				`Registration returned HTTP ${registerResponse.status}: ${body.slice(0, 200)}`,
+			);
+		}
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		if (message.includes("422") || message.includes("already")) {
+			console.log("  User may already exist, proceeding...");
+		} else {
+			fatal("Failed to register user", err);
+		}
+	}
+}
+
+// ── Step 3: Get an API token ──────────────────────────────────────────
 
 const MONICA_CONTAINER = process.env.MONICA_SMOKE_CONTAINER || "monica-smoke";
 
-function dockerExec(cmd: string): string {
-	try {
-		return execSync(`docker exec ${MONICA_CONTAINER} ${cmd}`, {
-			encoding: "utf-8",
-			timeout: 60_000,
-		}).trim();
-	} catch (err) {
-		// biome-ignore lint/suspicious/noExplicitAny: execSync error has stderr property not in Error type
-		const message = err instanceof Error ? (err as any).stderr || err.message : String(err);
-		throw new Error(`docker exec failed: ${message}`);
-	}
-}
-
-/**
- * Run a PHP script inside the Monica container via artisan tinker.
- * Uses base64 encoding piped through docker exec stdin to avoid
- * any shell quoting issues with PHP $variables.
- */
-function dockerTinker(phpCode: string): string {
-	// Strip <?php tag — tinker evaluates raw PHP expressions
-	const code = phpCode.replace(/^<\?php\s*/m, "");
-	const b64 = Buffer.from(code).toString("base64");
-	try {
-		return execSync(
-			`echo ${b64} | docker exec -i ${MONICA_CONTAINER} bash -c "base64 -d | php artisan tinker"`,
-			{ encoding: "utf-8", timeout: 60_000 },
-		).trim();
-	} catch (err) {
-		// biome-ignore lint/suspicious/noExplicitAny: execSync error has stderr property not in Error type
-		const message = err instanceof Error ? (err as any).stderr || err.message : String(err);
-		throw new Error(`dockerTinker failed: ${message}`);
-	}
-}
-
-async function registerUser(): Promise<void> {
-	console.log("Registering test user via artisan...");
-
-	try {
-		const phpCode = `<?php
-$user = new \\App\\Models\\User\\User;
-$user->first_name = '${TEST_USER.first_name}';
-$user->last_name = '${TEST_USER.last_name}';
-$user->email = '${TEST_USER.email}';
-$user->password = bcrypt('${TEST_USER.password}');
-$user->locale = 'en';
-$user->save();
-$account = \\App\\Models\\Account\\Account::create([]);
-$user->account_id = $account->id;
-$user->save();
-echo 'USER_ID=' . $user->id;
-`;
-		const output = dockerTinker(phpCode);
-		console.log(`  ${output}`);
-		console.log("  User registered successfully");
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		if (message.includes("Duplicate") || message.includes("UNIQUE")) {
-			console.log("  User may already exist, proceeding...");
-		} else {
-			fatal("Failed to register user via artisan", err);
-		}
-	}
-}
-
-// ── Step 3: Get an API token via artisan ──────────────────────────────
-
 async function getApiToken(): Promise<string> {
-	console.log("Creating API token via artisan...");
+	console.log("Obtaining API token...");
 
-	// First ensure Passport keys exist
+	// Ensure Passport keys and personal access client exist
 	try {
-		dockerExec("php artisan passport:keys --force");
+		execSync(`docker exec ${MONICA_CONTAINER} php artisan passport:keys --force`, {
+			encoding: "utf-8",
+			timeout: 30_000,
+		});
 		console.log("  Passport keys generated");
 	} catch {
-		console.log("  Passport keys may already exist, proceeding...");
+		console.log("  Passport keys may already exist");
 	}
 
-	// Create a Personal Access Client if none exists
 	try {
-		dockerExec('php artisan passport:client --personal --name="Smoke Test" --no-interaction');
+		execSync(
+			`docker exec ${MONICA_CONTAINER} php artisan passport:client --personal --name="SmokeTest" --no-interaction`,
+			{ encoding: "utf-8", timeout: 30_000 },
+		);
 		console.log("  Personal access client created");
 	} catch {
-		console.log("  Personal access client may already exist, proceeding...");
+		console.log("  Personal access client may already exist");
 	}
 
-	// Create a personal access token via tinker
-	try {
-		const phpCode = `<?php
-$user = \\App\\Models\\User\\User::where('email', '${TEST_USER.email}')->firstOrFail();
-$token = $user->createToken('smoke-test');
-echo $token->accessToken;
-`;
-		const token = dockerTinker(phpCode);
-		if (!token || token.length < 10) {
-			fatal(`Got invalid token: ${token.slice(0, 20)}...`);
-		}
-		console.log(`  Got API token (${token.length} chars)`);
-		return token;
-	} catch (err) {
-		fatal("Failed to create API token via artisan", err);
+	// Log in via web form to get a session cookie
+	console.log("  Logging in via web form...");
+	const loginPage = await fetch(`${MONICA_BASE_URL}/login`, { redirect: "manual" });
+	const loginHtml = await loginPage.text();
+	const csrfMatch =
+		loginHtml.match(/name="_token"\s+value="([^"]+)"/) ||
+		loginHtml.match(/content="([^"]+)"\s+name="csrf-token"/) ||
+		loginHtml.match(/name="csrf-token"\s+content="([^"]+)"/);
+	if (!csrfMatch) {
+		fatal("Could not find CSRF token on login page");
 	}
+	const loginCookies = (loginPage.headers.getSetCookie?.() ?? []).join("; ");
+
+	const loginResponse = await fetch(`${MONICA_BASE_URL}/login`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/x-www-form-urlencoded",
+			Cookie: loginCookies,
+		},
+		body: new URLSearchParams({
+			_token: csrfMatch[1],
+			email: TEST_USER.email,
+			password: TEST_USER.password,
+		}).toString(),
+		redirect: "manual",
+	});
+
+	const sessionCookies = [loginCookies, ...(loginResponse.headers.getSetCookie?.() ?? [])].join(
+		"; ",
+	);
+
+	if (loginResponse.status !== 302) {
+		fatal(`Login failed with HTTP ${loginResponse.status}`);
+	}
+	console.log("  Logged in successfully");
+
+	// Create a personal access token via the Passport API
+	console.log("  Creating personal access token...");
+	const tokenResponse = await fetch(`${MONICA_BASE_URL}/oauth/personal-access-tokens`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+			Cookie: sessionCookies,
+			"X-CSRF-TOKEN": csrfMatch[1],
+		},
+		body: JSON.stringify({ name: "smoke-test", scopes: [] }),
+	});
+
+	if (!tokenResponse.ok) {
+		const body = await tokenResponse.text().catch(() => "");
+		fatal(`Token creation failed HTTP ${tokenResponse.status}: ${body.slice(0, 300)}`);
+	}
+
+	const tokenResult = (await tokenResponse.json()) as { accessToken?: string };
+	if (!tokenResult.accessToken) {
+		fatal("Token response missing accessToken field");
+	}
+
+	console.log(`  Got API token (${tokenResult.accessToken.length} chars)`);
+	return tokenResult.accessToken;
 }
 
 // ── Step 4: Seed test data ─────────────────────────────────────────────
