@@ -1,0 +1,11 @@
+{
+	"taskId": "end-to-end-pipeline-wiring",
+	"taskGroup": "End-to-End Pipeline Wiring",
+	"phase": "planning",
+	"planAttempts": 0,
+	"codeAttempts": 0,
+	"smokeAttempts": 0,
+	"status": "in-progress",
+	"mode": "auto",
+	"startedAt": "2026-03-19T00:00:00.000Z"
+}
