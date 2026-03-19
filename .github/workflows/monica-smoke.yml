@@ -75,12 +75,12 @@ jobs:
 
       - name: Wait for Monica and seed test data
         env:
-          MONICA_SMOKE_URL: http://localhost:8080
+          MONICA_SMOKE_URL: http://localhost:80
         run: pnpm tsx scripts/seed-monica-smoke.ts
 
       - name: Run smoke tests
         env:
-          MONICA_SMOKE_BASE_URL: http://localhost:8080
+          MONICA_SMOKE_BASE_URL: http://localhost:80
           MONICA_SMOKE_API_TOKEN: ${{ env.SMOKE_API_TOKEN }}
         run: pnpm test:smoke:monica
 
@@ -91,6 +91,10 @@ jobs:
           name: smoke-test-results
           path: packages/monica-api-lib/smoke-results/
           retention-days: 30
+
+      - name: Monica container logs
+        if: always()
+        run: docker logs monica-smoke 2>&1 | tail -100 || true
 
       - name: Cleanup Monica container
         if: always()
