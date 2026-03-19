@@ -266,12 +266,19 @@ async function getApiToken(): Promise<string> {
 		body: JSON.stringify({ name: "smoke-test", scopes: [] }),
 	});
 
+	const tokenBody = await tokenResponse.text();
+	console.log(`  Token response: HTTP ${tokenResponse.status}, body length: ${tokenBody.length}`);
+
 	if (!tokenResponse.ok) {
-		const body = await tokenResponse.text().catch(() => "");
-		fatal(`Token creation failed HTTP ${tokenResponse.status}: ${body.slice(0, 300)}`);
+		fatal(`Token creation failed HTTP ${tokenResponse.status}: ${tokenBody.slice(0, 500)}`);
 	}
 
-	const tokenResult = (await tokenResponse.json()) as { accessToken?: string };
+	let tokenResult: { accessToken?: string };
+	try {
+		tokenResult = JSON.parse(tokenBody);
+	} catch {
+		fatal(`Token response is not JSON (HTTP ${tokenResponse.status}): ${tokenBody.slice(0, 500)}`);
+	}
 	if (!tokenResult.accessToken) {
 		fatal("Token response missing accessToken field");
 	}
