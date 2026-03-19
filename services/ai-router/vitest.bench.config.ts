@@ -18,6 +18,8 @@ export default defineConfig({
 			"hono/http-exception": pkg("hono", "dist/http-exception.js"),
 			hono: pkg("hono", "dist/index.js"),
 			jose: pkg("jose"),
+			"@langchain/openai": pkg("@langchain/openai"),
+			"@langchain/core": pkg("@langchain/core"),
 			"@opentelemetry/api-logs": pkg("@opentelemetry/api-logs"),
 			"@monica-companion/auth": workspace("@monica-companion/auth"),
 			"@monica-companion/types": workspace("@monica-companion/types"),

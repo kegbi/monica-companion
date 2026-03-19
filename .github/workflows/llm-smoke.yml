@@ -1,0 +1,146 @@
+name: LLM Smoke Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for running"
+        required: false
+        default: "Manual trigger"
+
+concurrency:
+  group: llm-smoke
+  cancel-in-progress: true
+
+jobs:
+  llm-smoke:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17.9-alpine
+        env:
+          POSTGRES_USER: monica
+          POSTGRES_PASSWORD: monica_dev
+          POSTGRES_DB: monica_companion
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U monica"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+      redis:
+        image: redis:8.6.1-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run migrations
+        run: |
+          npx tsx scripts/migrate.ts ai-router
+          npx tsx scripts/migrate.ts user-management
+          npx tsx scripts/migrate.ts delivery
+          npx tsx scripts/migrate.ts scheduler
+        env:
+          DATABASE_URL: postgresql://monica:monica_dev@localhost:5432/monica_companion
+
+      - name: Start services
+        run: |
+          # Start all required services in background
+          SERVICE_NAME=user-management npx tsx services/user-management/src/index.ts &
+          SERVICE_NAME=delivery npx tsx services/delivery/src/index.ts &
+          SERVICE_NAME=ai-router npx tsx services/ai-router/src/index.ts &
+          SERVICE_NAME=scheduler npx tsx services/scheduler/src/index.ts &
+          SERVICE_NAME=monica-integration npx tsx services/monica-integration/src/index.ts &
+
+          # Wait for health
+          services=("http://localhost:3007" "http://localhost:3006" "http://localhost:3002" "http://localhost:3005" "http://localhost:3004")
+          for url in "${services[@]}"; do
+            echo "Waiting for $url ..."
+            retries=30
+            while [ $retries -gt 0 ]; do
+              if curl -sf "$url/health" > /dev/null 2>&1; then
+                echo "  OK: $url"
+                break
+              fi
+              sleep 2
+              retries=$((retries - 1))
+            done
+            if [ $retries -eq 0 ]; then
+              echo "FAIL: $url not reachable after 60s"
+              exit 1
+            fi
+          done
+        env:
+          DATABASE_URL: postgresql://monica:monica_dev@localhost:5432/monica_companion
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ci-smoke-test-secret-at-least-32-chars
+          JWT_SECRET_PREVIOUS: ""
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SETUP_TOKEN_SECRET: ci-smoke-setup-token-secret-at-least-32-chars
+          SETUP_BASE_URL: http://localhost
+          ENCRYPTION_MASTER_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          ENCRYPTION_MASTER_KEY_PREVIOUS: ""
+          MONICA_INTEGRATION_URL: http://localhost:3004
+          DELIVERY_URL: http://localhost:3006
+          SCHEDULER_URL: http://localhost:3005
+          USER_MANAGEMENT_URL: http://localhost:3007
+          TELEGRAM_BOT_TOKEN: "000000000:fake-ci-token"
+          TELEGRAM_WEBHOOK_SECRET: ci-webhook-secret
+          ALLOW_PRIVATE_NETWORK_TARGETS: "false"
+          EXPECTED_ORIGIN: http://localhost
+          TELEGRAM_BRIDGE_URL: http://localhost:3001
+          CONNECTOR_URL_TELEGRAM: http://localhost:3001
+
+      - name: Run LLM smoke tests
+        run: pnpm test:smoke:llm
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          JWT_SECRET: ci-smoke-test-secret-at-least-32-chars
+          AI_ROUTER_URL: http://localhost:3002
+          POSTGRES_URL: postgresql://monica:monica_dev@localhost:5432/monica_companion
+
+      - name: Run benchmark with real key
+        run: pnpm bench:ai
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-smoke-results
+          path: |
+            services/ai-router/smoke-results/results.xml
+          if-no-files-found: warn
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            services/ai-router/llm-integration-results/
+          if-no-files-found: warn

@@ -1,12 +1,12 @@
 /**
- * Read intent benchmark fixture stubs.
+ * Read intent benchmark fixtures.
  *
  * ALL DATA IN THIS FILE IS SYNTHETIC. No real user data, API keys,
  * credentials, or PII is used. Names, dates, and relationships are
  * fabricated for testing purposes only.
  *
- * These cases are status: "pending" until the LangGraph intent
- * classification pipeline is built (Phase 3+).
+ * Command types are aligned with V1 IntentSchema / V1CommandTypeSchema:
+ * query_birthday, query_phone, query_last_note.
  */
 import type { ContactResolutionSummary, IntentBenchmarkCase } from "@monica-companion/types";
 
@@ -41,7 +41,7 @@ export const readIntentCases: IntentBenchmarkCase[] = [
 	{
 		id: "ri-001",
 		category: "read_intent",
-		status: "pending",
+		status: "active",
 		description: "Ask for a contact's birthday",
 		input: {
 			utterance: "What's Sarah's birthday?",
@@ -49,7 +49,7 @@ export const readIntentCases: IntentBenchmarkCase[] = [
 			contactContext: sampleContacts,
 		},
 		expected: {
-			commandType: "get_birthday",
+			commandType: "query_birthday",
 			contactRef: "Sarah",
 			resolvedContactId: 3,
 			isMutating: false,
@@ -58,15 +58,15 @@ export const readIntentCases: IntentBenchmarkCase[] = [
 	{
 		id: "ri-002",
 		category: "read_intent",
-		status: "pending",
-		description: "Ask about last interaction",
+		status: "active",
+		description: "Ask about the last note for a contact",
 		input: {
-			utterance: "When did I last talk to Mom?",
+			utterance: "What was the last note about Mom?",
 			voiceSamplePath: null,
 			contactContext: sampleContacts,
 		},
 		expected: {
-			commandType: "get_last_activity",
+			commandType: "query_last_note",
 			contactRef: "Mom",
 			resolvedContactId: 1,
 			isMutating: false,
@@ -75,68 +75,34 @@ export const readIntentCases: IntentBenchmarkCase[] = [
 	{
 		id: "ri-003",
 		category: "read_intent",
-		status: "pending",
-		description: "Ask for upcoming birthdays",
+		status: "active",
+		description: "Ask for a contact's phone number",
 		input: {
-			utterance: "Who has a birthday this month?",
+			utterance: "What's Alex's phone number?",
 			voiceSamplePath: null,
 			contactContext: sampleContacts,
 		},
 		expected: {
-			commandType: "list_birthdays",
-			contactRef: null,
-			resolvedContactId: null,
-			isMutating: false,
-		},
-	},
-	{
-		id: "ri-004",
-		category: "read_intent",
-		status: "pending",
-		description: "Get contact details",
-		input: {
-			utterance: "Tell me about Alex",
-			voiceSamplePath: null,
-			contactContext: sampleContacts,
-		},
-		expected: {
-			commandType: "get_contact",
+			commandType: "query_phone",
 			contactRef: "Alex",
 			resolvedContactId: 2,
 			isMutating: false,
 		},
 	},
 	{
-		id: "ri-005",
+		id: "ri-004",
 		category: "read_intent",
-		status: "pending",
-		description: "List recent activities",
+		status: "active",
+		description: "Ask for a contact's birthday using relationship label",
 		input: {
-			utterance: "What did I do with Sarah recently?",
+			utterance: "When is my brother's birthday?",
 			voiceSamplePath: null,
 			contactContext: sampleContacts,
 		},
 		expected: {
-			commandType: "list_activities",
-			contactRef: "Sarah",
-			resolvedContactId: 3,
-			isMutating: false,
-		},
-	},
-	{
-		id: "ri-006",
-		category: "read_intent",
-		status: "pending",
-		description: "Ask for reminders",
-		input: {
-			utterance: "What reminders do I have?",
-			voiceSamplePath: null,
-			contactContext: sampleContacts,
-		},
-		expected: {
-			commandType: "list_reminders",
-			contactRef: null,
-			resolvedContactId: null,
+			commandType: "query_birthday",
+			contactRef: "brother",
+			resolvedContactId: 2,
 			isMutating: false,
 		},
 	},

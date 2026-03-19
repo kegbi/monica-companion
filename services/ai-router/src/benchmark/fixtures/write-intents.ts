@@ -1,13 +1,15 @@
 /**
- * Write intent benchmark fixture stubs.
+ * Write intent benchmark fixtures.
  *
  * ALL DATA IN THIS FILE IS SYNTHETIC. No real user data, API keys,
  * credentials, or PII is used. Names, dates, and relationships are
  * fabricated for testing purposes only.
  *
- * These cases are status: "pending" until the LangGraph intent
- * classification pipeline is built (Phase 3+). They establish the
- * data format and distribution target.
+ * Command types are aligned with V1 IntentSchema / V1CommandTypeSchema:
+ * create_contact, create_note, create_activity, update_contact_birthday,
+ * update_contact_phone, update_contact_email, update_contact_address.
+ *
+ * Non-V1 types (create_reminder, create_task) have been removed.
  */
 import type { ContactResolutionSummary, IntentBenchmarkCase } from "@monica-companion/types";
 
@@ -50,7 +52,7 @@ export const writeIntentCases: IntentBenchmarkCase[] = [
 	{
 		id: "wi-001",
 		category: "write_intent",
-		status: "pending",
+		status: "active",
 		description: "Add a note to a contact by relationship label",
 		input: {
 			utterance: "Add a note to Mom about her garden project",
@@ -67,7 +69,7 @@ export const writeIntentCases: IntentBenchmarkCase[] = [
 	{
 		id: "wi-002",
 		category: "write_intent",
-		status: "pending",
+		status: "active",
 		description: "Create a new contact by name",
 		input: {
 			utterance: "Create a contact named Sarah Miller",
@@ -84,7 +86,7 @@ export const writeIntentCases: IntentBenchmarkCase[] = [
 	{
 		id: "wi-003",
 		category: "write_intent",
-		status: "pending",
+		status: "active",
 		description: "Update a birthday for a specific contact",
 		input: {
 			utterance: "Update Alex's birthday to April 12",
@@ -92,7 +94,7 @@ export const writeIntentCases: IntentBenchmarkCase[] = [
 			contactContext: sampleContacts,
 		},
 		expected: {
-			commandType: "update_contact",
+			commandType: "update_contact_birthday",
 			contactRef: "Alex",
 			resolvedContactId: 2,
 			isMutating: true,
@@ -101,7 +103,7 @@ export const writeIntentCases: IntentBenchmarkCase[] = [
 	{
 		id: "wi-004",
 		category: "write_intent",
-		status: "pending",
+		status: "active",
 		description: "Log a phone call activity",
 		input: {
 			utterance: "Log that I called Sarah yesterday",
@@ -116,26 +118,9 @@ export const writeIntentCases: IntentBenchmarkCase[] = [
 		},
 	},
 	{
-		id: "wi-005",
-		category: "write_intent",
-		status: "pending",
-		description: "Set a reminder for a contact",
-		input: {
-			utterance: "Remind me to call David next Tuesday",
-			voiceSamplePath: null,
-			contactContext: sampleContacts,
-		},
-		expected: {
-			commandType: "create_reminder",
-			contactRef: "David",
-			resolvedContactId: 4,
-			isMutating: true,
-		},
-	},
-	{
 		id: "wi-006",
 		category: "write_intent",
-		status: "pending",
+		status: "active",
 		description: "Add a gift idea to a contact",
 		input: {
 			utterance: "Add gift idea for Mom: new gardening tools",
@@ -152,7 +137,7 @@ export const writeIntentCases: IntentBenchmarkCase[] = [
 	{
 		id: "wi-007",
 		category: "write_intent",
-		status: "pending",
+		status: "active",
 		description: "Update a phone number",
 		input: {
 			utterance: "Update Sarah's phone number to 555-0199",
@@ -160,7 +145,7 @@ export const writeIntentCases: IntentBenchmarkCase[] = [
 			contactContext: sampleContacts,
 		},
 		expected: {
-			commandType: "update_contact",
+			commandType: "update_contact_phone",
 			contactRef: "Sarah",
 			resolvedContactId: 3,
 			isMutating: true,
@@ -169,7 +154,7 @@ export const writeIntentCases: IntentBenchmarkCase[] = [
 	{
 		id: "wi-008",
 		category: "write_intent",
-		status: "pending",
+		status: "active",
 		description: "Log a meeting activity",
 		input: {
 			utterance: "I had lunch with David today",
@@ -184,26 +169,9 @@ export const writeIntentCases: IntentBenchmarkCase[] = [
 		},
 	},
 	{
-		id: "wi-009",
-		category: "write_intent",
-		status: "pending",
-		description: "Add a task for a contact",
-		input: {
-			utterance: "Add a task: buy birthday gift for Alex",
-			voiceSamplePath: null,
-			contactContext: sampleContacts,
-		},
-		expected: {
-			commandType: "create_task",
-			contactRef: "Alex",
-			resolvedContactId: 2,
-			isMutating: true,
-		},
-	},
-	{
 		id: "wi-010",
 		category: "write_intent",
-		status: "pending",
+		status: "active",
 		description: "Record a conversation note",
 		input: {
 			utterance: "Note: Mom mentioned she wants to visit in June",

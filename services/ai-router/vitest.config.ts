@@ -25,6 +25,6 @@ export default defineConfig({
 	},
 	test: {
 		fileParallelism: false,
-		exclude: ["**/node_modules/**", "**/dist/**", "**/benchmark/**"],
+		exclude: ["**/node_modules/**", "**/dist/**", "**/benchmark/**", "**/__smoke__/**"],
 	},
 });

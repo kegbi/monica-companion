@@ -51,12 +51,15 @@ describe("Intent benchmark fixture stubs", () => {
 		}
 	});
 
-	it("has at least 10 write intent stubs", () => {
-		expect(writeIntentCases.length).toBeGreaterThanOrEqual(10);
+	// Lowered from >= 10 / >= 6 to match post-cleanup V1 case counts.
+	// Non-V1 command types (create_reminder, create_task, list_birthdays, etc.)
+	// were removed during LLM benchmark activation.
+	it("has at least 8 write intent cases", () => {
+		expect(writeIntentCases.length).toBeGreaterThanOrEqual(8);
 	});
 
-	it("has at least 6 read intent stubs", () => {
-		expect(readIntentCases.length).toBeGreaterThanOrEqual(6);
+	it("has at least 4 read intent cases", () => {
+		expect(readIntentCases.length).toBeGreaterThanOrEqual(4);
 	});
 
 	it("has at least 4 clarification stubs", () => {
@@ -85,5 +88,23 @@ describe("Intent benchmark fixture stubs", () => {
 		const allCases = [...writeIntentCases, ...readIntentCases, ...clarificationCases];
 		const ids = allCases.map((c) => c.id);
 		expect(new Set(ids).size).toBe(ids.length);
+	});
+
+	it("all write intent cases are active", () => {
+		for (const c of writeIntentCases) {
+			expect(c.status, `Case ${c.id} should be active`).toBe("active");
+		}
+	});
+
+	it("all read intent cases are active", () => {
+		for (const c of readIntentCases) {
+			expect(c.status, `Case ${c.id} should be active`).toBe("active");
+		}
+	});
+
+	it("all clarification cases are active", () => {
+		for (const c of clarificationCases) {
+			expect(c.status, `Case ${c.id} should be active`).toBe("active");
+		}
 	});
 });

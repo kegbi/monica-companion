@@ -1,12 +1,12 @@
 /**
- * Clarification turn benchmark fixture stubs.
+ * Clarification turn benchmark fixtures.
  *
  * ALL DATA IN THIS FILE IS SYNTHETIC. No real user data, API keys,
  * credentials, or PII is used. Names, dates, and relationships are
  * fabricated for testing purposes only.
  *
- * These cases are status: "pending" until the LangGraph intent
- * classification pipeline is built (Phase 3+).
+ * All cases are status: "active" now that the LangGraph intent
+ * classification pipeline supports evaluation.
  */
 import type { ContactResolutionSummary, IntentBenchmarkCase } from "@monica-companion/types";
 
@@ -33,7 +33,7 @@ export const clarificationCases: IntentBenchmarkCase[] = [
 	{
 		id: "cl-001",
 		category: "clarification",
-		status: "pending",
+		status: "active",
 		description: "Disambiguation question - which Sherry",
 		input: {
 			utterance: "Which Sherry?",
@@ -50,7 +50,7 @@ export const clarificationCases: IntentBenchmarkCase[] = [
 	{
 		id: "cl-002",
 		category: "clarification",
-		status: "pending",
+		status: "active",
 		description: "Disambiguation answer - the one from work",
 		input: {
 			utterance: "The one from work",
@@ -67,7 +67,7 @@ export const clarificationCases: IntentBenchmarkCase[] = [
 	{
 		id: "cl-003",
 		category: "clarification",
-		status: "pending",
+		status: "active",
 		description: "Confirmation response",
 		input: {
 			utterance: "Yes, that's right",
@@ -84,7 +84,7 @@ export const clarificationCases: IntentBenchmarkCase[] = [
 	{
 		id: "cl-004",
 		category: "clarification",
-		status: "pending",
+		status: "active",
 		description: "Negation response",
 		input: {
 			utterance: "No, not that one",

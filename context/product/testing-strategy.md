@@ -84,7 +84,7 @@ The `monica-smoke.yml` GitHub Actions workflow:
 **Location:** `services/ai-router/src/__smoke__/`
 
 **What it tests:**
-- `command-parsing.smoke.test.ts` — Send representative text messages covering all V1 command types (contact create, note create, activity log, field updates, read queries) through the live `telegram-bridge → ai-router` path and verify correct command payloads are produced.
+- `command-parsing.smoke.test.ts` — Send representative text messages covering all V1 command types (contact create, note create, activity log, field updates, read queries) through the live `ai-router /internal/process` endpoint (bypassing `telegram-bridge`, which has its own smoke tests) and verify correct response types are produced.
 - `dialog-clarification.smoke.test.ts` — Simulate multi-turn dialogs: ambiguous input → clarification prompt → user response → correct command. Verify pending command stays in `draft` through clarification and transitions to `pending_confirmation` only when resolved.
 - `context-preservation.smoke.test.ts` — Send consecutive messages with implicit references ("add note to John" → "also update his birthday") and verify pronoun/reference resolution using `conversation_turns` context.
 - `out-of-scope.smoke.test.ts` — Send out-of-domain queries and verify polite decline without pending command creation or mutation triggers.

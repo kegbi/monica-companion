@@ -14,6 +14,7 @@
 		"bench:ai": "pnpm --filter @monica-companion/ai-router bench",
 		"test:llm-integration": "vitest run --config services/ai-router/vitest.llm-integration.config.ts",
 		"test:smoke:monica": "pnpm --filter @monica-companion/monica-api-lib test:smoke",
+		"test:smoke:llm": "pnpm --filter @monica-companion/ai-router test:smoke",
 		"test:smoke:stack": "npx vitest run --config tests/smoke/vitest.config.ts",
 		"test:smoke:stack:full": "bash tests/smoke/run.sh",
 		"prepare": "husky"
