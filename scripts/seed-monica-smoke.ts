@@ -232,6 +232,27 @@ async function getApiToken(): Promise<string> {
 	}
 	console.log("  Logged in successfully");
 
+	// Fetch a page with the authenticated session to get a fresh CSRF token
+	const dashResponse = await fetch(`${MONICA_BASE_URL}/settings/api`, {
+		headers: { Cookie: sessionCookies },
+		redirect: "manual",
+	});
+	// Follow redirect if needed
+	let dashHtml: string;
+	if (dashResponse.status === 302) {
+		const redirectUrl = dashResponse.headers.get("location") || `${MONICA_BASE_URL}/dashboard`;
+		const followResponse = await fetch(redirectUrl, {
+			headers: { Cookie: sessionCookies },
+		});
+		dashHtml = await followResponse.text();
+	} else {
+		dashHtml = await dashResponse.text();
+	}
+	const freshCsrf =
+		dashHtml.match(/content="([^"]+)"\s+name="csrf-token"/) ||
+		dashHtml.match(/name="csrf-token"\s+content="([^"]+)"/);
+	const csrfToken = freshCsrf ? freshCsrf[1] : csrfMatch[1];
+
 	// Create a personal access token via the Passport API
 	console.log("  Creating personal access token...");
 	const tokenResponse = await fetch(`${MONICA_BASE_URL}/oauth/personal-access-tokens`, {
@@ -240,7 +261,7 @@ async function getApiToken(): Promise<string> {
 			"Content-Type": "application/json",
 			Accept: "application/json",
 			Cookie: sessionCookies,
-			"X-CSRF-TOKEN": csrfMatch[1],
+			"X-CSRF-TOKEN": csrfToken,
 		},
 		body: JSON.stringify({ name: "smoke-test", scopes: [] }),
 	});
