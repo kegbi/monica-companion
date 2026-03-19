@@ -27,7 +27,6 @@ describe("createIntentClassifier", () => {
 		expect(ChatOpenAISpy).toHaveBeenCalledWith(
 			expect.objectContaining({
 				modelName: "gpt-5.4-mini",
-				temperature: 0,
 				openAIApiKey: "sk-test-key",
 				timeout: 30000,
 			}),

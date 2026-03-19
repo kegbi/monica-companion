@@ -9,6 +9,7 @@
 		"start": "node dist/index.js",
 		"test": "vitest run --passWithNoTests",
 		"bench": "vitest run --config vitest.bench.config.ts",
+		"test:llm-integration": "npx vitest run --config vitest.llm-integration.config.ts",
 		"check": "biome check .",
 		"db:generate": "drizzle-kit generate",
 		"db:push": "drizzle-kit push"

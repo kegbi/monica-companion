@@ -41,3 +41,6 @@ scripts/.env.smoke
 smoke-results/
 tests/smoke/results/*.xml
 
+# LLM integration test results
+services/ai-router/llm-integration-results/
+
