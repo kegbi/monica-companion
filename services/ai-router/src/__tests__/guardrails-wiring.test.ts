@@ -51,6 +51,7 @@ vi.mock("../db/turn-repository.js", () => ({
 
 vi.mock("../pending-command/repository.js", () => ({
 	getActivePendingCommandForUser: vi.fn().mockResolvedValue(null),
+	updateDraftPayload: vi.fn().mockResolvedValue(null),
 	createPendingCommand: vi
 		.fn()
 		.mockResolvedValue({ id: "cmd-mock", version: 1, status: "draft", commandType: "create_note" }),

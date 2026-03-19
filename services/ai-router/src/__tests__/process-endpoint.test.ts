@@ -67,6 +67,7 @@ vi.mock("../db/turn-repository.js", () => ({
 
 vi.mock("../pending-command/repository.js", () => ({
 	getActivePendingCommandForUser: vi.fn().mockResolvedValue(null),
+	updateDraftPayload: vi.fn().mockResolvedValue(null),
 	createPendingCommand: vi.fn().mockResolvedValue({
 		id: "cmd-mock",
 		userId: "test",
@@ -173,7 +174,7 @@ const mutatingResult = {
 	userFacingText: "I'll create a note for Jane.",
 	commandType: "create_note",
 	contactRef: "Jane",
-	commandPayload: { body: "our lunch" },
+	commandPayload: { contactId: 42, body: "our lunch" },
 	confidence: 0.95,
 };
 
