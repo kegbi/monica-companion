@@ -162,12 +162,12 @@ _Wire the LLM brain into the existing infrastructure. The plumbing (pending comm
   - [x] Support multi-step disambiguation: user selects a contact from buttons → system re-evaluates the command with the resolved contact → prompts for confirmation.
   - [x] Persist a compressed turn summary after each interaction (not the raw utterance or full LLM response) to satisfy data-governance minimization requirements.
 
-- [ ] **Voice Transcription Model Upgrade**
-  - [ ] Upgrade the default transcription model from `whisper-1` to `gpt-4o-transcribe` (model ID: `gpt-4o-transcribe`). Same endpoint `/v1/audio/transcriptions`, improved word-error rate and language recognition.
-  - [ ] Update `response_format` from `verbose_json` to `json` — `gpt-4o-transcribe` does not support `verbose_json` or `srt`/`vtt` formats.
-  - [ ] Update the default `WHISPER_COST_PER_MINUTE_USD` config to reflect `gpt-4o-transcribe` token-based pricing ($6.00/1M audio input tokens).
-  - [ ] Keep `whisper-1` as a supported fallback via the `WHISPER_MODEL` env var for operators who prefer lower cost.
-  - [ ] Verify language detection still works under the `json` response format and adjust `TranscriptionResult` mapping if needed.
+- [x] **Voice Transcription Model Upgrade**
+  - [x] Upgrade the default transcription model from `whisper-1` to `gpt-4o-transcribe` (model ID: `gpt-4o-transcribe`). Same endpoint `/v1/audio/transcriptions`, improved word-error rate and language recognition.
+  - [x] Update `response_format` from `verbose_json` to `json` — `gpt-4o-transcribe` does not support `verbose_json` or `srt`/`vtt` formats.
+  - [x] Update the default `WHISPER_COST_PER_MINUTE_USD` config to reflect `gpt-4o-transcribe` token-based pricing ($6.00/1M audio input tokens).
+  - [x] Keep `whisper-1` as a supported fallback via the `WHISPER_MODEL` env var for operators who prefer lower cost.
+  - [x] Verify language detection still works under the `json` response format and adjust `TranscriptionResult` mapping if needed.
 
 - [ ] **End-to-End Pipeline Wiring**
   - [ ] Connect intent classification output → pending command creation (mutating) or direct delivery response (read-only/greeting/out-of-scope).
