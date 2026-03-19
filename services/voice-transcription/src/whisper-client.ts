@@ -77,6 +77,16 @@ function isRetryable(category: TranscriptionErrorCategory): boolean {
 
 const RETRY_DELAY_MS = 1000;
 
+/**
+ * Returns true for gpt-4o transcribe model variants (gpt-4o-transcribe,
+ * gpt-4o-mini-transcribe, gpt-4o-mini-transcribe-2025-12-15, etc.).
+ * These models only support response_format "json" and do not return a
+ * language field in the response.
+ */
+function isGpt4oTranscribeModel(model: string): boolean {
+	return model.startsWith("gpt-4o") && model.includes("transcribe");
+}
+
 export function createWhisperClient(options: WhisperClientOptions): WhisperClient {
 	const openai = new OpenAI({ apiKey: options.apiKey });
 
@@ -86,6 +96,29 @@ export function createWhisperClient(options: WhisperClientOptions): WhisperClien
 		languageHint?: string,
 	): Promise<TranscriptionResult> {
 		const file = new File([audioBlob], filename, { type: audioBlob.type });
+
+		if (isGpt4oTranscribeModel(options.model)) {
+			const params: OpenAI.Audio.TranscriptionCreateParams & {
+				response_format: "json";
+			} = {
+				file,
+				model: options.model,
+				response_format: "json",
+			};
+
+			if (languageHint) {
+				params.language = languageHint;
+			}
+
+			const response = await openai.audio.transcriptions.create(params, {
+				signal: AbortSignal.timeout(options.timeoutMs),
+			});
+
+			return {
+				text: response.text,
+				detectedLanguage: undefined,
+			};
+		}
 
 		const params: OpenAI.Audio.TranscriptionCreateParams & {
 			response_format: "verbose_json";

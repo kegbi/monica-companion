@@ -47,11 +47,11 @@ const testConfig = {
 		jwtSecrets: [JWT_SECRET],
 	},
 	openaiApiKey: "sk-test-key",
-	whisperModel: "whisper-1",
+	whisperModel: "gpt-4o-transcribe",
 	whisperTimeoutMs: 60000,
 	whisperMaxFileSizeBytes: 25 * 1024 * 1024,
 	fetchUrlTimeoutMs: 15000,
-	whisperCostPerMinuteUsd: 0.006,
+	whisperCostPerMinuteUsd: 0.048,
 	redisUrl: "redis://localhost:6379",
 	inboundAllowedCallers: ["telegram-bridge"],
 	guardrails: {
@@ -120,6 +120,44 @@ describe("transcription handler", () => {
 		expect(body.text).toBe("Hello world");
 		expect(body.detectedLanguage).toBe("en");
 		expect(body.correlationId).toBe("corr-test");
+	});
+
+	it("returns successful transcription with undefined detectedLanguage for gpt-4o-transcribe", async () => {
+		(mockWhisperClient.transcribe as any).mockResolvedValueOnce({
+			text: "Hello from gpt-4o-transcribe",
+			detectedLanguage: undefined,
+		} satisfies TranscriptionResult);
+
+		const app = createApp(testConfig, null as any, mockWhisperClient);
+		const token = await makeToken();
+
+		const formData = new FormData();
+		formData.append(
+			"metadata",
+			JSON.stringify({
+				mimeType: "audio/ogg",
+				durationSeconds: 5,
+				correlationId: "corr-gpt4o",
+			}),
+		);
+		formData.append(
+			"file",
+			new Blob([new Uint8Array([1, 2, 3])], { type: "audio/ogg" }),
+			"audio.ogg",
+		);
+
+		const res = await app.request("/internal/transcribe", {
+			method: "POST",
+			headers: { Authorization: `Bearer ${token}` },
+			body: formData,
+		});
+
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.success).toBe(true);
+		expect(body.text).toBe("Hello from gpt-4o-transcribe");
+		expect(body.detectedLanguage).toBeUndefined();
+		expect(body.correlationId).toBe("corr-gpt4o");
 	});
 
 	it("returns successful transcription for fetch-URL mode", async () => {

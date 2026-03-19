@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 
 const voiceTranscriptionConfigSchema = z.object({
 	OPENAI_API_KEY: z.string().min(1),
-	WHISPER_MODEL: z.string().min(1).default("whisper-1"),
+	WHISPER_MODEL: z.string().min(1).default("gpt-4o-transcribe"),
 	WHISPER_TIMEOUT_MS: z.coerce.number().int().positive().default(60000),
 	WHISPER_MAX_FILE_SIZE_BYTES: z.coerce
 		.number()
@@ -12,7 +12,7 @@ const voiceTranscriptionConfigSchema = z.object({
 		.positive()
 		.default(25 * 1024 * 1024),
 	FETCH_URL_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
-	WHISPER_COST_PER_MINUTE_USD: z.coerce.number().positive().default(0.006),
+	WHISPER_COST_PER_MINUTE_USD: z.coerce.number().positive().default(0.048),
 	INBOUND_ALLOWED_CALLERS: z.string().optional(),
 });
 

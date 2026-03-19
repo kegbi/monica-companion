@@ -18,7 +18,7 @@ describe("loadConfig", () => {
 
 	it("applies default whisper settings", () => {
 		const config = loadConfig(baseEnv);
-		expect(config.whisperModel).toBe("whisper-1");
+		expect(config.whisperModel).toBe("gpt-4o-transcribe");
 		expect(config.whisperTimeoutMs).toBe(60000);
 		expect(config.whisperMaxFileSizeBytes).toBe(25 * 1024 * 1024);
 		expect(config.fetchUrlTimeoutMs).toBe(15000);
@@ -27,20 +27,30 @@ describe("loadConfig", () => {
 	it("allows overriding whisper settings", () => {
 		const config = loadConfig({
 			...baseEnv,
-			WHISPER_MODEL: "whisper-2",
+			WHISPER_MODEL: "whisper-1",
 			WHISPER_TIMEOUT_MS: "30000",
 			WHISPER_MAX_FILE_SIZE_BYTES: "10485760",
 			FETCH_URL_TIMEOUT_MS: "5000",
 		});
-		expect(config.whisperModel).toBe("whisper-2");
+		expect(config.whisperModel).toBe("whisper-1");
 		expect(config.whisperTimeoutMs).toBe(30000);
 		expect(config.whisperMaxFileSizeBytes).toBe(10485760);
 		expect(config.fetchUrlTimeoutMs).toBe(5000);
 	});
 
+	it("allows falling back to whisper-1 model via env override", () => {
+		const config = loadConfig({
+			...baseEnv,
+			WHISPER_MODEL: "whisper-1",
+			WHISPER_COST_PER_MINUTE_USD: "0.006",
+		});
+		expect(config.whisperModel).toBe("whisper-1");
+		expect(config.whisperCostPerMinuteUsd).toBe(0.006);
+	});
+
 	it("loads whisper cost per minute with default", () => {
 		const config = loadConfig(baseEnv);
-		expect(config.whisperCostPerMinuteUsd).toBe(0.006);
+		expect(config.whisperCostPerMinuteUsd).toBe(0.048);
 	});
 
 	it("allows overriding whisper cost per minute", () => {

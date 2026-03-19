@@ -29,11 +29,11 @@ const testConfig = {
 		jwtSecrets: [JWT_SECRET],
 	},
 	openaiApiKey: "sk-test-key",
-	whisperModel: "whisper-1",
+	whisperModel: "gpt-4o-transcribe",
 	whisperTimeoutMs: 60000,
 	whisperMaxFileSizeBytes: 25 * 1024 * 1024,
 	fetchUrlTimeoutMs: 15000,
-	whisperCostPerMinuteUsd: 0.006,
+	whisperCostPerMinuteUsd: 0.048,
 	redisUrl: "redis://localhost:6379",
 	inboundAllowedCallers: ["telegram-bridge"],
 	guardrails: {
