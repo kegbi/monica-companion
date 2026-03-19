@@ -6,6 +6,9 @@ const baseEnv = {
 	JWT_SECRET: "test-jwt-secret",
 	DATABASE_URL: "postgresql://monica:monica_dev@localhost:5432/monica_companion",
 	MONICA_INTEGRATION_URL: "http://monica-integration:3004",
+	DELIVERY_URL: "http://delivery:3006",
+	SCHEDULER_URL: "http://scheduler:3005",
+	USER_MANAGEMENT_URL: "http://user-management:3007",
 	REDIS_URL: "redis://localhost:6379",
 	OPENAI_API_KEY: "sk-test-key-for-config",
 };
@@ -130,5 +133,45 @@ describe("loadConfig", () => {
 
 	it("rejects MAX_CONVERSATION_TURNS of 0", () => {
 		expect(() => loadConfig({ ...baseEnv, MAX_CONVERSATION_TURNS: "0" })).toThrow();
+	});
+
+	it("parses DELIVERY_URL", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.deliveryUrl).toBe("http://delivery:3006");
+	});
+
+	it("throws when DELIVERY_URL is missing", () => {
+		const { DELIVERY_URL, ...env } = baseEnv;
+		expect(() => loadConfig(env)).toThrow();
+	});
+
+	it("parses SCHEDULER_URL", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.schedulerUrl).toBe("http://scheduler:3005");
+	});
+
+	it("throws when SCHEDULER_URL is missing", () => {
+		const { SCHEDULER_URL, ...env } = baseEnv;
+		expect(() => loadConfig(env)).toThrow();
+	});
+
+	it("parses USER_MANAGEMENT_URL", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.userManagementUrl).toBe("http://user-management:3007");
+	});
+
+	it("throws when USER_MANAGEMENT_URL is missing", () => {
+		const { USER_MANAGEMENT_URL, ...env } = baseEnv;
+		expect(() => loadConfig(env)).toThrow();
+	});
+
+	it("applies default AUTO_CONFIRM_CONFIDENCE_THRESHOLD of 0.95", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.autoConfirmConfidenceThreshold).toBe(0.95);
+	});
+
+	it("coerces AUTO_CONFIRM_CONFIDENCE_THRESHOLD correctly", () => {
+		const config = loadConfig({ ...baseEnv, AUTO_CONFIRM_CONFIDENCE_THRESHOLD: "0.8" });
+		expect(config.autoConfirmConfidenceThreshold).toBe(0.8);
 	});
 });

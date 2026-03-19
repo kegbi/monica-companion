@@ -35,6 +35,32 @@ export const PendingCommandRefSchema = z.object({
 
 export type PendingCommandRef = z.infer<typeof PendingCommandRefSchema>;
 
+export const ActionOutcomeSchema = z.discriminatedUnion("type", [
+	z.object({
+		type: z.literal("pending_created"),
+		pendingCommandId: z.string(),
+		version: z.number().int().positive(),
+	}),
+	z.object({
+		type: z.literal("confirmed"),
+		pendingCommandId: z.string(),
+	}),
+	z.object({
+		type: z.literal("auto_confirmed"),
+		pendingCommandId: z.string(),
+	}),
+	z.object({ type: z.literal("cancelled") }),
+	z.object({ type: z.literal("edit_draft") }),
+	z.object({
+		type: z.literal("stale_rejected"),
+		reason: z.string(),
+	}),
+	z.object({ type: z.literal("read_through") }),
+	z.object({ type: z.literal("passthrough") }),
+]);
+
+export type ActionOutcome = z.infer<typeof ActionOutcomeSchema>;
+
 export const GraphResponseSchema = z.object({
 	type: z.enum(["text", "confirmation_prompt", "disambiguation_prompt", "error"]),
 	text: z.string().min(1),
@@ -61,6 +87,8 @@ export const ConversationStateSchema = z.object({
 	userPreferences: z.record(z.string(), z.unknown()).nullable().default(null),
 	/** Intent classification result from LLM */
 	intentClassification: IntentClassificationResultSchema.nullable().default(null),
+	/** Action outcome from executeAction node */
+	actionOutcome: ActionOutcomeSchema.nullable().default(null),
 	/** The final output of the graph */
 	response: GraphResponseSchema.nullable().default(null),
 });
@@ -90,6 +118,10 @@ export const ConversationAnnotation = Annotation.Root({
 		default: () => null,
 	}),
 	intentClassification: Annotation<IntentClassificationResult | null>({
+		reducer: (_prev, next) => next,
+		default: () => null,
+	}),
+	actionOutcome: Annotation<ActionOutcome | null>({
 		reducer: (_prev, next) => next,
 		default: () => null,
 	}),

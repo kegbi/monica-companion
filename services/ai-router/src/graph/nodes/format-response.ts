@@ -1,26 +1,32 @@
 /**
  * formatResponse graph node.
  *
- * Maps the intentClassification state field to a GraphResponse.
+ * Maps the intentClassification and actionOutcome state fields to a GraphResponse.
+ *
+ * Action outcomes drive the response type for mutating commands:
+ * - pending_created → confirmation_prompt with pendingCommandId/version
+ * - confirmed / auto_confirmed → text success message
+ * - cancelled → text cancellation message
+ * - stale_rejected → error with rejection reason
+ * - edit_draft → text clarification (or disambiguation_prompt if options exist)
+ * - read_through / passthrough → text from LLM userFacingText
  *
  * When needsClarification is true:
  * - Without disambiguationOptions: produces a "text" response (simple clarification)
  * - With disambiguationOptions: produces a "disambiguation_prompt" response
- *
- * Per review MEDIUM-1: use `text` type for clarification without options,
- * `disambiguation_prompt` for clarification with options.
  */
 
-import type { ConversationAnnotation, GraphResponse } from "../state.js";
+import type { ActionOutcome, ConversationAnnotation, GraphResponse } from "../state.js";
 
 type State = typeof ConversationAnnotation.State;
 type Update = typeof ConversationAnnotation.Update;
 
 /**
- * Formats the classification result into a GraphResponse.
+ * Formats the classification result and action outcome into a GraphResponse.
  */
 export function formatResponseNode(state: State): Update {
 	const classification = state.intentClassification;
+	const actionOutcome = state.actionOutcome;
 
 	if (!classification) {
 		const response: GraphResponse = {
@@ -28,6 +34,14 @@ export function formatResponseNode(state: State): Update {
 			text: "Unable to process your request.",
 		};
 		return { response };
+	}
+
+	// Handle action outcomes that override the default text response
+	if (actionOutcome) {
+		const overrideResponse = formatActionOutcome(actionOutcome, classification.userFacingText);
+		if (overrideResponse) {
+			return { response: overrideResponse };
+		}
 	}
 
 	// Handle clarification with disambiguation options
@@ -51,11 +65,56 @@ export function formatResponseNode(state: State): Update {
 		return { response };
 	}
 
-	// All other cases (including clarification without options) use text type
+	// All other cases use text type
 	const response: GraphResponse = {
 		type: "text",
 		text: classification.userFacingText,
 	};
 
 	return { response };
+}
+
+function formatActionOutcome(outcome: ActionOutcome, userFacingText: string): GraphResponse | null {
+	switch (outcome.type) {
+		case "pending_created":
+			return {
+				type: "confirmation_prompt",
+				text: userFacingText,
+				pendingCommandId: outcome.pendingCommandId,
+				version: outcome.version,
+			};
+
+		case "confirmed":
+			return {
+				type: "text",
+				text: userFacingText,
+			};
+
+		case "auto_confirmed":
+			return {
+				type: "text",
+				text: userFacingText,
+			};
+
+		case "cancelled":
+			return {
+				type: "text",
+				text: userFacingText,
+			};
+
+		case "stale_rejected":
+			return {
+				type: "error",
+				text: outcome.reason,
+			};
+
+		case "edit_draft":
+			// Clarification/disambiguation handled by the default path below
+			return null;
+
+		case "read_through":
+		case "passthrough":
+			// Use default text response from LLM
+			return null;
+	}
 }

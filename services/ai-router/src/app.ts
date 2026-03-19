@@ -1,4 +1,4 @@
-import { serviceAuth } from "@monica-companion/auth";
+import { createServiceClient, serviceAuth } from "@monica-companion/auth";
 import {
 	createGuardrailMetrics,
 	type GuardrailMetrics,
@@ -14,19 +14,64 @@ import { contactResolutionRoutes } from "./contact-resolution/routes.js";
 import type { Database } from "./db/connection.js";
 import { getRecentTurns, insertTurnSummary } from "./db/turn-repository.js";
 import { createConversationGraph } from "./graph/index.js";
-import { getActivePendingCommandForUser } from "./pending-command/repository.js";
+import { createDeliveryClient } from "./lib/delivery-client.js";
+import { createSchedulerClient } from "./lib/scheduler-client.js";
+import { createUserManagementClient } from "./lib/user-management-client.js";
+import {
+	createPendingCommand,
+	getActivePendingCommandForUser,
+	getPendingCommand,
+	transitionStatus,
+} from "./pending-command/repository.js";
 
 export function createApp(config: Config, db: Database, redis: Redis) {
 	const app = new Hono();
 	const metrics: GuardrailMetrics = createGuardrailMetrics();
+
+	// Create service clients for downstream services
+	const jwtSecret = config.auth.jwtSecrets[0];
+
+	const deliveryServiceClient = createServiceClient({
+		issuer: "ai-router",
+		audience: "delivery",
+		secret: jwtSecret,
+		baseUrl: config.deliveryUrl,
+	});
+
+	const schedulerServiceClient = createServiceClient({
+		issuer: "ai-router",
+		audience: "scheduler",
+		secret: jwtSecret,
+		baseUrl: config.schedulerUrl,
+	});
+
+	const userManagementServiceClient = createServiceClient({
+		issuer: "ai-router",
+		audience: "user-management",
+		secret: jwtSecret,
+		baseUrl: config.userManagementUrl,
+	});
+
+	const deliveryClient = createDeliveryClient(deliveryServiceClient);
+	const schedulerClient = createSchedulerClient(schedulerServiceClient);
+	const userManagementClient = createUserManagementClient(userManagementServiceClient);
+
 	const graph = createConversationGraph({
 		openaiApiKey: config.openaiApiKey,
 		db,
 		maxConversationTurns: config.maxConversationTurns,
+		pendingCommandTtlMinutes: config.pendingCommandTtlMinutes,
+		autoConfirmConfidenceThreshold: config.autoConfirmConfidenceThreshold,
 		getRecentTurns,
 		getActivePendingCommandForUser,
 		insertTurnSummary,
 		redactString,
+		createPendingCommand,
+		transitionStatus,
+		getPendingCommand,
+		schedulerClient,
+		deliveryClient,
+		userManagementClient,
 	});
 
 	app.use(otelMiddleware());

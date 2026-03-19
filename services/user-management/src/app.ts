@@ -64,6 +64,12 @@ export function createApp(config: Config, db: Database) {
 		allowedCallers: ["telegram-bridge", "ai-router", "scheduler"],
 	});
 
+	const deliveryRoutingAuth = serviceAuth({
+		audience: "user-management",
+		secrets: config.auth.jwtSecrets,
+		allowedCallers: ["ai-router", "scheduler"],
+	});
+
 	const schedulerAuth = serviceAuth({
 		audience: "user-management",
 		secrets: config.auth.jwtSecrets,
@@ -354,6 +360,26 @@ export function createApp(config: Config, db: Database) {
 			language: prefs.language,
 			confirmationMode: prefs.confirmationMode,
 			timezone: prefs.timezone,
+		});
+	});
+
+	// --- Delivery routing endpoint (callers: ai-router, scheduler) ---
+	app.get("/internal/users/:userId/delivery-routing", deliveryRoutingAuth, async (c) => {
+		const userId = c.req.param("userId");
+
+		const uuidResult = uuidSchema.safeParse(userId);
+		if (!uuidResult.success) {
+			return c.json({ error: "Invalid userId format" }, 400);
+		}
+
+		const schedule = await getUserSchedule(db, userId);
+		if (!schedule) {
+			return c.json({ error: "User not found" }, 404);
+		}
+
+		return c.json({
+			connectorType: schedule.connectorType,
+			connectorRoutingId: schedule.connectorRoutingId,
 		});
 	});
 

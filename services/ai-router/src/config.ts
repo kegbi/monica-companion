@@ -8,10 +8,13 @@ const configSchema = z.object({
 	PENDING_COMMAND_TTL_MINUTES: z.coerce.number().int().positive().default(30),
 	EXPIRY_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
 	MONICA_INTEGRATION_URL: z.string().min(1),
-	DELIVERY_URL: z.string().min(1).optional(),
+	DELIVERY_URL: z.string().min(1),
+	SCHEDULER_URL: z.string().min(1),
+	USER_MANAGEMENT_URL: z.string().min(1),
 	INBOUND_ALLOWED_CALLERS: z.string().optional(),
 	OPENAI_API_KEY: z.string().min(1),
 	MAX_CONVERSATION_TURNS: z.coerce.number().int().positive().default(10),
+	AUTO_CONFIRM_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.95),
 });
 
 export interface Config {
@@ -20,9 +23,12 @@ export interface Config {
 	pendingCommandTtlMinutes: number;
 	expirySweepIntervalMs: number;
 	monicaIntegrationUrl: string;
-	deliveryUrl?: string;
+	deliveryUrl: string;
+	schedulerUrl: string;
+	userManagementUrl: string;
 	openaiApiKey: string;
 	maxConversationTurns: number;
+	autoConfirmConfidenceThreshold: number;
 	auth: AuthConfig;
 	guardrails: GuardrailConfig;
 	inboundAllowedCallers: string[];
@@ -51,8 +57,11 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 		expirySweepIntervalMs: parsed.EXPIRY_SWEEP_INTERVAL_MS,
 		monicaIntegrationUrl: parsed.MONICA_INTEGRATION_URL,
 		deliveryUrl: parsed.DELIVERY_URL,
+		schedulerUrl: parsed.SCHEDULER_URL,
+		userManagementUrl: parsed.USER_MANAGEMENT_URL,
 		openaiApiKey: parsed.OPENAI_API_KEY,
 		maxConversationTurns: parsed.MAX_CONVERSATION_TURNS,
+		autoConfirmConfidenceThreshold: parsed.AUTO_CONFIRM_CONFIDENCE_THRESHOLD,
 		auth,
 		guardrails,
 		inboundAllowedCallers: parseAllowedCallers(parsed.INBOUND_ALLOWED_CALLERS),
