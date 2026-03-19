@@ -8,10 +8,13 @@ import { buildConfirmedPayload } from "../pending-command/confirm.js";
  * These tests verify the architectural property that read-only queries
  * bypass the scheduler and flow directly to delivery. Specifically:
  *
- * 1. ai-router config has DELIVERY_URL (for direct delivery) but no SCHEDULER_URL
- *    (confirming read-only responses go to delivery, not scheduler).
- * 2. buildConfirmedPayload() output matches the shape that scheduler's
+ * 1. ai-router config has DELIVERY_URL (for direct delivery of read-only responses).
+ * 2. ai-router config has SCHEDULER_URL (for confirmed mutating commands only).
+ * 3. buildConfirmedPayload() output matches the shape that scheduler's
  *    CommandJobData expects, ensuring the confirmed-command contract is sound.
+ *
+ * The read_query intent type never reaches the scheduler — it flows from
+ * ai-router directly to delivery via the deliverResponse graph node.
  */
 
 const baseEnv = {
@@ -20,6 +23,8 @@ const baseEnv = {
 	DATABASE_URL: "postgresql://monica:monica_dev@localhost:5432/monica_companion",
 	MONICA_INTEGRATION_URL: "http://monica-integration:3004",
 	DELIVERY_URL: "http://delivery:3006",
+	SCHEDULER_URL: "http://scheduler:3005",
+	USER_MANAGEMENT_URL: "http://user-management:3007",
 	REDIS_URL: "redis://localhost:6379",
 	OPENAI_API_KEY: "sk-test-key-for-bypass",
 };
@@ -31,19 +36,19 @@ describe("read-only bypass verification", () => {
 			expect(config.deliveryUrl).toBe("http://delivery:3006");
 		});
 
-		it("does not have a SCHEDULER_URL in the config schema", () => {
+		it("has SCHEDULER_URL for confirmed mutating commands", () => {
 			const config = loadConfig(baseEnv);
-			// ai-router never routes to scheduler directly; confirmed commands
-			// are posted to the scheduler's HTTP endpoint, but there is no
-			// SCHEDULER_URL config value. The config object should not have
-			// any scheduler-related URL.
-			expect(config).not.toHaveProperty("schedulerUrl");
+			expect(config.schedulerUrl).toBe("http://scheduler:3005");
 		});
 
-		it("accepts config without DELIVERY_URL (optional for backward compat)", () => {
+		it("requires DELIVERY_URL", () => {
 			const { DELIVERY_URL, ...envWithoutDelivery } = baseEnv;
-			const config = loadConfig(envWithoutDelivery);
-			expect(config.deliveryUrl).toBeUndefined();
+			expect(() => loadConfig(envWithoutDelivery)).toThrow();
+		});
+
+		it("requires SCHEDULER_URL", () => {
+			const { SCHEDULER_URL, ...envWithoutScheduler } = baseEnv;
+			expect(() => loadConfig(envWithoutScheduler)).toThrow();
 		});
 	});
 
@@ -73,8 +78,6 @@ describe("read-only bypass verification", () => {
 		it("produces output with all fields scheduler CommandJobData expects", () => {
 			const confirmed = buildConfirmedPayload(mockPendingCommandRow);
 
-			// Scheduler's CommandJobData wraps ConfirmedCommandPayload as `command`
-			// and adds executionId + correlationId. The confirmed payload must have:
 			expect(confirmed).toHaveProperty("pendingCommandId");
 			expect(confirmed).toHaveProperty("userId");
 			expect(confirmed).toHaveProperty("commandType");

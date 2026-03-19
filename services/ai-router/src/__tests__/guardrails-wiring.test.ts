@@ -51,6 +51,49 @@ vi.mock("../db/turn-repository.js", () => ({
 
 vi.mock("../pending-command/repository.js", () => ({
 	getActivePendingCommandForUser: vi.fn().mockResolvedValue(null),
+	createPendingCommand: vi
+		.fn()
+		.mockResolvedValue({ id: "cmd-mock", version: 1, status: "draft", commandType: "create_note" }),
+	transitionStatus: vi.fn().mockResolvedValue({
+		id: "cmd-mock",
+		version: 2,
+		status: "pending_confirmation",
+		commandType: "create_note",
+	}),
+	getPendingCommand: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("../lib/delivery-client.js", () => ({
+	createDeliveryClient: vi.fn().mockReturnValue({
+		deliver: vi.fn().mockResolvedValue({ deliveryId: "del-1", status: "delivered" }),
+	}),
+}));
+
+vi.mock("../lib/scheduler-client.js", () => ({
+	createSchedulerClient: vi.fn().mockReturnValue({
+		execute: vi.fn().mockResolvedValue({ executionId: "exec-1", status: "queued" }),
+	}),
+}));
+
+vi.mock("../lib/user-management-client.js", () => ({
+	createUserManagementClient: vi.fn().mockReturnValue({
+		getDeliveryRouting: vi
+			.fn()
+			.mockResolvedValue({ connectorType: "telegram", connectorRoutingId: "chat-1" }),
+		getPreferences: vi
+			.fn()
+			.mockResolvedValue({ language: "en", confirmationMode: "explicit", timezone: "UTC" }),
+	}),
+}));
+
+vi.mock("@monica-companion/auth", () => ({
+	serviceAuth: vi.fn().mockReturnValue(async (_c: any, next: any) => {
+		await next();
+	}),
+	createServiceClient: vi.fn().mockReturnValue({ fetch: vi.fn() }),
+	loadAuthConfig: vi
+		.fn()
+		.mockReturnValue({ serviceName: "ai-router", jwtSecrets: ["test-secret"] }),
 }));
 
 import { createApp } from "../app.js";
@@ -61,8 +104,12 @@ const mockConfig = {
 	pendingCommandTtlMinutes: 30,
 	expirySweepIntervalMs: 60000,
 	monicaIntegrationUrl: "http://monica-integration:3004",
+	deliveryUrl: "http://delivery:3006",
+	schedulerUrl: "http://scheduler:3005",
+	userManagementUrl: "http://user-management:3007",
 	openaiApiKey: "sk-test-key-for-guardrails",
 	maxConversationTurns: 10,
+	autoConfirmConfidenceThreshold: 0.95,
 	inboundAllowedCallers: ["telegram-bridge"],
 	auth: {
 		serviceName: "ai-router" as const,
