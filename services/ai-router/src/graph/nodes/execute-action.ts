@@ -63,7 +63,7 @@ function parseCallbackData(data: string): { pendingCommandId: string; version: n
 
 export function createExecuteActionNode(deps: ExecuteActionDeps) {
 	return async function executeActionNode(state: State): Promise<Update> {
-		const { intentClassification, inboundEvent, userId, correlationId } = state;
+		const { intentClassification, inboundEvent } = state;
 
 		// No classification: passthrough
 		if (!intentClassification) {
