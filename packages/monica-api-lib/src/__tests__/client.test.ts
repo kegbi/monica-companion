@@ -157,7 +157,8 @@ describe("MonicaApiClient - read operations", () => {
 
 	describe("getUpcomingReminders", () => {
 		it("returns parsed reminder outbox entries", async () => {
-			const fetchFn = mockFetchResponse(paginatedEnvelope([reminderOutboxFixture]));
+			// Upcoming reminders returns a flat { data: [...] } response, not paginated
+			const fetchFn = mockFetchResponse({ data: [reminderOutboxFixture] });
 			const client = new MonicaApiClient({ ...baseOpts, fetch: fetchFn });
 
 			const results = await client.getUpcomingReminders(0);

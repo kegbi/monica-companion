@@ -67,7 +67,6 @@ jobs:
             sed -i \
               -e "s|APP_KEY=ChangeMeBy32KeyLengthOrGenerated|APP_KEY=base64:eJGRxF0b1S7KPkUmhoeIQl/sM4LhOqGPVHNxAdT+sOA=|" \
               -e "s|APP_DISABLE_SIGNUP=true|APP_DISABLE_SIGNUP=false|" \
-              -e "s|DB_HOST=127.0.0.1|DB_HOST=127.0.0.1|" \
               -e "s|DB_USERNAME=homestead|DB_USERNAME=monica|" \
               -e "s|DB_PASSWORD=secret|DB_PASSWORD=smoke_db_password|" \
               /var/www/html/.env && \

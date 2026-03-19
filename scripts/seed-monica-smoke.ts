@@ -274,8 +274,6 @@ async function createToken(xsrfToken: string): Promise<string> {
 	collectCookies(tokenResponse);
 
 	const body = await tokenResponse.text();
-	console.log(`  Token response: HTTP ${tokenResponse.status}, length: ${body.length}`);
-
 	if (!tokenResponse.ok) {
 		fatal(`Token creation failed HTTP ${tokenResponse.status}: ${body.slice(0, 500)}`);
 	}
