@@ -139,28 +139,28 @@ _Use real usage data to validate that the separate service split remains justifi
 
 _Wire the LLM brain into the existing infrastructure. The plumbing (pending commands, contact resolution, scheduler, delivery) is complete — this phase adds intent parsing, multi-turn conversation, and the GPT integration that makes the system actually understand user messages._
 
-- [ ] **LangGraph Pipeline Foundation**
-  - [ ] Install `@langchain/langgraph`, `@langchain/openai` in `ai-router`.
-  - [ ] Define the LangGraph `StateGraph` with a typed conversation state schema: current turn, recent turn summaries, active pending command reference, resolved contact context, and user preferences.
-  - [ ] Add a `conversation_turns` PostgreSQL table in `ai-router` to persist per-user turn summaries (role, summary text, timestamp, correlation ID) with a configurable retention window (default 30 days).
-  - [ ] Wire `POST /internal/process` to invoke the LangGraph graph instead of returning the current stub `{ received: true }`.
-  - [ ] Ensure the graph runner respects the existing guardrail middleware (rate limits, concurrency caps, budget tracking, kill switch).
+- [x] **LangGraph Pipeline Foundation**
+  - [x] Install `@langchain/langgraph`, `@langchain/openai` in `ai-router`.
+  - [x] Define the LangGraph `StateGraph` with a typed conversation state schema: current turn, recent turn summaries, active pending command reference, resolved contact context, and user preferences.
+  - [x] Add a `conversation_turns` PostgreSQL table in `ai-router` to persist per-user turn summaries (role, summary text, timestamp, correlation ID) with a configurable retention window (default 30 days).
+  - [x] Wire `POST /internal/process` to invoke the LangGraph graph instead of returning the current stub `{ received: true }`.
+  - [x] Ensure the graph runner respects the existing guardrail middleware (rate limits, concurrency caps, budget tracking, kill switch).
 
-- [ ] **Intent Classification & Command Parsing**
-  - [ ] Integrate OpenAI GPT `gpt-5.4-mini` (model ID: `gpt-5.4-mini`, 400K context, structured outputs, reasoning tokens) as the LLM provider for intent parsing.
-  - [ ] Configure medium reasoning effort for balanced accuracy vs. latency on command parsing.
-  - [ ] Build a system prompt scoped to Monica Companion's V1 command domain: contact create, note create, activity create, field updates (birthday, phone, email, address), and read queries (birthday, phone, last note).
-  - [ ] Use GPT structured outputs with Zod schemas to extract typed command payloads directly — no regex or manual JSON parsing.
-  - [ ] Implement intent routing: classify each utterance as `mutating_command`, `read_query`, `clarification_response`, `greeting`, or `out_of_scope`.
-  - [ ] Detect user language from the utterance and generate all user-facing copy (confirmations, clarifications, errors) in the same language.
+- [x] **Intent Classification & Command Parsing**
+  - [x] Integrate OpenAI GPT `gpt-5.4-mini` (model ID: `gpt-5.4-mini`, 400K context, structured outputs, reasoning tokens) as the LLM provider for intent parsing.
+  - [x] Configure medium reasoning effort for balanced accuracy vs. latency on command parsing.
+  - [x] Build a system prompt scoped to Monica Companion's V1 command domain: contact create, note create, activity create, field updates (birthday, phone, email, address), and read queries (birthday, phone, last note).
+  - [x] Use GPT structured outputs with Zod schemas to extract typed command payloads directly — no regex or manual JSON parsing.
+  - [x] Implement intent routing: classify each utterance as `mutating_command`, `read_query`, `clarification_response`, `greeting`, or `out_of_scope`.
+  - [x] Detect user language from the utterance and generate all user-facing copy (confirmations, clarifications, errors) in the same language.
 
-- [ ] **Multi-Turn Conversation & Context Preservation**
-  - [ ] Load the most recent N turn summaries (configurable, default 10) from `conversation_turns` into the LangGraph state before each invocation.
-  - [ ] Support follow-up references ("add a note to him too", "what about her birthday?") by resolving pronouns and implicit references against the conversation context and last resolved contact.
-  - [ ] When the LLM needs clarification (ambiguous contact, missing fields, unclear intent), generate a clarification question via `delivery` and keep the pending command in `draft` status for the next user turn.
-  - [ ] Attach follow-up messages to the active pending command instead of creating unrelated new commands.
-  - [ ] Support multi-step disambiguation: user selects a contact from buttons → system re-evaluates the command with the resolved contact → prompts for confirmation.
-  - [ ] Persist a compressed turn summary after each interaction (not the raw utterance or full LLM response) to satisfy data-governance minimization requirements.
+- [x] **Multi-Turn Conversation & Context Preservation**
+  - [x] Load the most recent N turn summaries (configurable, default 10) from `conversation_turns` into the LangGraph state before each invocation.
+  - [x] Support follow-up references ("add a note to him too", "what about her birthday?") by resolving pronouns and implicit references against the conversation context and last resolved contact.
+  - [x] When the LLM needs clarification (ambiguous contact, missing fields, unclear intent), generate a clarification question via `delivery` and keep the pending command in `draft` status for the next user turn.
+  - [x] Attach follow-up messages to the active pending command instead of creating unrelated new commands.
+  - [x] Support multi-step disambiguation: user selects a contact from buttons → system re-evaluates the command with the resolved contact → prompts for confirmation.
+  - [x] Persist a compressed turn summary after each interaction (not the raw utterance or full LLM response) to satisfy data-governance minimization requirements.
 
 - [ ] **Voice Transcription Model Upgrade**
   - [ ] Upgrade the default transcription model from `whisper-1` to `gpt-4o-transcribe` (model ID: `gpt-4o-transcribe`). Same endpoint `/v1/audio/transcriptions`, improved word-error rate and language recognition.
