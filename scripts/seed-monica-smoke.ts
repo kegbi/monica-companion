@@ -21,7 +21,7 @@ import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const MONICA_BASE_URL = process.env.MONICA_SMOKE_URL || "http://localhost:8180";
-const HEALTH_TIMEOUT_MS = 120_000;
+const HEALTH_TIMEOUT_MS = 300_000;
 const HEALTH_POLL_INTERVAL_MS = 3_000;
 
 const TEST_USER = {
