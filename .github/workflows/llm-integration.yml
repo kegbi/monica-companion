@@ -15,7 +15,6 @@ concurrency:
 jobs:
   llm-integration:
     runs-on: ubuntu-latest
-    if: ${{ secrets.OPENAI_API_KEY_CI != '' }}
 
     steps:
       - name: Checkout
