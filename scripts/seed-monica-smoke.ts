@@ -2,9 +2,9 @@
  * Seed script for the Monica smoke test instance.
  *
  * This script:
- * 1. Waits for Monica to become healthy (retries with backoff, 120s timeout)
- * 2. Registers a user via Monica's registration endpoint
- * 3. Creates a Personal Access Token via the OAuth API
+ * 1. Waits for Monica to become healthy (retries with backoff, 300s timeout)
+ * 2. Registers a user via Monica's web registration form
+ * 3. Logs in and creates a Personal Access Token via Passport
  * 4. Seeds test contacts with varying data completeness
  * 5. Writes the API token and base URL to scripts/.env.smoke
  *
@@ -22,6 +22,7 @@ import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const MONICA_BASE_URL = process.env.MONICA_SMOKE_URL || "http://localhost:8180";
+const MONICA_CONTAINER = process.env.MONICA_SMOKE_CONTAINER || "monica-smoke";
 const HEALTH_TIMEOUT_MS = 300_000;
 const HEALTH_POLL_INTERVAL_MS = 3_000;
 
@@ -31,6 +32,28 @@ const TEST_USER = {
 	first_name: "Smoke",
 	last_name: "Tester",
 };
+
+// ── Cookie Jar ────────────────────────────────────────────────────────
+
+/** Simple cookie jar that collects Set-Cookie headers across requests. */
+const cookieJar = new Map<string, string>();
+
+function collectCookies(response: Response): void {
+	const raw = response.headers.getSetCookie?.() ?? [];
+	for (const header of raw) {
+		// Extract "name=value" from "name=value; path=/; httponly; ..."
+		const nameValue = header.split(";")[0].trim();
+		const eqIdx = nameValue.indexOf("=");
+		if (eqIdx > 0) {
+			const name = nameValue.substring(0, eqIdx);
+			cookieJar.set(name, nameValue);
+		}
+	}
+}
+
+function cookieHeader(): string {
+	return [...cookieJar.values()].join("; ");
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -44,6 +67,14 @@ function fatal(message: string, cause?: unknown): never {
 
 async function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function extractCsrf(html: string): string | null {
+	const m =
+		html.match(/name="_token"\s+value="([^"]+)"/) ||
+		html.match(/content="([^"]+)"\s+name="csrf-token"/) ||
+		html.match(/name="csrf-token"\s+content="([^"]+)"/);
+	return m ? m[1] : null;
 }
 
 async function fetchJson(
@@ -108,48 +139,39 @@ async function registerUser(): Promise<void> {
 	console.log("Registering test user via web form...");
 
 	try {
-		// Step 1: GET the register page to obtain a CSRF token
+		// GET register page for CSRF token
 		const pageResponse = await fetch(`${MONICA_BASE_URL}/register`, {
 			redirect: "manual",
 		});
+		collectCookies(pageResponse);
 		const pageHtml = await pageResponse.text();
 
-		// Extract CSRF token from the HTML meta tag or hidden input
-		const csrfMatch =
-			pageHtml.match(/name="_token"\s+value="([^"]+)"/) ||
-			pageHtml.match(/content="([^"]+)"\s+name="csrf-token"/) ||
-			pageHtml.match(/name="csrf-token"\s+content="([^"]+)"/);
-		if (!csrfMatch) {
+		const csrfToken = extractCsrf(pageHtml);
+		if (!csrfToken) {
 			throw new Error("Could not find CSRF token in registration page");
 		}
-		const csrfToken = csrfMatch[1];
 
-		// Extract cookies from the response (laravel_session)
-		const cookies = (pageResponse.headers.getSetCookie?.() ?? []).join("; ");
-
-		// Step 2: POST the registration form
-		const formData = new URLSearchParams({
-			_token: csrfToken,
-			email: TEST_USER.email,
-			password: TEST_USER.password,
-			password_confirmation: TEST_USER.password,
-			first_name: TEST_USER.first_name,
-			last_name: TEST_USER.last_name,
-			policy: "on",
-			lang: "en",
-		});
-
+		// POST registration form
 		const registerResponse = await fetch(`${MONICA_BASE_URL}/register`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/x-www-form-urlencoded",
-				Cookie: cookies,
+				Cookie: cookieHeader(),
 			},
-			body: formData.toString(),
+			body: new URLSearchParams({
+				_token: csrfToken,
+				email: TEST_USER.email,
+				password: TEST_USER.password,
+				password_confirmation: TEST_USER.password,
+				first_name: TEST_USER.first_name,
+				last_name: TEST_USER.last_name,
+				policy: "on",
+				lang: "en",
+			}).toString(),
 			redirect: "manual",
 		});
+		collectCookies(registerResponse);
 
-		// 302 redirect to /dashboard = success
 		if (registerResponse.status === 302 || registerResponse.status === 200) {
 			console.log(`  Registration succeeded (HTTP ${registerResponse.status})`);
 		} else {
@@ -169,8 +191,6 @@ async function registerUser(): Promise<void> {
 }
 
 // ── Step 3: Get an API token ──────────────────────────────────────────
-
-const MONICA_CONTAINER = process.env.MONICA_SMOKE_CONTAINER || "monica-smoke";
 
 async function getApiToken(): Promise<string> {
 	console.log("Obtaining API token...");
@@ -196,106 +216,83 @@ async function getApiToken(): Promise<string> {
 		console.log("  Personal access client may already exist");
 	}
 
-	// Log in via web form to get a session cookie
-	console.log("  Logging in via web form...");
+	// Fresh login to get authenticated session
+	console.log("  Logging in...");
 	const loginPage = await fetch(`${MONICA_BASE_URL}/login`, { redirect: "manual" });
+	collectCookies(loginPage);
 	const loginHtml = await loginPage.text();
-	const csrfMatch =
-		loginHtml.match(/name="_token"\s+value="([^"]+)"/) ||
-		loginHtml.match(/content="([^"]+)"\s+name="csrf-token"/) ||
-		loginHtml.match(/name="csrf-token"\s+content="([^"]+)"/);
-	if (!csrfMatch) {
+	const csrfToken = extractCsrf(loginHtml);
+	if (!csrfToken) {
 		fatal("Could not find CSRF token on login page");
 	}
-	const loginCookies = (loginPage.headers.getSetCookie?.() ?? []).join("; ");
 
 	const loginResponse = await fetch(`${MONICA_BASE_URL}/login`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/x-www-form-urlencoded",
-			Cookie: loginCookies,
+			Cookie: cookieHeader(),
 		},
 		body: new URLSearchParams({
-			_token: csrfMatch[1],
+			_token: csrfToken,
 			email: TEST_USER.email,
 			password: TEST_USER.password,
 		}).toString(),
 		redirect: "manual",
 	});
-
-	const sessionCookies = [loginCookies, ...(loginResponse.headers.getSetCookie?.() ?? [])].join(
-		"; ",
-	);
+	collectCookies(loginResponse);
 
 	if (loginResponse.status !== 302) {
 		fatal(`Login failed with HTTP ${loginResponse.status}`);
 	}
 	console.log("  Logged in successfully");
 
-	// Collect all cookies: combine initial + post-login, keeping only name=value
-	const allCookies = [
-		...(loginPage.headers.getSetCookie?.() ?? []),
-		...(loginResponse.headers.getSetCookie?.() ?? []),
-	]
-		.map((c) => c.split(";")[0])
-		.join("; ");
-	console.log(`  Session cookies: ${allCookies.replace(/=.{10,}/g, "=***")}`);
-
-	// Follow the redirect to establish session, then get fresh CSRF
-	const dashResponse = await fetch(`${MONICA_BASE_URL}/dashboard`, {
-		headers: { Cookie: allCookies },
-	});
-	const dashHtml = await dashResponse.text();
-	console.log(`  Dashboard: HTTP ${dashResponse.status}, length: ${dashHtml.length}`);
-
-	const freshCsrf =
-		dashHtml.match(/content="([^"]+)"\s+name="csrf-token"/) ||
-		dashHtml.match(/name="csrf-token"\s+content="([^"]+)"/);
-	if (!freshCsrf) {
-		// Log a snippet to debug what page we got
-		console.log(`  Dashboard HTML snippet: ${dashHtml.slice(0, 300)}`);
-		fatal("Could not find CSRF token on dashboard page (session may not be authenticated)");
+	// Use URL-decoded XSRF-TOKEN cookie as the CSRF token.
+	// Monica v4 uses an SPA — there's no csrf-token meta tag in HTML.
+	// Laravel expects the XSRF-TOKEN cookie value (URL-decoded) as the
+	// X-XSRF-TOKEN header for AJAX requests.
+	const xsrfCookie = cookieJar.get("XSRF-TOKEN");
+	if (!xsrfCookie) {
+		console.log(`  Cookie jar: ${[...cookieJar.keys()].join(", ")}`);
+		fatal("No XSRF-TOKEN cookie found after login");
 	}
-	const csrfToken = freshCsrf[1];
+	const xsrfValue = decodeURIComponent(xsrfCookie.split("=").slice(1).join("="));
+	return await createToken(xsrfValue);
+}
 
-	// Create a personal access token via the Passport API
+async function createToken(xsrfToken: string): Promise<string> {
 	console.log("  Creating personal access token...");
-	// Also collect any new cookies from the dashboard response
-	const dashCookies = [
-		allCookies,
-		...(dashResponse.headers.getSetCookie?.() ?? []).map((c) => c.split(";")[0]),
-	].join("; ");
-
 	const tokenResponse = await fetch(`${MONICA_BASE_URL}/oauth/personal-access-tokens`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
 			Accept: "application/json",
-			Cookie: dashCookies,
-			"X-CSRF-TOKEN": csrfToken,
+			Cookie: cookieHeader(),
+			"X-XSRF-TOKEN": xsrfToken,
 		},
 		body: JSON.stringify({ name: "smoke-test", scopes: [] }),
 	});
+	collectCookies(tokenResponse);
 
-	const tokenBody = await tokenResponse.text();
-	console.log(`  Token response: HTTP ${tokenResponse.status}, body length: ${tokenBody.length}`);
+	const body = await tokenResponse.text();
+	console.log(`  Token response: HTTP ${tokenResponse.status}, length: ${body.length}`);
 
 	if (!tokenResponse.ok) {
-		fatal(`Token creation failed HTTP ${tokenResponse.status}: ${tokenBody.slice(0, 500)}`);
+		fatal(`Token creation failed HTTP ${tokenResponse.status}: ${body.slice(0, 500)}`);
 	}
 
-	let tokenResult: { accessToken?: string };
+	let result: { accessToken?: string };
 	try {
-		tokenResult = JSON.parse(tokenBody);
+		result = JSON.parse(body);
 	} catch {
-		fatal(`Token response is not JSON (HTTP ${tokenResponse.status}): ${tokenBody.slice(0, 500)}`);
-	}
-	if (!tokenResult.accessToken) {
-		fatal("Token response missing accessToken field");
+		fatal(`Token response not JSON (HTTP ${tokenResponse.status}): ${body.slice(0, 500)}`);
 	}
 
-	console.log(`  Got API token (${tokenResult.accessToken.length} chars)`);
-	return tokenResult.accessToken;
+	if (!result.accessToken) {
+		fatal(`Token response missing accessToken: ${body.slice(0, 200)}`);
+	}
+
+	console.log(`  Got API token (${result.accessToken.length} chars)`);
+	return result.accessToken;
 }
 
 // ── Step 4: Seed test data ─────────────────────────────────────────────
@@ -307,7 +304,6 @@ async function seedTestData(apiToken: string): Promise<void> {
 		Authorization: `Bearer ${apiToken}`,
 	};
 
-	// Get the first gender ID for creating contacts
 	const gendersResult = (await fetchJson(`${MONICA_BASE_URL}/api/genders`, {
 		headers,
 	})) as { data: Array<{ id: number }> };
@@ -317,7 +313,6 @@ async function seedTestData(apiToken: string): Promise<void> {
 	}
 	const genderId = gendersResult.data[0].id;
 
-	// Contact 1: Full data (rich contact)
 	console.log("  Creating full contact...");
 	const fullContact = (await fetchJson(`${MONICA_BASE_URL}/api/contacts`, {
 		method: "POST",
@@ -338,7 +333,6 @@ async function seedTestData(apiToken: string): Promise<void> {
 	const fullContactId = fullContact.data.id;
 	console.log(`    Created contact ID: ${fullContactId}`);
 
-	// Contact 2: Minimal data
 	console.log("  Creating minimal contact...");
 	const minimalContact = (await fetchJson(`${MONICA_BASE_URL}/api/contacts`, {
 		method: "POST",
@@ -353,7 +347,6 @@ async function seedTestData(apiToken: string): Promise<void> {
 	})) as { data: { id: number } };
 	console.log(`    Created contact ID: ${minimalContact.data.id}`);
 
-	// Contact 3: Partial data
 	console.log("  Creating partial contact...");
 	const partialContact = (await fetchJson(`${MONICA_BASE_URL}/api/contacts`, {
 		method: "POST",
@@ -369,7 +362,6 @@ async function seedTestData(apiToken: string): Promise<void> {
 	})) as { data: { id: number } };
 	console.log(`    Created contact ID: ${partialContact.data.id}`);
 
-	// Add note to full contact
 	console.log("  Creating note on full contact...");
 	await fetchJson(`${MONICA_BASE_URL}/api/notes`, {
 		method: "POST",
@@ -380,7 +372,6 @@ async function seedTestData(apiToken: string): Promise<void> {
 		}),
 	});
 
-	// Add activity to full contact
 	console.log("  Creating activity on full contact...");
 	await fetchJson(`${MONICA_BASE_URL}/api/activities`, {
 		method: "POST",
@@ -392,7 +383,6 @@ async function seedTestData(apiToken: string): Promise<void> {
 		}),
 	});
 
-	// Add address to full contact
 	console.log("  Creating address on full contact...");
 	await fetchJson(`${MONICA_BASE_URL}/api/addresses`, {
 		method: "POST",
@@ -408,7 +398,6 @@ async function seedTestData(apiToken: string): Promise<void> {
 		}),
 	});
 
-	// Add reminder to full contact
 	console.log("  Creating reminder on full contact...");
 	await fetchJson(`${MONICA_BASE_URL}/api/reminders`, {
 		method: "POST",
@@ -422,7 +411,6 @@ async function seedTestData(apiToken: string): Promise<void> {
 		}),
 	});
 
-	// Update career info on full contact
 	console.log("  Updating career info on full contact...");
 	await fetchJson(`${MONICA_BASE_URL}/api/contacts/${fullContactId}/work`, {
 		method: "PUT",

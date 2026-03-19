@@ -47,7 +47,7 @@ jobs:
             -e APP_ENV=local \
             -e APP_DEBUG=true \
             -e "APP_KEY=base64:eJGRxF0b1S7KPkUmhoeIQl/sM4LhOqGPVHNxAdT+sOA=" \
-            -e APP_URL=http://localhost:8080 \
+            -e APP_URL=http://localhost:80 \
             -e DB_CONNECTION=mysql \
             -e DB_HOST=127.0.0.1 \
             -e DB_PORT=3306 \
@@ -57,6 +57,22 @@ jobs:
             -e MAIL_MAILER=log \
             -e HASH_DRIVER=bcrypt \
             monica:4.1.2
+
+      - name: Patch Monica .env
+        run: |
+          # Monica's Docker entrypoint writes a default .env that overrides
+          # container env vars. We must patch it directly.
+          sleep 10
+          docker exec monica-smoke bash -c '
+            sed -i \
+              -e "s|APP_KEY=ChangeMeBy32KeyLengthOrGenerated|APP_KEY=base64:eJGRxF0b1S7KPkUmhoeIQl/sM4LhOqGPVHNxAdT+sOA=|" \
+              -e "s|APP_DISABLE_SIGNUP=true|APP_DISABLE_SIGNUP=false|" \
+              -e "s|DB_HOST=127.0.0.1|DB_HOST=127.0.0.1|" \
+              -e "s|DB_USERNAME=homestead|DB_USERNAME=monica|" \
+              -e "s|DB_PASSWORD=secret|DB_PASSWORD=smoke_db_password|" \
+              /var/www/html/.env && \
+            php artisan config:clear
+          '
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -79,10 +95,11 @@ jobs:
         run: pnpm tsx scripts/seed-monica-smoke.ts
 
       - name: Run smoke tests
-        env:
-          MONICA_SMOKE_BASE_URL: http://localhost:80
-          MONICA_SMOKE_API_TOKEN: ${{ env.SMOKE_API_TOKEN }}
-        run: pnpm test:smoke:monica
+        run: |
+          # Source the generated .env.smoke for the API token
+          source scripts/.env.smoke
+          export MONICA_SMOKE_BASE_URL MONICA_SMOKE_API_TOKEN
+          pnpm test:smoke:monica
 
       - name: Upload smoke test results
         if: always()
