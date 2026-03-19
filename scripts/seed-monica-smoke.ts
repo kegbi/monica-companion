@@ -17,6 +17,7 @@
  *   1 - Fatal error (see stderr for details)
  */
 
+import { execSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -101,89 +102,94 @@ async function waitForMonica(): Promise<void> {
 	fatal(`Monica did not become healthy within ${HEALTH_TIMEOUT_MS / 1000}s`);
 }
 
-// ── Step 2: Register a user ────────────────────────────────────────────
+// ── Step 2: Register a user via artisan inside the container ──────────
+
+const MONICA_CONTAINER = process.env.MONICA_SMOKE_CONTAINER || "monica-smoke";
+
+function dockerExec(cmd: string): string {
+	try {
+		return execSync(`docker exec ${MONICA_CONTAINER} ${cmd}`, {
+			encoding: "utf-8",
+			timeout: 60_000,
+		}).trim();
+	} catch (err) {
+		// biome-ignore lint/suspicious/noExplicitAny: execSync error has stderr property not in Error type
+		const message = err instanceof Error ? (err as any).stderr || err.message : String(err);
+		throw new Error(`docker exec failed: ${message}`);
+	}
+}
 
 async function registerUser(): Promise<void> {
-	console.log("Registering test user...");
+	console.log("Registering test user via artisan...");
 
 	try {
-		await fetchJson(`${MONICA_BASE_URL}/api/register`, {
-			method: "POST",
-			body: JSON.stringify({
-				email: TEST_USER.email,
-				password: TEST_USER.password,
-				password_confirmation: TEST_USER.password,
-				first_name: TEST_USER.first_name,
-				last_name: TEST_USER.last_name,
-			}),
-		});
+		// Monica v4 uses a tinker command to create users since there's no CLI signup command.
+		// We use artisan tinker to run the registration logic directly.
+		const tinkerScript = [
+			`$user = new \\App\\Models\\User\\User;`,
+			`$user->first_name = '${TEST_USER.first_name}';`,
+			`$user->last_name = '${TEST_USER.last_name}';`,
+			`$user->email = '${TEST_USER.email}';`,
+			`$user->password = bcrypt('${TEST_USER.password}');`,
+			`$user->locale = 'en';`,
+			`$user->save();`,
+			`$account = \\App\\Models\\Account\\Account::create([]);`,
+			`$user->account_id = $account->id;`,
+			`$user->save();`,
+			`echo 'USER_ID=' . $user->id;`,
+		].join(" ");
+
+		const output = dockerExec(`php artisan tinker --execute="${tinkerScript}"`);
+		console.log(`  ${output}`);
 		console.log("  User registered successfully");
 	} catch (err) {
-		// If registration fails because user already exists, try to proceed anyway
 		const message = err instanceof Error ? err.message : String(err);
-		if (message.includes("422") || message.includes("already")) {
+		if (message.includes("Duplicate") || message.includes("UNIQUE")) {
 			console.log("  User may already exist, proceeding...");
 		} else {
-			fatal("Failed to register user", err);
+			fatal("Failed to register user via artisan", err);
 		}
 	}
 }
 
-// ── Step 3: Get an API token ───────────────────────────────────────────
+// ── Step 3: Get an API token via artisan ──────────────────────────────
 
 async function getApiToken(): Promise<string> {
-	console.log("Obtaining API token...");
+	console.log("Creating API token via artisan...");
 
-	// Monica v4 uses Laravel Passport. We log in and try to create a Personal Access Token.
-	// First, get a session by logging in via the API.
+	// First ensure Passport keys exist
 	try {
-		const loginResult = (await fetchJson(`${MONICA_BASE_URL}/api/login`, {
-			method: "POST",
-			body: JSON.stringify({
-				email: TEST_USER.email,
-				password: TEST_USER.password,
-			}),
-		})) as { access_token?: string; token?: string };
-
-		// Monica v4 may return a token directly from /api/login
-		const token = loginResult.access_token || loginResult.token;
-		if (token && typeof token === "string") {
-			console.log("  Got API token from login endpoint");
-			return token;
-		}
-	} catch (err) {
-		console.log(`  Login endpoint failed: ${err instanceof Error ? err.message : err}`);
+		dockerExec("php artisan passport:keys --force");
+		console.log("  Passport keys generated");
+	} catch {
+		console.log("  Passport keys may already exist, proceeding...");
 	}
 
-	// Fallback: try OAuth password grant
+	// Create a Personal Access Client if none exists
 	try {
-		console.log("  Trying OAuth password grant...");
-		const oauthResult = (await fetchJson(`${MONICA_BASE_URL}/oauth/token`, {
-			method: "POST",
-			body: JSON.stringify({
-				grant_type: "password",
-				client_id: "2",
-				client_secret: "",
-				username: TEST_USER.email,
-				password: TEST_USER.password,
-				scope: "*",
-			}),
-		})) as { access_token?: string };
-
-		if (oauthResult.access_token) {
-			console.log("  Got API token from OAuth password grant");
-			return oauthResult.access_token;
-		}
-	} catch (err) {
-		console.log(`  OAuth password grant failed: ${err instanceof Error ? err.message : err}`);
+		dockerExec('php artisan passport:client --personal --name="Smoke Test" --no-interaction');
+		console.log("  Personal access client created");
+	} catch {
+		console.log("  Personal access client may already exist, proceeding...");
 	}
 
-	// Fallback: try artisan command via the container
-	fatal(
-		"Could not obtain an API token via any authentication method. " +
-			"The Monica smoke instance may require manual token creation. " +
-			"Set MONICA_SMOKE_API_TOKEN environment variable manually if needed.",
-	);
+	// Create a personal access token via tinker
+	const tinkerScript = [
+		`$user = \\App\\Models\\User\\User::where('email', '${TEST_USER.email}')->firstOrFail();`,
+		`$token = $user->createToken('smoke-test');`,
+		`echo $token->accessToken;`,
+	].join(" ");
+
+	try {
+		const token = dockerExec(`php artisan tinker --execute="${tinkerScript}"`);
+		if (!token || token.length < 10) {
+			fatal(`Got invalid token: ${token.slice(0, 20)}...`);
+		}
+		console.log(`  Got API token (${token.length} chars)`);
+		return token;
+	} catch (err) {
+		fatal("Failed to create API token via artisan", err);
+	}
 }
 
 // ── Step 4: Seed test data ─────────────────────────────────────────────
