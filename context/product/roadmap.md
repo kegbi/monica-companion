@@ -169,13 +169,13 @@ _Wire the LLM brain into the existing infrastructure. The plumbing (pending comm
   - [x] Keep `whisper-1` as a supported fallback via the `WHISPER_MODEL` env var for operators who prefer lower cost.
   - [x] Verify language detection still works under the `json` response format and adjust `TranscriptionResult` mapping if needed.
 
-- [ ] **End-to-End Pipeline Wiring**
-  - [ ] Connect intent classification output → pending command creation (mutating) or direct delivery response (read-only/greeting/out-of-scope).
-  - [ ] Connect confirmed commands → `scheduler` via `POST /internal/execute` with the existing `ConfirmedCommandPayload` contract.
-  - [ ] Implement auto-confirmation logic: when user preferences allow it and LLM confidence exceeds threshold, skip the confirmation prompt and send directly to scheduler.
-  - [ ] Route read-only queries directly from `ai-router` → `delivery`, bypassing scheduler as required by service boundary rules.
-  - [ ] Handle stale/expired/version-mismatched confirmations with clear user-facing rejection messages.
-  - [ ] Wire callback actions (confirm/edit/cancel from Telegram buttons) through the LangGraph graph so edits re-enter the parsing pipeline with updated context.
+- [x] **End-to-End Pipeline Wiring**
+  - [x] Connect intent classification output → pending command creation (mutating) or direct delivery response (read-only/greeting/out-of-scope).
+  - [x] Connect confirmed commands → `scheduler` via `POST /internal/execute` with the existing `ConfirmedCommandPayload` contract.
+  - [x] Implement auto-confirmation logic: when user preferences allow it and LLM confidence exceeds threshold, skip the confirmation prompt and send directly to scheduler.
+  - [x] Route read-only queries directly from `ai-router` → `delivery`, bypassing scheduler as required by service boundary rules.
+  - [x] Handle stale/expired/version-mismatched confirmations with clear user-facing rejection messages.
+  - [x] Wire callback actions (confirm/edit/cancel from Telegram buttons) through the LangGraph graph so edits re-enter the parsing pipeline with updated context.
 
 - [ ] **LLM Smoke Tests & Benchmark Activation**
   - [ ] **Command parsing smoke tests:** Docker Compose smoke tests that send representative text messages through the live `telegram-bridge → ai-router` path and verify that correct command types and payloads are produced. Cover all V1 command types: contact create, note create, activity log, field updates, and read queries.
