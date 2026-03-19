@@ -97,8 +97,17 @@ jobs:
       - name: Run smoke tests
         run: |
           # Source the generated .env.smoke for the API token
-          source scripts/.env.smoke
+          if [ -f scripts/.env.smoke ]; then
+            source scripts/.env.smoke
+          elif [ -f .env.smoke ]; then
+            source .env.smoke
+          else
+            echo "ERROR: .env.smoke not found"
+            find . -name ".env.smoke" 2>/dev/null
+            exit 1
+          fi
           export MONICA_SMOKE_BASE_URL MONICA_SMOKE_API_TOKEN
+          echo "API token length: ${#MONICA_SMOKE_API_TOKEN}"
           pnpm test:smoke:monica
 
       - name: Upload smoke test results
