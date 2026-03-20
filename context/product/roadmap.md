@@ -205,7 +205,7 @@ _Close remaining gaps between implemented infrastructure and V1 acceptance crite
   - [x] Measure p95 time-to-first-response under the staging environment: ≤ 5 seconds for text input, ≤ 12 seconds for voice input.
   - [x] Profile the LangGraph pipeline and optimize if thresholds are exceeded (context window trimming, prompt caching, parallel contact resolution).
 
-- [ ] **Full Acceptance Criteria Sweep**
-  - [ ] Run the complete acceptance-criteria checklist from `context/product/acceptance-criteria.md` against the live Docker Compose stack.
-  - [ ] Document any deferred items with rationale.
-  - [ ] Produce a V1 release readiness report with changed files, verification results, and residual risks.
+- [x] **Full Acceptance Criteria Sweep**
+  - [x] Run the complete acceptance-criteria checklist from `context/product/acceptance-criteria.md` against the live Docker Compose stack.
+  - [x] Document any deferred items with rationale.
+  - [x] Produce a V1 release readiness report with changed files, verification results, and residual risks.
