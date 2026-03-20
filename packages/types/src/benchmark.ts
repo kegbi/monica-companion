@@ -7,6 +7,8 @@ export const BenchmarkCaseCategory = z.enum([
 	"read_intent",
 	"clarification",
 	"contact_resolution",
+	"out_of_scope",
+	"greeting",
 ]);
 export type BenchmarkCaseCategory = z.infer<typeof BenchmarkCaseCategory>;
 
@@ -35,7 +37,7 @@ export type ContactResolutionBenchmarkCase = z.infer<typeof ContactResolutionBen
 /** A benchmark case that tests intent classification (write, read, or clarification). */
 export const IntentBenchmarkCase = z.object({
 	id: z.string().min(1),
-	category: z.enum(["write_intent", "read_intent", "clarification"]),
+	category: z.enum(["write_intent", "read_intent", "clarification", "out_of_scope", "greeting"]),
 	status: BenchmarkCaseStatus,
 	description: z.string(),
 	input: z.object({

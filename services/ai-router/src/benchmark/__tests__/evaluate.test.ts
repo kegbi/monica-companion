@@ -524,6 +524,154 @@ describe("evaluateIntentCase", () => {
 		expect(result.passed).toBe(true);
 	});
 
+	it("returns passed: true for correct out_of_scope classification", async () => {
+		const classifier: Classifier = {
+			invoke: async () => ({
+				intent: "out_of_scope" as const,
+				detectedLanguage: "en",
+				userFacingText: "I can only help with contact management.",
+				commandType: null,
+				contactRef: null,
+				commandPayload: null,
+				confidence: 0.95,
+			}),
+		};
+
+		const oosCase: IntentBenchmarkCase = {
+			id: "oos-test",
+			category: "out_of_scope",
+			status: "active",
+			description: "Out of scope test",
+			input: {
+				utterance: "What is the weather today?",
+				voiceSamplePath: null,
+				contactContext: [],
+			},
+			expected: {
+				commandType: null,
+				contactRef: null,
+				resolvedContactId: null,
+				isMutating: false,
+			},
+		};
+
+		const result = await evaluateIntentCase(oosCase, classifier);
+
+		expect(result.passed).toBe(true);
+		expect(result.category).toBe("out_of_scope");
+	});
+
+	it("returns passed: false when out_of_scope is misclassified as mutating", async () => {
+		const classifier: Classifier = {
+			invoke: async () => ({
+				intent: "mutating_command" as const,
+				detectedLanguage: "en",
+				userFacingText: "Adding note...",
+				commandType: "create_note",
+				contactRef: null,
+				commandPayload: null,
+				confidence: 0.6,
+			}),
+		};
+
+		const oosCase: IntentBenchmarkCase = {
+			id: "oos-test-fail",
+			category: "out_of_scope",
+			status: "active",
+			description: "Out of scope misclassified",
+			input: {
+				utterance: "What is 2 + 2?",
+				voiceSamplePath: null,
+				contactContext: [],
+			},
+			expected: {
+				commandType: null,
+				contactRef: null,
+				resolvedContactId: null,
+				isMutating: false,
+			},
+		};
+
+		const result = await evaluateIntentCase(oosCase, classifier);
+
+		expect(result.passed).toBe(false);
+		expect(result.error).toContain("intent");
+	});
+
+	it("returns passed: true for correct greeting classification", async () => {
+		const classifier: Classifier = {
+			invoke: async () => ({
+				intent: "greeting" as const,
+				detectedLanguage: "en",
+				userFacingText: "Hello! How can I help you?",
+				commandType: null,
+				contactRef: null,
+				commandPayload: null,
+				confidence: 0.99,
+			}),
+		};
+
+		const grCase: IntentBenchmarkCase = {
+			id: "gr-test",
+			category: "greeting",
+			status: "active",
+			description: "Greeting test",
+			input: {
+				utterance: "Hello",
+				voiceSamplePath: null,
+				contactContext: [],
+			},
+			expected: {
+				commandType: null,
+				contactRef: null,
+				resolvedContactId: null,
+				isMutating: false,
+			},
+		};
+
+		const result = await evaluateIntentCase(grCase, classifier);
+
+		expect(result.passed).toBe(true);
+		expect(result.category).toBe("greeting");
+	});
+
+	it("returns passed: false when greeting is misclassified as mutating", async () => {
+		const classifier: Classifier = {
+			invoke: async () => ({
+				intent: "mutating_command" as const,
+				detectedLanguage: "en",
+				userFacingText: "Creating...",
+				commandType: "create_contact",
+				contactRef: null,
+				commandPayload: null,
+				confidence: 0.5,
+			}),
+		};
+
+		const grCase: IntentBenchmarkCase = {
+			id: "gr-test-fail",
+			category: "greeting",
+			status: "active",
+			description: "Greeting misclassified",
+			input: {
+				utterance: "Hi there",
+				voiceSamplePath: null,
+				contactContext: [],
+			},
+			expected: {
+				commandType: null,
+				contactRef: null,
+				resolvedContactId: null,
+				isMutating: false,
+			},
+		};
+
+		const result = await evaluateIntentCase(grCase, classifier);
+
+		expect(result.passed).toBe(false);
+		expect(result.error).toContain("intent");
+	});
+
 	it("handles classifier errors gracefully", async () => {
 		const classifier: Classifier = {
 			invoke: async () => {

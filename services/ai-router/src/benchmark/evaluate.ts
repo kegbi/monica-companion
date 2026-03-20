@@ -168,6 +168,14 @@ export async function evaluateIntentCase(
 			if (result.intent !== "clarification_response") {
 				errors.push(`intent: expected "clarification_response" but got "${result.intent}"`);
 			}
+		} else if (benchmarkCase.category === "out_of_scope") {
+			if (result.intent !== "out_of_scope") {
+				errors.push(`intent: expected "out_of_scope" but got "${result.intent}"`);
+			}
+		} else if (benchmarkCase.category === "greeting") {
+			if (result.intent !== "greeting") {
+				errors.push(`intent: expected "greeting" but got "${result.intent}"`);
+			}
 		}
 
 		// Surface-level contactRef check (case-insensitive substring match)

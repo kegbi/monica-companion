@@ -11,7 +11,14 @@ import {
 
 describe("BenchmarkCaseCategory schema", () => {
 	it("accepts valid categories", () => {
-		for (const cat of ["write_intent", "read_intent", "clarification", "contact_resolution"]) {
+		for (const cat of [
+			"write_intent",
+			"read_intent",
+			"clarification",
+			"contact_resolution",
+			"out_of_scope",
+			"greeting",
+		]) {
 			expect(BenchmarkCaseCategory.safeParse(cat).success).toBe(true);
 		}
 	});
@@ -175,6 +182,36 @@ describe("IntentBenchmarkCase schema", () => {
 			...validCase,
 			id: "cl-001",
 			category: "clarification",
+			expected: {
+				commandType: null,
+				contactRef: null,
+				resolvedContactId: null,
+				isMutating: false,
+			},
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("parses a valid out_of_scope case", () => {
+		const result = IntentBenchmarkCase.safeParse({
+			...validCase,
+			id: "oos-001",
+			category: "out_of_scope",
+			expected: {
+				commandType: null,
+				contactRef: null,
+				resolvedContactId: null,
+				isMutating: false,
+			},
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("parses a valid greeting case", () => {
+		const result = IntentBenchmarkCase.safeParse({
+			...validCase,
+			id: "gr-001",
+			category: "greeting",
 			expected: {
 				commandType: null,
 				contactRef: null,

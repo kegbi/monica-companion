@@ -2,6 +2,8 @@ import { ContactResolutionBenchmarkCase, IntentBenchmarkCase } from "@monica-com
 import { describe, expect, it } from "vitest";
 import { clarificationCases } from "../fixtures/clarification-turns.js";
 import { contactResolutionCases } from "../fixtures/contact-resolution.js";
+import { greetingCases } from "../fixtures/greeting-turns.js";
+import { outOfScopeCases } from "../fixtures/out-of-scope-turns.js";
 import { readIntentCases } from "../fixtures/read-intents.js";
 import { writeIntentCases } from "../fixtures/write-intents.js";
 
@@ -29,7 +31,7 @@ describe("Contact resolution benchmark fixtures", () => {
 	});
 });
 
-describe("Intent benchmark fixture stubs", () => {
+describe("Intent benchmark fixtures", () => {
 	it("every write intent case parses against the IntentBenchmarkCase schema", () => {
 		for (const c of writeIntentCases) {
 			const result = IntentBenchmarkCase.safeParse(c);
@@ -51,19 +53,16 @@ describe("Intent benchmark fixture stubs", () => {
 		}
 	});
 
-	// Lowered from >= 10 / >= 6 to match post-cleanup V1 case counts.
-	// Non-V1 command types (create_reminder, create_task, list_birthdays, etc.)
-	// were removed during LLM benchmark activation.
-	it("has at least 8 write intent cases", () => {
-		expect(writeIntentCases.length).toBeGreaterThanOrEqual(8);
+	it("has at least 100 write intent cases", () => {
+		expect(writeIntentCases.length).toBeGreaterThanOrEqual(100);
 	});
 
-	it("has at least 4 read intent cases", () => {
-		expect(readIntentCases.length).toBeGreaterThanOrEqual(4);
+	it("has at least 60 read intent cases", () => {
+		expect(readIntentCases.length).toBeGreaterThanOrEqual(60);
 	});
 
-	it("has at least 4 clarification stubs", () => {
-		expect(clarificationCases.length).toBeGreaterThanOrEqual(4);
+	it("has at least 25 clarification cases", () => {
+		expect(clarificationCases.length).toBeGreaterThanOrEqual(25);
 	});
 
 	it("all write intent cases have category write_intent", () => {
@@ -84,8 +83,60 @@ describe("Intent benchmark fixture stubs", () => {
 		}
 	});
 
+	it("every out-of-scope case parses against the IntentBenchmarkCase schema", () => {
+		for (const c of outOfScopeCases) {
+			const result = IntentBenchmarkCase.safeParse(c);
+			expect(result.success, `Case ${c.id} failed to parse`).toBe(true);
+		}
+	});
+
+	it("has at least 10 out-of-scope cases", () => {
+		expect(outOfScopeCases.length).toBeGreaterThanOrEqual(10);
+	});
+
+	it("all out-of-scope cases have category out_of_scope", () => {
+		for (const c of outOfScopeCases) {
+			expect(c.category).toBe("out_of_scope");
+		}
+	});
+
+	it("all out-of-scope cases are non-mutating", () => {
+		for (const c of outOfScopeCases) {
+			expect(c.expected.isMutating, `Case ${c.id} should be non-mutating`).toBe(false);
+		}
+	});
+
+	it("every greeting case parses against the IntentBenchmarkCase schema", () => {
+		for (const c of greetingCases) {
+			const result = IntentBenchmarkCase.safeParse(c);
+			expect(result.success, `Case ${c.id} failed to parse`).toBe(true);
+		}
+	});
+
+	it("has at least 5 greeting cases", () => {
+		expect(greetingCases.length).toBeGreaterThanOrEqual(5);
+	});
+
+	it("all greeting cases have category greeting", () => {
+		for (const c of greetingCases) {
+			expect(c.category).toBe("greeting");
+		}
+	});
+
+	it("all greeting cases are non-mutating", () => {
+		for (const c of greetingCases) {
+			expect(c.expected.isMutating, `Case ${c.id} should be non-mutating`).toBe(false);
+		}
+	});
+
 	it("has unique IDs across all intent cases", () => {
-		const allCases = [...writeIntentCases, ...readIntentCases, ...clarificationCases];
+		const allCases = [
+			...writeIntentCases,
+			...readIntentCases,
+			...clarificationCases,
+			...outOfScopeCases,
+			...greetingCases,
+		];
 		const ids = allCases.map((c) => c.id);
 		expect(new Set(ids).size).toBe(ids.length);
 	});
@@ -106,5 +157,39 @@ describe("Intent benchmark fixture stubs", () => {
 		for (const c of clarificationCases) {
 			expect(c.status, `Case ${c.id} should be active`).toBe("active");
 		}
+	});
+
+	it("all out-of-scope cases are active", () => {
+		for (const c of outOfScopeCases) {
+			expect(c.status, `Case ${c.id} should be active`).toBe("active");
+		}
+	});
+
+	it("all greeting cases are active", () => {
+		for (const c of greetingCases) {
+			expect(c.status, `Case ${c.id} should be active`).toBe("active");
+		}
+	});
+
+	it("has at least 200 total intent cases", () => {
+		const totalIntentCases =
+			writeIntentCases.length +
+			readIntentCases.length +
+			clarificationCases.length +
+			outOfScopeCases.length +
+			greetingCases.length;
+		expect(totalIntentCases).toBeGreaterThanOrEqual(200);
+	});
+
+	it("has at least 50 voice samples total across all intent cases", () => {
+		const allIntentCases = [
+			...writeIntentCases,
+			...readIntentCases,
+			...clarificationCases,
+			...outOfScopeCases,
+			...greetingCases,
+		];
+		const voiceSamples = allIntentCases.filter((c) => c.input.voiceSamplePath !== null);
+		expect(voiceSamples.length).toBeGreaterThanOrEqual(50);
 	});
 });
