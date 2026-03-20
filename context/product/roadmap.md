@@ -192,10 +192,10 @@ _Wire the LLM brain into the existing infrastructure. The plumbing (pending comm
 
 _Close remaining gaps between implemented infrastructure and V1 acceptance criteria. The AI core from Phase 6 enables full end-to-end validation._
 
-- [ ] **Data Governance Enforcement**
-  - [ ] Implement automated retention cleanup: purge `conversation_turns` records older than 30 days, `command_logs` and `delivery_audits` older than 90 days, and traces/logs/dead-letter payloads older than 14 days.
-  - [ ] Implement account disconnection flow: immediate credential deletion + schedule user-specific conversational and audit data for purge within 30 days.
-  - [ ] Verify voice audio is not retained after transcription completes (transient processing only).
+- [x] **Data Governance Enforcement**
+  - [x] Implement automated retention cleanup: purge `conversation_turns` records older than 30 days, `command_logs` and `delivery_audits` older than 90 days, and traces/logs/dead-letter payloads older than 14 days.
+  - [x] Implement account disconnection flow: immediate credential deletion + schedule user-specific conversational and audit data for purge within 30 days.
+  - [x] Verify voice audio is not retained after transcription completes (transient processing only).
 
 - [ ] **Benchmark Expansion to Release Threshold**
   - [ ] Expand the labeled benchmark set to at least 200 utterances: 100 write intents, 60 read/query intents, and 40 clarification/disambiguation turns, including at least 50 voice samples as required by acceptance criteria.
