@@ -209,3 +209,34 @@ _Close remaining gaps between implemented infrastructure and V1 acceptance crite
   - [x] Run the complete acceptance-criteria checklist from `context/product/acceptance-criteria.md` against the live Docker Compose stack.
   - [x] Document any deferred items with rationale.
   - [x] Produce a V1 release readiness report with changed files, verification results, and residual risks.
+
+---
+
+### Phase 8: Onboarding & User Flow Completion
+
+_Close the remaining gaps that block the end-to-end user journey: a new user must be able to start the bot, receive a setup link, fill in credentials, and have the AI resolve contacts against their real Monica data._
+
+- [ ] **Telegram /start Command Handler**
+  - [ ] Register a `/start` command handler in `telegram-bridge` bot setup.
+  - [ ] For unregistered users: call `user-management` `POST /internal/setup-tokens` with the Telegram user ID to issue a signed 15-minute setup link.
+  - [ ] Add an `issueSetupToken()` method to the `telegram-bridge` user-management client.
+  - [ ] Send the setup URL to the user in the Telegram chat with a clear onboarding prompt.
+  - [ ] For already-registered users: reply with a "you're already set up" message (or offer re-setup / settings link).
+  - [ ] Update tests: the bot setup test currently expects 1 command (`/disconnect`); update to expect 2 (`/start`, `/disconnect`).
+
+- [ ] **Web-UI Onboarding Form Completion**
+  - [ ] Add form fields to `[tokenId].astro`: Monica base URL, Monica API key, preferred language, confirmation mode, IANA timezone selector, reminder cadence, reminder time.
+  - [ ] Extend the `ConsumeSetupTokenRequest` Zod schema in `@monica-companion/types` to include all onboarding fields alongside `sig`.
+  - [ ] Update the `web-ui` form submission handler (`submit.ts`) to extract and validate all fields, then forward them to `user-management`.
+  - [ ] Update the `user-management` consume endpoint to accept the extended payload: create or update the `users` row with encrypted Monica credentials, populate the `user_preferences` row with timezone, language, confirmation mode, reminder cadence, and reminder time.
+  - [ ] Add client-side validation: Monica URL must be HTTPS and well-formed, timezone must be a valid IANA identifier, API key must be non-empty.
+  - [ ] Add a success page or redirect after consumption that instructs the user to return to Telegram.
+
+- [ ] **Contact Resolution Integration into LangGraph Pipeline**
+  - [ ] Wire the existing contact resolver (`ai-router/src/contact-resolution/`) into the LangGraph `executeAction` node so that `contactRef` strings from the LLM are resolved against real Monica contact data via `monica-integration`.
+  - [ ] When the LLM produces a `contactRef` for a mutating command, call `monica-integration` `/internal/contacts/resolution-summaries` and run the deterministic matcher before creating the pending command.
+  - [ ] Use real contact resolution results to populate disambiguation options instead of relying on LLM-generated options.
+  - [ ] When resolution returns `resolved` (single high-confidence match), auto-fill `contactId` in the command payload.
+  - [ ] When resolution returns `ambiguous`, generate a disambiguation prompt with real contact data (names, relationship labels) as inline keyboard buttons.
+  - [ ] When resolution returns `no_match`, prompt the user to clarify or offer to create a new contact.
+  - [ ] Ensure the contact summary is loaded once per graph invocation and cached in state to avoid redundant calls.

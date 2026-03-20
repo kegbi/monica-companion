@@ -1,7 +1,7 @@
 # V1 Release Readiness Report
 
 **Date:** 2026-03-20
-**Status:** CONDITIONALLY READY -- all acceptance criteria are PASS or DEFERRED with documented rationale
+**Status:** CONDITIONALLY READY -- all acceptance criteria are PASS or DEFERRED with documented rationale. Three implementation gaps identified in Phase 8 must be completed before live user onboarding.
 
 ---
 
@@ -9,10 +9,15 @@
 
 The Monica Companion V1 meets all 75 acceptance criteria defined in `context/product/acceptance-criteria.md`. Of the 75 criteria:
 
-- **71 PASS** -- verified through automated tests, code inspection, or documentation review
-- **4 DEFERRED** -- documented gaps with rationale and risk assessment; none are blockers for V1 launch
+- **69 PASS** -- verified through automated tests, code inspection, or documentation review
+- **6 DEFERRED** -- documented gaps with rationale and risk assessment
 
-The deferred items relate to the web-ui onboarding form (which is a skeleton that validates and consumes setup tokens but does not yet collect Monica credentials, timezone, or other user configuration) and operational metrics that require a production-like load environment.
+Three deferred items are **HIGH risk** and block the end-to-end user onboarding journey:
+1. **No `/start` command handler** — new users cannot initiate onboarding from Telegram (OM-1 partial)
+2. **Web-UI form is a skeleton** — even with a setup link, no credentials or user record gets created (OM-9 expanded)
+3. **Contact resolution not wired into AI pipeline** — the resolver exists but the LangGraph nodes don't call it (CF-7 partial, MEDIUM risk)
+
+These are tracked in **Phase 8** of the roadmap. The remaining deferred items relate to operational metrics and CI gate automation (LOW risk).
 
 ### Architecture Conformance
 
@@ -49,7 +54,7 @@ All 8 service boundaries are enforced as documented in `context/spec/adr-v1-depl
 | CF-4 | 200+ benchmark utterances | PASS | EXISTING-TEST | `services/ai-router/src/benchmark/__tests__/fixtures.test.ts` asserts >= 200 total, >= 50 voice samples |
 | CF-5 | Read accuracy >= 92% | PASS | EXISTING-TEST | `services/ai-router/src/benchmark/__tests__/evaluate.test.ts` gates on thresholds |
 | CF-6 | Write accuracy >= 90% | PASS | EXISTING-TEST | `services/ai-router/src/benchmark/__tests__/evaluate.test.ts` gates on thresholds |
-| CF-7 | Contact resolution precision >= 95% | PASS | EXISTING-TEST | `services/ai-router/src/benchmark/__tests__/evaluate.test.ts` gates on thresholds |
+| CF-7 | Contact resolution precision >= 95% | **PARTIAL** | EXISTING-TEST | Benchmark gates on thresholds (`evaluate.test.ts`), but contact resolver is not wired into the LangGraph pipeline — resolution relies on LLM rather than deterministic matching against real contacts. See Deferred Items. |
 | CF-8 | False-positive mutation < 1% | PASS | EXISTING-TEST | `services/ai-router/src/benchmark/__tests__/evaluate.test.ts` `falsePositiveMutationRate` |
 | CF-9 | p95 latency text <= 5s, voice <= 12s | PASS | EXISTING-TEST | `services/ai-router/src/__smoke__/latency-text.smoke.test.ts`, `latency-voice.smoke.test.ts` |
 | CF-10 | Disambiguation inline keyboard buttons | PASS | CODE-INSPECTION | `services/ai-router/src/graph/nodes/format-response.ts` (options field), `services/telegram-bridge/src/bot/__tests__/outbound-renderer.test.ts` |
@@ -72,7 +77,7 @@ All 8 service boundaries are enforced as documented in `context/spec/adr-v1-depl
 
 | # | Criterion | Status | Method | Evidence |
 |---|-----------|--------|--------|----------|
-| OM-1 | 15-minute one-time setup link | PASS | AUTOMATED + EXISTING-TEST | `tests/smoke/services.smoke.test.ts` (setup-tokens endpoint) |
+| OM-1 | 15-minute one-time setup link | **PARTIAL** | AUTOMATED + EXISTING-TEST | Setup token endpoint works (`tests/smoke/services.smoke.test.ts`), but telegram-bridge has no `/start` handler to call it — users cannot receive a setup link. See Deferred Items. |
 | OM-2 | Setup link constraints (signed, bound, consumed, invalidated, rejected) | PASS | EXISTING-TEST | `services/user-management/src/setup-token/__tests__/repository.integration.test.ts` |
 | OM-3 | CSRF/origin checks | PASS | EXISTING-TEST | `services/web-ui/src/lib/__tests__/csrf.test.ts` |
 | OM-4 | Credentials never through Telegram | PASS | CODE-INSPECTION | No credential collection in telegram-bridge handlers; web-ui handles credential submission |
@@ -168,21 +173,69 @@ All 8 service boundaries are enforced as documented in `context/spec/adr-v1-depl
 
 ## 3. Deferred Items
 
-### OM-9: IANA Timezone Selection During Onboarding
+### OM-1 (partial): Telegram /start Command Handler
 
-**Status:** DEFERRED
-**Risk:** LOW
+**Status:** DEFERRED — tracked in Phase 8 of roadmap
+**Risk:** HIGH (blocks onboarding for new users)
+**Rationale:** The `telegram-bridge` bot does not register a `/start` command handler. When an unregistered user sends any message, the user-resolver middleware replies "Please use /start to begin" — but no `/start` handler exists to respond. The user-management `POST /internal/setup-tokens` endpoint is fully functional and can issue signed 15-minute setup links, but `telegram-bridge` never calls it.
+
+**Impact:** New users cannot initiate onboarding. The entire onboarding chain (setup token → web-ui form → user creation) is unreachable from Telegram.
+
+**What exists:**
+- user-management setup token endpoint (issue, validate, consume, cancel) — COMPLETE
+- web-ui token validation and CSRF protection — COMPLETE
+- user-management client in telegram-bridge (`lookupByConnector`, `disconnectUser`) — COMPLETE but missing `issueSetupToken()` method
+
+**What's missing:**
+- `bot.command("start", ...)` handler in `services/telegram-bridge/src/bot/setup.ts`
+- `issueSetupToken()` method on `services/telegram-bridge/src/lib/user-management-client.ts`
+- Handler logic: call user-management → get setup URL → send to user in chat
+
+### OM-9 (expanded): Web-UI Onboarding Form Completion
+
+**Status:** DEFERRED — tracked in Phase 8 of roadmap
+**Risk:** HIGH (blocks user registration even if /start is fixed)
 **Rationale:** The web-ui onboarding form at `services/web-ui/src/pages/setup/[tokenId].astro` is a skeleton. It successfully validates and consumes setup tokens (CSRF protection, signed link verification, replay rejection all work), but the form body does not yet collect:
 - Monica base URL
 - Monica API key
 - Preferred language
 - Confirmation mode preference
 - IANA timezone
-- Reminder cadence
+- Reminder cadence / reminder time
 
-The backend infrastructure fully supports all these fields: the `user_preferences` table stores IANA timezone, the scheduler uses stored timezones for DST-aware scheduling, and the user-management service has endpoints for preference updates. The gap is UI-only.
+Furthermore, consuming the token currently only marks the token status as "consumed" — it does **not** create a user record or store credentials/preferences. The `ConsumeSetupTokenRequest` Zod schema accepts only `{ sig }` with no fields for credentials or preferences.
 
-**Mitigation:** Users can have timezone set to a default value (UTC) and updated later. The onboarding form is documented as a fast-follow UI completion task. All backend plumbing is complete.
+The backend infrastructure fully supports all these fields: the `user_preferences` table stores IANA timezone, the scheduler uses stored timezones for DST-aware scheduling, the credential cipher encrypts API keys at rest, and the user-management service has endpoints for preference updates. The gaps are:
+1. UI form fields (web-ui)
+2. Extended consume request schema (types package)
+3. User creation logic in the consume endpoint (user-management)
+
+**Impact:** Even if the /start handler is added, completing the form does not create a user. The user would remain unregistered.
+
+### CF-7 (partial): Contact Resolution Not Wired into LangGraph Pipeline
+
+**Status:** DEFERRED — tracked in Phase 8 of roadmap
+**Risk:** MEDIUM (degrades accuracy but does not block the flow)
+**Rationale:** The contact resolution module exists in `ai-router/src/contact-resolution/` with a fully implemented deterministic matcher (45 test cases), scoring thresholds, and an HTTP endpoint at `/internal/resolve-contact`. However, the main LangGraph conversation pipeline (`classifyIntent` → `executeAction`) never calls it.
+
+When the LLM returns a `contactRef` like "John", the system does NOT look up John in the user's actual Monica contacts. Instead:
+- The LLM generates `contactRef` as a string based on its training, not real contact data
+- Disambiguation options (when `needsClarification` is true) come from LLM-generated labels, not actual contact records
+- `contactId` is only populated when a user clicks a disambiguation button (callback_action with "select" action)
+
+**Impact:** Contact resolution precision (acceptance criterion CF-7: ≥ 95%) depends entirely on LLM quality rather than deterministic matching against real contacts. False matches and hallucinated disambiguation options are possible.
+
+**What exists:**
+- `ai-router/src/contact-resolution/client.ts` — fetches summaries from monica-integration
+- `ai-router/src/contact-resolution/matcher.ts` — deterministic scoring with thresholds (0.9 resolve, 0.6 minimum, 0.1 ambiguity gap)
+- `ai-router/src/contact-resolution/resolver.ts` — orchestrates client + matcher → resolved / ambiguous / no_match
+- `ai-router/src/contact-resolution/routes.ts` — HTTP endpoint `/internal/resolve-contact`
+- `monica-integration` `/internal/contacts/resolution-summaries` endpoint — serves ContactResolutionSummary projections
+
+**What's missing:**
+- Call to resolver from `executeAction` node when LLM produces a `contactRef`
+- Use of real resolution results for disambiguation prompt options
+- Caching of contact summaries in graph state to avoid redundant fetches
 
 ### TG-4: Release Requires Passing Smoke Suites (Partial)
 
@@ -284,13 +337,19 @@ The backend infrastructure fully supports all these fields: the `user_preference
 
 ## 6. Known Risks and Residual Items
 
+### Onboarding Flow Not Connected End-to-End (HIGH)
+
+Three gaps prevent a new user from completing the full journey (Telegram → setup → registered user):
+
+1. **No `/start` handler in telegram-bridge.** The user-resolver middleware tells unregistered users to "use /start", but no handler exists. The `user-management` setup-token endpoint works — telegram-bridge just never calls it. Tracked as Phase 8 task.
+
+2. **Web-UI form is a skeleton.** The form validates and consumes setup tokens correctly, but has no input fields. Consuming the token marks it as "consumed" without creating a user record or storing credentials. The `ConsumeSetupTokenRequest` schema only accepts `{ sig }`. All backend storage (encrypted credentials, user_preferences table) is ready. Tracked as Phase 8 task.
+
+3. **Contact resolution not wired into LangGraph.** The resolver module exists (`ai-router/src/contact-resolution/`) with 45 test cases and a working endpoint, but the main conversation pipeline never calls it. The LLM generates `contactRef` strings that are not validated against real Monica contacts. Disambiguation options come from LLM hallucination, not actual contact data. Tracked as Phase 8 task.
+
 ### Pre-existing Test Infrastructure Issues
 
 Some unit tests (24 test files) fail due to vitest module resolution issues with `hono/body-limit` and `hono/factory` path aliases. These are pre-existing configuration issues unrelated to V1 acceptance criteria. The underlying functionality works correctly in the Docker Compose stack (verified by smoke tests).
-
-### Web-UI Onboarding Form
-
-The web-ui form is a functional skeleton that handles token validation, CSRF protection, and token consumption, but does not collect user configuration data. This is documented as DEFERRED (OM-9) and affects the complete onboarding user journey. Backend support for all onboarding fields is complete.
 
 ### Smoke Tests Require Docker Compose Stack
 
