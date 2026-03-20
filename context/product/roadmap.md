@@ -201,9 +201,9 @@ _Close remaining gaps between implemented infrastructure and V1 acceptance crite
   - [x] Expand the labeled benchmark set to at least 200 utterances: 100 write intents, 60 read/query intents, and 40 clarification/disambiguation turns, including at least 50 voice samples as required by acceptance criteria.
   - [x] Include edge cases: multi-language utterances, ambiguous contacts with similar names, compound commands ("add a note and update his phone"), and out-of-scope requests that must not trigger mutations.
 
-- [ ] **Latency Validation**
-  - [ ] Measure p95 time-to-first-response under the staging environment: ≤ 5 seconds for text input, ≤ 12 seconds for voice input.
-  - [ ] Profile the LangGraph pipeline and optimize if thresholds are exceeded (context window trimming, prompt caching, parallel contact resolution).
+- [x] **Latency Validation**
+  - [x] Measure p95 time-to-first-response under the staging environment: ≤ 5 seconds for text input, ≤ 12 seconds for voice input.
+  - [x] Profile the LangGraph pipeline and optimize if thresholds are exceeded (context window trimming, prompt caching, parallel contact resolution).
 
 - [ ] **Full Acceptance Criteria Sweep**
   - [ ] Run the complete acceptance-criteria checklist from `context/product/acceptance-criteria.md` against the live Docker Compose stack.
