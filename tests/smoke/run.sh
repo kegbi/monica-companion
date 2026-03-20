@@ -46,6 +46,9 @@ export AI_ROUTER_URL="${AI_ROUTER_URL:-http://localhost:3002}"
 export USER_MANAGEMENT_URL="${USER_MANAGEMENT_URL:-http://localhost:3007}"
 export DELIVERY_URL="${DELIVERY_URL:-http://localhost:3006}"
 export VOICE_TRANSCRIPTION_URL="${VOICE_TRANSCRIPTION_URL:-http://localhost:3003}"
+export TELEGRAM_BRIDGE_URL="${TELEGRAM_BRIDGE_URL:-http://localhost:3001}"
+export MONICA_INTEGRATION_URL="${MONICA_INTEGRATION_URL:-http://localhost:3004}"
+export SCHEDULER_URL="${SCHEDULER_URL:-http://localhost:3005}"
 export CADDY_URL="${CADDY_URL:-http://localhost:80}"
 export POSTGRES_URL="${POSTGRES_URL:-postgresql://monica:monica_dev@localhost:5432/monica_companion}"
 
@@ -84,7 +87,7 @@ fi
 # ---- Health wait ----
 
 echo "Checking service health..."
-services=("$AI_ROUTER_URL" "$USER_MANAGEMENT_URL" "$DELIVERY_URL" "$VOICE_TRANSCRIPTION_URL")
+services=("$AI_ROUTER_URL" "$USER_MANAGEMENT_URL" "$DELIVERY_URL" "$VOICE_TRANSCRIPTION_URL" "$TELEGRAM_BRIDGE_URL" "$MONICA_INTEGRATION_URL" "$SCHEDULER_URL")
 for url in "${services[@]}"; do
   retries=10
   while [ $retries -gt 0 ]; do

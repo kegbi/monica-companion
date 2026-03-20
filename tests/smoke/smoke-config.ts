@@ -14,6 +14,8 @@ const SmokeConfigSchema = z.object({
 	DELIVERY_URL: z.string().default("http://localhost:3006"),
 	VOICE_TRANSCRIPTION_URL: z.string().default("http://localhost:3003"),
 	SCHEDULER_URL: z.string().default("http://localhost:3005"),
+	TELEGRAM_BRIDGE_URL: z.string().default("http://localhost:3001"),
+	MONICA_INTEGRATION_URL: z.string().default("http://localhost:3004"),
 	CADDY_URL: z.string().default("http://localhost:80"),
 	POSTGRES_URL: z
 		.string()
@@ -41,6 +43,8 @@ export function loadSmokeConfig(): SmokeConfig {
 				"  DELIVERY_URL            http://localhost:3006",
 				"  VOICE_TRANSCRIPTION_URL http://localhost:3003",
 				"  SCHEDULER_URL           http://localhost:3005",
+				"  TELEGRAM_BRIDGE_URL     http://localhost:3001",
+				"  MONICA_INTEGRATION_URL  http://localhost:3004",
 				"  CADDY_URL               http://localhost:80",
 				"  POSTGRES_URL            postgresql://monica:monica_dev@localhost:5432/monica_companion",
 				"",

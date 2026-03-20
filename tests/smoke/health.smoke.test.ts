@@ -16,6 +16,9 @@ const services = [
 	{ name: "user-management", url: config.USER_MANAGEMENT_URL },
 	{ name: "delivery", url: config.DELIVERY_URL },
 	{ name: "voice-transcription", url: config.VOICE_TRANSCRIPTION_URL },
+	{ name: "telegram-bridge", url: config.TELEGRAM_BRIDGE_URL },
+	{ name: "monica-integration", url: config.MONICA_INTEGRATION_URL },
+	{ name: "scheduler", url: config.SCHEDULER_URL },
 ];
 
 describe("service health checks", () => {
