@@ -6,6 +6,16 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@opentelemetry/api", () => ({
+	trace: {
+		getTracer: () => ({
+			startActiveSpan: (_name: string, fn: (span: unknown) => unknown) =>
+				fn({ setAttribute: () => {}, end: () => {} }),
+		}),
+	},
+}));
+
 import type { TurnSummary } from "../../state.js";
 import { createLoadContextNode } from "../load-context.js";
 

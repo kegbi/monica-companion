@@ -10,9 +10,12 @@
  */
 
 import type { OutboundContent, OutboundMessageIntent } from "@monica-companion/types";
+import { trace } from "@opentelemetry/api";
 import type { DeliveryClient } from "../../lib/delivery-client.js";
 import type { UserManagementClient } from "../../lib/user-management-client.js";
 import type { ConversationAnnotation, GraphResponse } from "../state.js";
+
+const tracer = trace.getTracer("ai-router");
 
 type State = typeof ConversationAnnotation.State;
 type Update = typeof ConversationAnnotation.Update;
@@ -47,32 +50,38 @@ function mapResponseToContent(response: GraphResponse): OutboundContent {
 
 export function createDeliverResponseNode(deps: DeliverResponseDeps) {
 	return async function deliverResponseNode(state: State): Promise<Update> {
-		if (!state.response) {
-			return {};
-		}
+		return tracer.startActiveSpan("ai-router.graph.deliver_response", async (span) => {
+			try {
+				if (!state.response) {
+					return {};
+				}
 
-		try {
-			const routing = await deps.userManagementClient.getDeliveryRouting(
-				state.userId,
-				state.correlationId,
-			);
+				try {
+					const routing = await deps.userManagementClient.getDeliveryRouting(
+						state.userId,
+						state.correlationId,
+					);
 
-			const content = mapResponseToContent(state.response);
+					const content = mapResponseToContent(state.response);
 
-			const intent: OutboundMessageIntent = {
-				userId: state.userId,
-				connectorType: routing.connectorType,
-				connectorRoutingId: routing.connectorRoutingId,
-				correlationId: state.correlationId,
-				content,
-			};
+					const intent: OutboundMessageIntent = {
+						userId: state.userId,
+						connectorType: routing.connectorType,
+						connectorRoutingId: routing.connectorRoutingId,
+						correlationId: state.correlationId,
+						content,
+					};
 
-			await deps.deliveryClient.deliver(intent);
-		} catch {
-			// Best-effort delivery: failures don't block the graph response.
-			// Delivery audit trail in the delivery service tracks failures.
-		}
+					await deps.deliveryClient.deliver(intent);
+				} catch {
+					// Best-effort delivery: failures don't block the graph response.
+					// Delivery audit trail in the delivery service tracks failures.
+				}
 
-		return {};
+				return {};
+			} finally {
+				span.end();
+			}
+		});
 	};
 }

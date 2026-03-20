@@ -16,7 +16,10 @@
  * - With disambiguationOptions: produces a "disambiguation_prompt" response
  */
 
+import { trace } from "@opentelemetry/api";
 import type { ActionOutcome, ConversationAnnotation, GraphResponse } from "../state.js";
+
+const tracer = trace.getTracer("ai-router");
 
 type State = typeof ConversationAnnotation.State;
 type Update = typeof ConversationAnnotation.Update;
@@ -25,53 +28,59 @@ type Update = typeof ConversationAnnotation.Update;
  * Formats the classification result and action outcome into a GraphResponse.
  */
 export function formatResponseNode(state: State): Update {
-	const classification = state.intentClassification;
-	const actionOutcome = state.actionOutcome;
+	return tracer.startActiveSpan("ai-router.graph.format_response", (span) => {
+		try {
+			const classification = state.intentClassification;
+			const actionOutcome = state.actionOutcome;
 
-	if (!classification) {
-		const response: GraphResponse = {
-			type: "error",
-			text: "Unable to process your request.",
-		};
-		return { response };
-	}
+			if (!classification) {
+				const response: GraphResponse = {
+					type: "error",
+					text: "Unable to process your request.",
+				};
+				return { response };
+			}
 
-	// Handle action outcomes that override the default text response
-	if (actionOutcome) {
-		const overrideResponse = formatActionOutcome(actionOutcome, classification.userFacingText);
-		if (overrideResponse) {
-			return { response: overrideResponse };
+			// Handle action outcomes that override the default text response
+			if (actionOutcome) {
+				const overrideResponse = formatActionOutcome(actionOutcome, classification.userFacingText);
+				if (overrideResponse) {
+					return { response: overrideResponse };
+				}
+			}
+
+			// Handle clarification with disambiguation options
+			if (
+				classification.needsClarification &&
+				classification.disambiguationOptions &&
+				classification.disambiguationOptions.length > 0
+			) {
+				const response: GraphResponse = {
+					type: "disambiguation_prompt",
+					text: classification.userFacingText,
+					options: classification.disambiguationOptions,
+				};
+
+				// Include pending command reference if available
+				if (state.activePendingCommand) {
+					response.pendingCommandId = state.activePendingCommand.pendingCommandId;
+					response.version = state.activePendingCommand.version;
+				}
+
+				return { response };
+			}
+
+			// All other cases use text type
+			const response: GraphResponse = {
+				type: "text",
+				text: classification.userFacingText,
+			};
+
+			return { response };
+		} finally {
+			span.end();
 		}
-	}
-
-	// Handle clarification with disambiguation options
-	if (
-		classification.needsClarification &&
-		classification.disambiguationOptions &&
-		classification.disambiguationOptions.length > 0
-	) {
-		const response: GraphResponse = {
-			type: "disambiguation_prompt",
-			text: classification.userFacingText,
-			options: classification.disambiguationOptions,
-		};
-
-		// Include pending command reference if available
-		if (state.activePendingCommand) {
-			response.pendingCommandId = state.activePendingCommand.pendingCommandId;
-			response.version = state.activePendingCommand.version;
-		}
-
-		return { response };
-	}
-
-	// All other cases use text type
-	const response: GraphResponse = {
-		type: "text",
-		text: classification.userFacingText,
-	};
-
-	return { response };
+	});
 }
 
 function formatActionOutcome(outcome: ActionOutcome, userFacingText: string): GraphResponse | null {

@@ -7,6 +7,7 @@ import {
 import { otelMiddleware } from "@monica-companion/observability";
 import { redactString } from "@monica-companion/redaction";
 import { InboundEventSchema } from "@monica-companion/types";
+import { trace } from "@opentelemetry/api";
 import { Hono } from "hono";
 import type Redis from "ioredis";
 import type { Config } from "./config.js";
@@ -126,11 +127,29 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 		const event = parsed.data;
 
 		try {
+			const startMs = performance.now();
+
 			const result = await graph.invoke({
 				userId: event.userId,
 				correlationId: event.correlationId,
 				inboundEvent: event,
 			});
+
+			const durationMs = Math.round(performance.now() - startMs);
+
+			// Record graph total duration as a span attribute on the active span
+			const activeSpan = trace.getActiveSpan();
+			if (activeSpan) {
+				activeSpan.setAttribute("graph.total_duration_ms", durationMs);
+			}
+
+			console.info(
+				JSON.stringify({
+					msg: "graph invocation complete",
+					correlationId: event.correlationId,
+					durationMs,
+				}),
+			);
 
 			if (!result.response) {
 				return c.json({ type: "error", text: "No response generated" }, 500);

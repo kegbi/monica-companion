@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@opentelemetry/api", () => ({
+	trace: {
+		getTracer: () => ({
+			startActiveSpan: (_name: string, fn: (span: unknown) => unknown) =>
+				fn({ setAttribute: () => {}, end: () => {} }),
+		}),
+	},
+}));
+
 const mockLlmInvoke = vi.fn();
 
 // Mock @langchain/openai to avoid real LLM calls

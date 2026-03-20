@@ -6,9 +6,12 @@
  * pronouns, follow-up references, and draft command attachments.
  */
 
+import { trace } from "@opentelemetry/api";
 import type { Database } from "../../db/connection.js";
 import type { PendingCommandRow } from "../../pending-command/repository.js";
 import type { ConversationAnnotation, PendingCommandRef, TurnSummary } from "../state.js";
+
+const tracer = trace.getTracer("ai-router");
 
 type State = typeof ConversationAnnotation.State;
 type Update = typeof ConversationAnnotation.Update;
@@ -28,23 +31,29 @@ export interface LoadContextDeps {
  */
 export function createLoadContextNode(deps: LoadContextDeps) {
 	return async function loadContextNode(state: State): Promise<Update> {
-		const [recentTurns, activeCommand] = await Promise.all([
-			deps.getRecentTurns(deps.db, state.userId, deps.maxTurns),
-			deps.getActivePendingCommandForUser(deps.db, state.userId),
-		]);
+		return tracer.startActiveSpan("ai-router.graph.load_context", async (span) => {
+			try {
+				const [recentTurns, activeCommand] = await Promise.all([
+					deps.getRecentTurns(deps.db, state.userId, deps.maxTurns),
+					deps.getActivePendingCommandForUser(deps.db, state.userId),
+				]);
 
-		const activePendingCommand: PendingCommandRef | null = activeCommand
-			? {
-					pendingCommandId: activeCommand.id,
-					version: activeCommand.version,
-					status: activeCommand.status,
-					commandType: activeCommand.commandType,
-				}
-			: null;
+				const activePendingCommand: PendingCommandRef | null = activeCommand
+					? {
+							pendingCommandId: activeCommand.id,
+							version: activeCommand.version,
+							status: activeCommand.status,
+							commandType: activeCommand.commandType,
+						}
+					: null;
 
-		return {
-			recentTurns,
-			activePendingCommand,
-		};
+				return {
+					recentTurns,
+					activePendingCommand,
+				};
+			} finally {
+				span.end();
+			}
+		});
 	};
 }

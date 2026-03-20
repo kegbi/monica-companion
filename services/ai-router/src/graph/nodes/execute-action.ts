@@ -17,6 +17,10 @@ import {
 	MutatingCommandPayloadSchema,
 	type PendingCommandStatus,
 } from "@monica-companion/types";
+import { trace } from "@opentelemetry/api";
+
+const tracer = trace.getTracer("ai-router");
+
 import type { Database } from "../../db/connection.js";
 import type { SchedulerClient } from "../../lib/scheduler-client.js";
 import type { UserManagementClient } from "../../lib/user-management-client.js";
@@ -71,41 +75,64 @@ function parseCallbackData(data: string): { pendingCommandId: string; version: n
 
 export function createExecuteActionNode(deps: ExecuteActionDeps) {
 	return async function executeActionNode(state: State): Promise<Update> {
-		const { intentClassification, inboundEvent } = state;
+		return tracer.startActiveSpan("ai-router.graph.execute_action", async (span) => {
+			try {
+				const { intentClassification, inboundEvent } = state;
 
-		// No classification: passthrough
-		if (!intentClassification) {
-			return { actionOutcome: { type: "passthrough" } as ActionOutcome };
-		}
+				// No classification: passthrough
+				if (!intentClassification) {
+					const outcome = { type: "passthrough" } as ActionOutcome;
+					span.setAttribute("ai-router.action_outcome", outcome.type);
+					return { actionOutcome: outcome };
+				}
 
-		// Handle callback actions
-		if (inboundEvent.type === "callback_action") {
-			return handleCallbackAction(state, deps);
-		}
+				// Handle callback actions
+				if (inboundEvent.type === "callback_action") {
+					const result = await handleCallbackAction(state, deps);
+					if (result.actionOutcome) {
+						span.setAttribute("ai-router.action_outcome", result.actionOutcome.type);
+					}
+					return result;
+				}
 
-		const { intent } = intentClassification;
+				const { intent } = intentClassification;
 
-		// Passthrough intents: greeting, out_of_scope
-		if (intent === "greeting" || intent === "out_of_scope") {
-			return { actionOutcome: { type: "passthrough" } as ActionOutcome };
-		}
+				// Passthrough intents: greeting, out_of_scope
+				if (intent === "greeting" || intent === "out_of_scope") {
+					span.setAttribute("ai-router.action_outcome", "passthrough");
+					return { actionOutcome: { type: "passthrough" } as ActionOutcome };
+				}
 
-		// Read-only queries bypass scheduler
-		if (intent === "read_query") {
-			return { actionOutcome: { type: "read_through" } as ActionOutcome };
-		}
+				// Read-only queries bypass scheduler
+				if (intent === "read_query") {
+					span.setAttribute("ai-router.action_outcome", "read_through");
+					return { actionOutcome: { type: "read_through" } as ActionOutcome };
+				}
 
-		// Clarification responses without callback (text follow-up to a draft)
-		if (intent === "clarification_response") {
-			return handleClarificationResponse(state, deps);
-		}
+				// Clarification responses without callback (text follow-up to a draft)
+				if (intent === "clarification_response") {
+					const result = await handleClarificationResponse(state, deps);
+					if (result.actionOutcome) {
+						span.setAttribute("ai-router.action_outcome", result.actionOutcome.type);
+					}
+					return result;
+				}
 
-		// Mutating commands
-		if (intent === "mutating_command") {
-			return handleMutatingCommand(state, deps);
-		}
+				// Mutating commands
+				if (intent === "mutating_command") {
+					const result = await handleMutatingCommand(state, deps);
+					if (result.actionOutcome) {
+						span.setAttribute("ai-router.action_outcome", result.actionOutcome.type);
+					}
+					return result;
+				}
 
-		return { actionOutcome: { type: "passthrough" } as ActionOutcome };
+				span.setAttribute("ai-router.action_outcome", "passthrough");
+				return { actionOutcome: { type: "passthrough" } as ActionOutcome };
+			} finally {
+				span.end();
+			}
+		});
 	};
 }
 

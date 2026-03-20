@@ -11,6 +11,7 @@ import { z } from "zod/v4";
 const LlmSmokeConfigSchema = z.object({
 	OPENAI_API_KEY: z.string().min(1),
 	AI_ROUTER_URL: z.string().default("http://localhost:3002"),
+	VOICE_TRANSCRIPTION_URL: z.string().default("http://localhost:3003"),
 	JWT_SECRET: z.string().min(1),
 	POSTGRES_URL: z
 		.string()
@@ -35,8 +36,9 @@ export function loadLlmSmokeConfig(): LlmSmokeConfig {
 				"  JWT_SECRET      (must match the running ai-router instance)",
 				"",
 				"Optional overrides (with defaults):",
-				"  AI_ROUTER_URL   http://localhost:3002",
-				"  POSTGRES_URL    postgresql://monica:monica_dev@localhost:5432/monica_companion",
+				"  AI_ROUTER_URL              http://localhost:3002",
+				"  VOICE_TRANSCRIPTION_URL    http://localhost:3003",
+				"  POSTGRES_URL               postgresql://monica:monica_dev@localhost:5432/monica_companion",
 				"",
 				z.prettifyError(result.error),
 			].join("\n"),

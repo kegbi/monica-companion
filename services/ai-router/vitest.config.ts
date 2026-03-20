@@ -14,6 +14,7 @@ export default defineConfig({
 			"hono/http-exception": pkg("hono", "dist/http-exception.js"),
 			hono: pkg("hono", "dist/index.js"),
 			jose: pkg("jose"),
+			"@langchain/core/messages": pkg("@langchain/core", "messages.js"),
 			"@opentelemetry/api-logs": pkg("@opentelemetry/api-logs"),
 			"@opentelemetry/api": pkg("@opentelemetry/api"),
 			"@monica-companion/auth": workspace("@monica-companion/auth"),

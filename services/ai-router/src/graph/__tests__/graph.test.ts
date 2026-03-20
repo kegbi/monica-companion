@@ -1,4 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@opentelemetry/api", () => ({
+	trace: {
+		getTracer: () => ({
+			startActiveSpan: (_name: string, fn: (span: unknown) => unknown) =>
+				fn({ setAttribute: () => {}, end: () => {} }),
+		}),
+	},
+}));
+
 import type { IntentClassificationResult } from "../intent-schemas.js";
 import { GraphResponseSchema } from "../state.js";
 

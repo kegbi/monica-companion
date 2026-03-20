@@ -10,9 +10,12 @@
  * Error-resilient: catches DB errors so the user still gets their response.
  */
 
+import { trace } from "@opentelemetry/api";
 import type { Database } from "../../db/connection.js";
 import type { InsertTurnParams } from "../../db/turn-repository.js";
 import type { ConversationAnnotation } from "../state.js";
+
+const tracer = trace.getTracer("ai-router");
 
 type State = typeof ConversationAnnotation.State;
 type Update = typeof ConversationAnnotation.Update;
@@ -56,36 +59,41 @@ function compressAssistantSummary(response: { type: string }): string {
  */
 export function createPersistTurnNode(deps: PersistTurnDeps) {
 	return async function persistTurnNode(state: State): Promise<Update> {
-		// Skip persistence when there's nothing to persist
-		if (!state.intentClassification) {
-			return {};
-		}
+		return tracer.startActiveSpan("ai-router.graph.persist_turn", async (span) => {
+			try {
+				// Skip persistence when there's nothing to persist
+				if (!state.intentClassification) {
+					return {};
+				}
 
-		try {
-			const userSummary = deps.redactString(compressUserSummary(state.intentClassification));
+				try {
+					const userSummary = deps.redactString(compressUserSummary(state.intentClassification));
 
-			await deps.insertTurnSummary(deps.db, {
-				userId: state.userId,
-				role: "user",
-				summary: userSummary,
-				correlationId: state.correlationId,
-			});
+					await deps.insertTurnSummary(deps.db, {
+						userId: state.userId,
+						role: "user",
+						summary: userSummary,
+						correlationId: state.correlationId,
+					});
 
-			if (state.response) {
-				const assistantSummary = deps.redactString(compressAssistantSummary(state.response));
+					if (state.response) {
+						const assistantSummary = deps.redactString(compressAssistantSummary(state.response));
 
-				await deps.insertTurnSummary(deps.db, {
-					userId: state.userId,
-					role: "assistant",
-					summary: assistantSummary,
-					correlationId: state.correlationId,
-				});
+						await deps.insertTurnSummary(deps.db, {
+							userId: state.userId,
+							role: "assistant",
+							summary: assistantSummary,
+							correlationId: state.correlationId,
+						});
+					}
+				} catch (_error) {
+					// Best-effort persistence: DB errors should not block user response.
+				}
+
+				return {};
+			} finally {
+				span.end();
 			}
-		} catch (_error) {
-			// Best-effort persistence: DB errors should not block user response.
-			// TODO: Emit a counter metric (persist_turn_failures_total) when OTel is wired.
-		}
-
-		return {};
+		});
 	};
 }
