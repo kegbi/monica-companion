@@ -9,6 +9,7 @@ vi.mock("@opentelemetry/api", () => {
 				startActiveSpan: (_name: string, fn: (span: unknown) => unknown) => fn(mockSpan),
 				startSpan: () => mockSpan,
 			}),
+			getActiveSpan: () => mockSpan,
 		},
 	};
 });
