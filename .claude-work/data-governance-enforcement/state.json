@@ -1,0 +1,11 @@
+{
+	"taskId": "data-governance-enforcement",
+	"taskGroup": "Data Governance Enforcement",
+	"phase": "committing",
+	"planAttempts": 3,
+	"codeAttempts": 2,
+	"smokeAttempts": 2,
+	"status": "in-progress",
+	"mode": "auto",
+	"startedAt": "2026-03-20T01:30:00.000Z"
+}
