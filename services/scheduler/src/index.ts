@@ -17,6 +17,9 @@ async function main() {
 	const { pollReminders } = await import("./workers/reminder-poller");
 	const { executeReminder } = await import("./workers/reminder-executor");
 	const { handleDeadLetter } = await import("./lib/dead-letter");
+	const { processRetentionCleanup } = await import("./workers/retention-cleanup-worker");
+	const { purgeExpiredExecutions, purgeExpiredIdempotencyKeys, purgeExpiredReminderWindows } =
+		await import("./retention/cleanup");
 
 	const config = loadConfig();
 	const db = createDb(config.databaseUrl);
@@ -44,6 +47,13 @@ async function main() {
 		audience: "user-management",
 		secret: config.auth.jwtSecrets[0],
 		baseUrl: config.userManagementUrl,
+	});
+
+	const aiRouterClient = createServiceClient({
+		issuer: "scheduler",
+		audience: "ai-router",
+		secret: config.auth.jwtSecrets[0],
+		baseUrl: config.aiRouterUrl,
 	});
 
 	// Queue metrics (OTel instruments)
@@ -238,6 +248,36 @@ async function main() {
 		},
 	);
 
+	// --- Retention cleanup repeatable job ---
+	const retentionCleanupQueue = new Queue("retention-cleanup", { connection: redis });
+
+	await retentionCleanupQueue.upsertJobScheduler(
+		"retention-cleanup-scheduler",
+		{ every: config.retentionCleanupIntervalMs },
+		{ name: "retention-cleanup" },
+	);
+
+	const retentionCleanupWorker = new Worker(
+		"retention-cleanup",
+		async () => {
+			await processRetentionCleanup({
+				config,
+				db: db as never,
+				aiRouterClient,
+				deliveryClient,
+				purgeExpiredExecutions,
+				purgeExpiredIdempotencyKeys,
+				purgeExpiredReminderWindows,
+			});
+		},
+		{
+			connection: redis,
+			concurrency: 1,
+			removeOnComplete: { count: 100 },
+			removeOnFail: { count: 100 },
+		},
+	);
+
 	// --- Periodic queue depth poller ---
 	// Polls queue depth every 15s, aligned with the Prometheus scrape interval (15s)
 	// to ensure each scrape sees a fresh gauge value.
@@ -248,6 +288,7 @@ async function main() {
 				["command-execution", commandQueue],
 				["reminder-execute", reminderQueue],
 				["reminder-poll", reminderPollQueue],
+				["retention-cleanup", retentionCleanupQueue],
 			] as const) {
 				const counts = await queue.getJobCounts("waiting", "active", "delayed");
 				queueMetrics.updateQueueDepth(name, "waiting", counts.waiting ?? 0);
@@ -274,9 +315,11 @@ async function main() {
 		await commandWorker.close();
 		await reminderWorker.close();
 		await reminderPollWorker.close();
+		await retentionCleanupWorker.close();
 		await commandQueue.close();
 		await reminderQueue.close();
 		await reminderPollQueue.close();
+		await retentionCleanupQueue.close();
 		await redis.quit();
 		await telemetry.shutdown();
 		process.exit(0);

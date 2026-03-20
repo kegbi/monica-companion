@@ -5,11 +5,13 @@ describe("setupBot", () => {
 	it("registers middleware and handlers in correct order", () => {
 		const use = vi.fn();
 		const on = vi.fn();
+		const command = vi.fn();
 		const catchFn = vi.fn();
 
 		const mockBot = {
 			use,
 			on,
+			command,
 			catch: catchFn,
 		};
 
@@ -22,12 +24,20 @@ describe("setupBot", () => {
 				text: "test",
 				correlationId: "corr",
 			})),
+			disconnect: vi.fn(async () => ({
+				disconnected: true,
+				purgeScheduledAt: "2024-01-01T00:00:00Z",
+			})),
 		};
 
 		setupBot(mockBot as never, deps);
 
 		// Should register 2 middleware: privateChatOnly and userResolver
 		expect(use).toHaveBeenCalledTimes(2);
+
+		// Should register 1 command: disconnect (before message handlers)
+		expect(command).toHaveBeenCalledTimes(1);
+		expect(command.mock.calls[0][0]).toBe("disconnect");
 
 		// Should register 3 handlers: text message, voice message, callback query
 		expect(on).toHaveBeenCalledTimes(3);

@@ -62,6 +62,8 @@ export function createApp(config: Config, redis?: Redis) {
 		downloadFile: (fileId) => fileFetcher.downloadFile(fileId),
 		transcribe: (metadata, buffer, userId) =>
 			voiceTranscriptionClient.transcribe(metadata, buffer, userId),
+		disconnect: (userId, correlationId) =>
+			userManagementClient.disconnectUser(userId, correlationId),
 	});
 
 	// Create update dedup (uses Redis if available)

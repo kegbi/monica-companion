@@ -24,6 +24,8 @@ import {
 	transitionStatus,
 	updateDraftPayload,
 } from "./pending-command/repository.js";
+import { retentionRoutes } from "./retention/routes.js";
+import { userPurgeRoutes } from "./retention/user-purge-routes.js";
 
 export function createApp(config: Config, db: Database, redis: Redis) {
 	const app = new Hono();
@@ -83,8 +85,10 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 
 	// 2. Internal routes sub-app: auth → guardrails → handler (correct ordering)
 	//    serviceAuth MUST run first so userId is in context before guardrails checks it.
+	//    Auth is scoped to /process so it does not collide with other sub-apps mounted at /internal.
 	const internal = new Hono();
 	internal.use(
+		"/process",
 		serviceAuth({
 			audience: "ai-router",
 			secrets: config.auth.jwtSecrets,
@@ -145,6 +149,12 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 
 	// 3. Contact resolution routes (own per-endpoint auth, no LLM guardrails needed)
 	app.route("/internal", contactResolutionRoutes(config));
+
+	// 4. Retention cleanup routes (own per-endpoint auth, caller: scheduler only)
+	app.route("/internal", retentionRoutes(config, db));
+
+	// 5. User data purge routes (own per-endpoint auth, caller: user-management only)
+	app.route("/internal", userPurgeRoutes(config, db));
 
 	return app;
 }

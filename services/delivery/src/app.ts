@@ -7,6 +7,8 @@ import { Hono } from "hono";
 import type { Config } from "./config";
 import type { Database } from "./db/connection";
 import { deliveryAudits } from "./db/schema";
+import { retentionRoutes } from "./retention/routes";
+import { userPurgeRoutes } from "./retention/user-purge-routes";
 
 const logger = createLogger("delivery");
 const tracer = trace.getTracer("delivery");
@@ -23,7 +25,9 @@ export function createApp(config: Config, deps: AppDeps) {
 	app.get("/health", (c) => c.json({ status: "ok", service: "delivery" }));
 
 	const internal = new Hono();
+	// Auth scoped to /deliver so it does not collide with other sub-apps mounted at /internal.
 	internal.use(
+		"/deliver",
 		serviceAuth({
 			audience: "delivery",
 			secrets: config.auth.jwtSecrets,
@@ -164,6 +168,12 @@ export function createApp(config: Config, deps: AppDeps) {
 	});
 
 	app.route("/internal", internal);
+
+	// Retention cleanup routes (own per-endpoint auth, caller: scheduler only)
+	app.route("/internal", retentionRoutes(config, deps.db));
+
+	// User data purge routes (own per-endpoint auth, caller: user-management only)
+	app.route("/internal", userPurgeRoutes(config, deps.db));
 
 	return app;
 }

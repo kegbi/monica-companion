@@ -2,6 +2,7 @@ import type { Bot } from "grammy";
 import type { BotContext } from "./context";
 import { createErrorHandler } from "./error-handler";
 import { createCallbackQueryHandler } from "./handlers/callback-query";
+import { createDisconnectHandler, type DisconnectFn } from "./handlers/disconnect-command";
 import { createTextMessageHandler, type ForwardEventFn } from "./handlers/text-message";
 import {
 	createVoiceMessageHandler,
@@ -16,6 +17,7 @@ export interface SetupDeps {
 	forwardEvent: ForwardEventFn;
 	downloadFile: DownloadFileFn;
 	transcribe: TranscribeFn;
+	disconnect: DisconnectFn;
 }
 
 /**
@@ -31,6 +33,9 @@ export function setupBot(bot: Bot<BotContext>, deps: SetupDeps): void {
 	// Middleware (order matters)
 	bot.use(privateChatOnly);
 	bot.use(createUserResolver(deps.lookupUser));
+
+	// Commands (must be registered before generic message handlers)
+	bot.command("disconnect", createDisconnectHandler(deps.disconnect));
 
 	// Handlers
 	bot.on("message:text", createTextMessageHandler(deps.forwardEvent));

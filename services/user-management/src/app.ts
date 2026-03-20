@@ -22,6 +22,7 @@ import {
 	issueToken,
 	logAuditEvent,
 } from "./setup-token/repository";
+import { disconnectUser } from "./user/disconnect";
 import {
 	findUserByTelegramId,
 	getDecryptedCredentials,
@@ -405,6 +406,34 @@ export function createApp(config: Config, db: Database) {
 		}
 
 		return c.json(schedule);
+	});
+
+	// --- Disconnect endpoint (caller: telegram-bridge) ---
+	app.delete("/internal/users/:userId/disconnect", telegramBridgeAuth, async (c) => {
+		const userId = c.req.param("userId");
+
+		const uuidResult = uuidSchema.safeParse(userId);
+		if (!uuidResult.success) {
+			return c.json({ error: "Invalid userId format" }, 400);
+		}
+
+		const cid = getCorrelationId(c);
+		const actorService = getServiceCaller(c);
+
+		const result = await disconnectUser(db, {
+			userId,
+			actorService,
+			correlationId: cid,
+		});
+
+		if (!result) {
+			return c.json({ error: "User not found" }, 404);
+		}
+
+		return c.json({
+			disconnected: true,
+			purgeScheduledAt: result.purgeScheduledAt.toISOString(),
+		});
 	});
 
 	return app;

@@ -234,6 +234,7 @@ services:
       MONICA_INTEGRATION_URL: http://monica-integration:3004
       DELIVERY_URL: http://delivery:3006
       USER_MANAGEMENT_URL: http://user-management:3007
+      AI_ROUTER_URL: http://ai-router:3002
       SCHEDULER_MAX_RETRIES: ${SCHEDULER_MAX_RETRIES:-3}
       SCHEDULER_RETRY_BACKOFF_MS: ${SCHEDULER_RETRY_BACKOFF_MS:-1000}
       CATCH_UP_WINDOW_HOURS: ${CATCH_UP_WINDOW_HOURS:-6}
@@ -254,6 +255,8 @@ services:
       monica-integration:
         condition: service_started
       user-management:
+        condition: service_started
+      ai-router:
         condition: service_started
     networks:
       - internal
@@ -305,6 +308,10 @@ services:
       SETUP_BASE_URL: ${SETUP_BASE_URL:-http://localhost}
       ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY}
       ENCRYPTION_MASTER_KEY_PREVIOUS: ${ENCRYPTION_MASTER_KEY_PREVIOUS:-}
+      AI_ROUTER_URL: http://ai-router:3002
+      SCHEDULER_URL: http://scheduler:3005
+      DELIVERY_URL: http://delivery:3006
+      HTTP_TIMEOUT_MS: ${HTTP_TIMEOUT_MS:-10000}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_SERVICE_NAME: user-management
     volumes:

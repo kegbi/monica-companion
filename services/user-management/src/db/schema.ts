@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const setupTokens = pgTable(
 	"setup_tokens",
@@ -64,6 +64,28 @@ export const userPreferences = pgTable("user_preferences", {
 	createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const dataPurgeRequests = pgTable(
+	"data_purge_requests",
+	{
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id),
+		status: text("status").notNull().default("pending"),
+		reason: text("reason").notNull(),
+		requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+		purgeAfter: timestamp("purge_after", { withTimezone: true }).notNull(),
+		claimedAt: timestamp("claimed_at", { withTimezone: true }),
+		completedAt: timestamp("completed_at", { withTimezone: true }),
+		retryCount: integer("retry_count").notNull().default(0),
+		error: text("error"),
+	},
+	(table) => [
+		index("idx_data_purge_requests_status").on(table.status, table.purgeAfter),
+		index("idx_data_purge_requests_user_id").on(table.userId),
+	],
+);
 
 export const credentialAccessAuditLog = pgTable(
 	"credential_access_audit_log",

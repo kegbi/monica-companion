@@ -60,6 +60,18 @@ export {
 	OutboundMessageIntentSchema,
 } from "./outbound-message";
 export {
+	type AiRouterRetentionCleanupRequest,
+	AiRouterRetentionCleanupRequestSchema,
+	type DeliveryRetentionCleanupRequest,
+	DeliveryRetentionCleanupRequestSchema,
+	type DisconnectUserResponse,
+	DisconnectUserResponseSchema,
+	type RetentionCleanupResponse,
+	RetentionCleanupResponseSchema,
+	type UserDataPurgeResponse,
+	UserDataPurgeResponseSchema,
+} from "./retention";
+export {
 	CancelSetupTokenResponse,
 	ConsumeSetupTokenRequest,
 	ConsumeSetupTokenResponse,

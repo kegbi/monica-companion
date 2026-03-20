@@ -12,6 +12,13 @@ const configSchema = z.object({
 		.string()
 		.transform((s) => (s === "" ? undefined : s))
 		.pipe(z.string().min(32).optional()),
+	AI_ROUTER_URL: z.string().min(1).default("http://ai-router:3002"),
+	SCHEDULER_URL: z.string().min(1).default("http://scheduler:3005"),
+	DELIVERY_URL: z.string().min(1).default("http://delivery:3006"),
+	PURGE_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(3_600_000),
+	HTTP_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+	STALE_CLAIM_THRESHOLD_MINUTES: z.coerce.number().int().positive().default(30),
+	MAX_PURGE_RETRIES: z.coerce.number().int().positive().default(5),
 });
 
 /**
@@ -45,6 +52,13 @@ export interface Config {
 	auth: AuthConfig;
 	encryptionMasterKey: Buffer;
 	encryptionMasterKeyPrevious: Buffer | null;
+	aiRouterUrl: string;
+	schedulerUrl: string;
+	deliveryUrl: string;
+	purgeSweepIntervalMs: number;
+	httpTimeoutMs: number;
+	staleClaimThresholdMinutes: number;
+	maxPurgeRetries: number;
 }
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
@@ -61,5 +75,12 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 		encryptionMasterKeyPrevious: parsed.ENCRYPTION_MASTER_KEY_PREVIOUS
 			? parseKeyToBuffer(parsed.ENCRYPTION_MASTER_KEY_PREVIOUS)
 			: null,
+		aiRouterUrl: parsed.AI_ROUTER_URL,
+		schedulerUrl: parsed.SCHEDULER_URL,
+		deliveryUrl: parsed.DELIVERY_URL,
+		purgeSweepIntervalMs: parsed.PURGE_SWEEP_INTERVAL_MS,
+		httpTimeoutMs: parsed.HTTP_TIMEOUT_MS,
+		staleClaimThresholdMinutes: parsed.STALE_CLAIM_THRESHOLD_MINUTES,
+		maxPurgeRetries: parsed.MAX_PURGE_RETRIES,
 	};
 }
