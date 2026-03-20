@@ -44,3 +44,14 @@ tests/smoke/results/*.xml
 # LLM integration test results
 services/ai-router/llm-integration-results/
 
+# Env backups
+.env.backup
+
+# Windows artifacts
+nul
+
+# Throwaway scaffolding scripts
+tests/smoke/_gen.mjs
+tests/smoke/_write-test.mjs
+tests/smoke/smoke-debug.mts
+
