@@ -1,13 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@opentelemetry/api", () => ({
-	trace: {
-		getTracer: () => ({
-			startActiveSpan: (_name: string, fn: (span: unknown) => unknown) =>
-				fn({ setAttribute: () => {}, end: () => {} }),
-		}),
-	},
-}));
+vi.mock("@opentelemetry/api", () => {
+	const mockSpan = { setAttribute: () => {}, setStatus: () => {}, end: () => {} };
+	return {
+		SpanStatusCode: { OK: 0, ERROR: 2 },
+		trace: {
+			getTracer: () => ({
+				startActiveSpan: (_name: string, fn: (span: unknown) => unknown) => fn(mockSpan),
+				startSpan: () => mockSpan,
+			}),
+		},
+	};
+});
 
 /**
  * Middleware ordering test.
