@@ -23,9 +23,11 @@ import {
 	createPendingCommand,
 	getActivePendingCommandForUser,
 	getPendingCommand,
+	setUnresolvedContactRef,
 	transitionStatus,
 	updateDraftPayload,
 	updateNarrowingContext,
+	updatePendingPayload,
 } from "./pending-command/repository.js";
 import { retentionRoutes } from "./retention/routes.js";
 import { userPurgeRoutes } from "./retention/user-purge-routes.js";
@@ -85,6 +87,8 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 		updateDraftPayload,
 		updateNarrowingContext,
 		clearNarrowingContext,
+		updatePendingPayload,
+		setUnresolvedContactRef,
 		schedulerClient,
 		deliveryClient,
 		userManagementClient,

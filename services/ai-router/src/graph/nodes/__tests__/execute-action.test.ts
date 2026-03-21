@@ -44,6 +44,7 @@ function makeState(
 		intentClassification,
 		actionOutcome: null,
 		narrowingContext: null,
+		unresolvedContactRef: null,
 		response: null,
 		...overrides,
 	};
@@ -57,6 +58,8 @@ const mockUpdateNarrowingContext = vi.fn();
 const mockClearNarrowingContext = vi.fn();
 const mockSchedulerExecute = vi.fn();
 const mockGetPreferences = vi.fn();
+const mockUpdatePendingPayload = vi.fn();
+const mockSetUnresolvedContactRef = vi.fn();
 
 function makeDeps(overrides: Partial<ExecuteActionDeps> = {}): ExecuteActionDeps {
 	return {
@@ -69,6 +72,8 @@ function makeDeps(overrides: Partial<ExecuteActionDeps> = {}): ExecuteActionDeps
 		updateDraftPayload: mockUpdateDraftPayload,
 		updateNarrowingContext: mockUpdateNarrowingContext,
 		clearNarrowingContext: mockClearNarrowingContext,
+		updatePendingPayload: mockUpdatePendingPayload,
+		setUnresolvedContactRef: mockSetUnresolvedContactRef,
 		buildConfirmedPayload: (record: any) => ({
 			pendingCommandId: record.id,
 			userId: record.userId,
@@ -1646,5 +1651,339 @@ describe("executeActionNode", () => {
 			1,
 			narrowingContext,
 		);
+	});
+
+	// --- Confirm-then-resolve: 6b - Skip payload validation when unresolvedContactRef is set ---
+
+	it("skips payload validation when unresolvedContactRef is set (deferred resolution)", async () => {
+		// Payload missing contactId, but unresolvedContactRef means it'll be resolved later
+		const deferredClassification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "I'll add a note to mom about the park.",
+			commandType: "create_note",
+			contactRef: "mom",
+			commandPayload: { body: "went to the park" }, // no contactId - normally invalid
+			confidence: 0.9,
+			needsClarification: false,
+		};
+
+		const createdRow = {
+			id: "cmd-defer-1",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "went to the park" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		mockCreatePendingCommand.mockResolvedValue(createdRow);
+		mockSetUnresolvedContactRef.mockResolvedValue({ ...createdRow, unresolvedContactRef: "mom" });
+		mockTransitionStatus.mockResolvedValue({
+			...createdRow,
+			status: "pending_confirmation",
+			version: 2,
+		});
+
+		const node = createExecuteActionNode(makeDeps());
+		const update = await node(makeState(deferredClassification, { unresolvedContactRef: "mom" }));
+
+		// Should create pending command despite missing contactId
+		expect(mockCreatePendingCommand).toHaveBeenCalled();
+		// Should store unresolvedContactRef in DB
+		expect(mockSetUnresolvedContactRef).toHaveBeenCalledWith(
+			expect.anything(),
+			"cmd-defer-1",
+			"mom",
+		);
+		// Should transition to pending_confirmation
+		expect(update.actionOutcome?.type).toBe("pending_created");
+	});
+
+	// --- Confirm-then-resolve: 6c - Store unresolvedContactRef after creating pending command ---
+
+	it("stores unresolvedContactRef in DB after creating pending command", async () => {
+		const deferredClassification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "I'll add a note to mom.",
+			commandType: "create_note",
+			contactRef: "mom",
+			commandPayload: { body: "park" },
+			confidence: 0.9,
+			needsClarification: false,
+		};
+
+		const createdRow = {
+			id: "cmd-defer-2",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "park" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		mockCreatePendingCommand.mockResolvedValue(createdRow);
+		mockSetUnresolvedContactRef.mockResolvedValue({ ...createdRow, unresolvedContactRef: "mom" });
+		mockTransitionStatus.mockResolvedValue({
+			...createdRow,
+			status: "pending_confirmation",
+			version: 2,
+		});
+
+		const node = createExecuteActionNode(makeDeps());
+		await node(makeState(deferredClassification, { unresolvedContactRef: "mom" }));
+
+		expect(mockSetUnresolvedContactRef).toHaveBeenCalledWith(
+			expect.anything(),
+			"cmd-defer-2",
+			"mom",
+		);
+	});
+
+	// --- Confirm-then-resolve: 6d - handleConfirm with deferred resolution ---
+
+	it("handleConfirm merges contactId into payload when deferred resolution resolved", async () => {
+		const activePendingCommand: PendingCommandRef = {
+			pendingCommandId: "cmd-defer-3",
+			version: 2,
+			status: "pending_confirmation",
+			commandType: "create_note",
+		};
+
+		const confirmClassification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Done! Note created.",
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: { contactId: 42 },
+			confidence: 1.0,
+			needsClarification: false,
+		};
+
+		const pendingRow = {
+			id: "cmd-defer-3",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "went to park" },
+			status: "pending_confirmation",
+			version: 2,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			unresolvedContactRef: "mom",
+		};
+		mockGetPendingCommand.mockResolvedValue(pendingRow);
+
+		const updatedRow = {
+			...pendingRow,
+			payload: { type: "create_note", contactId: 42, body: "went to park" },
+			version: 3,
+			unresolvedContactRef: null,
+		};
+		mockUpdatePendingPayload.mockResolvedValue(updatedRow);
+
+		const confirmedRow = {
+			...updatedRow,
+			status: "confirmed",
+			version: 4,
+			confirmedAt: new Date(),
+		};
+		mockTransitionStatus.mockResolvedValue(confirmedRow);
+		mockSchedulerExecute.mockResolvedValue({ executionId: "exec-1", status: "queued" });
+
+		const node = createExecuteActionNode(makeDeps());
+		const update = await node(
+			makeState(confirmClassification, {
+				activePendingCommand,
+				contactResolution: {
+					outcome: "resolved",
+					resolved: {
+						contactId: 42,
+						displayName: "Mom Contact",
+						aliases: ["Mom"],
+						relationshipLabels: ["parent"],
+						importantDates: [],
+						lastInteractionAt: null,
+					},
+					candidates: [],
+					query: "mom",
+				},
+				inboundEvent: {
+					type: "callback_action" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "tg:cb:789",
+					correlationId: "corr-123",
+					action: "confirm",
+					data: "cmd-defer-3:2",
+				},
+			}),
+		);
+
+		// Should merge contactId into payload
+		expect(mockUpdatePendingPayload).toHaveBeenCalledWith(
+			expect.anything(),
+			"cmd-defer-3",
+			2,
+			expect.objectContaining({ contactId: 42, body: "went to park" }),
+		);
+		// Should confirm and send to scheduler
+		expect(update.actionOutcome?.type).toBe("confirmed");
+		expect(mockSchedulerExecute).toHaveBeenCalled();
+	});
+
+	it("handleConfirm transitions to draft when deferred resolution is ambiguous", async () => {
+		const activePendingCommand: PendingCommandRef = {
+			pendingCommandId: "cmd-defer-4",
+			version: 2,
+			status: "pending_confirmation",
+			commandType: "create_note",
+		};
+
+		const confirmClassification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Which contact did you mean?",
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: null,
+			confidence: 1.0,
+			needsClarification: true,
+			clarificationReason: "ambiguous_contact",
+			disambiguationOptions: [
+				{ label: "Elena Yuryevna", value: "10" },
+				{ label: "Maria Petrova", value: "20" },
+			],
+		};
+
+		const pendingRow = {
+			id: "cmd-defer-4",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "went to park" },
+			status: "pending_confirmation",
+			version: 2,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			unresolvedContactRef: "mom",
+		};
+		mockGetPendingCommand.mockResolvedValue(pendingRow);
+
+		const draftRow = {
+			...pendingRow,
+			status: "draft",
+			version: 3,
+		};
+		mockTransitionStatus.mockResolvedValue(draftRow);
+
+		const node = createExecuteActionNode(makeDeps());
+		const update = await node(
+			makeState(confirmClassification, {
+				activePendingCommand,
+				contactResolution: {
+					outcome: "ambiguous",
+					resolved: null,
+					candidates: [
+						{ contactId: 10, displayName: "Elena Yuryevna", score: 0.5 },
+						{ contactId: 20, displayName: "Maria Petrova", score: 0.5 },
+					],
+					query: "mom",
+				},
+				inboundEvent: {
+					type: "callback_action" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "tg:cb:789",
+					correlationId: "corr-123",
+					action: "confirm",
+					data: "cmd-defer-4:2",
+				},
+			}),
+		);
+
+		// Should transition back to draft for disambiguation
+		expect(update.actionOutcome?.type).toBe("edit_draft");
+		// Should NOT send to scheduler
+		expect(mockSchedulerExecute).not.toHaveBeenCalled();
+	});
+
+	it("does NOT skip auto-confirm when unresolvedContactRef is set", async () => {
+		mockGetPreferences.mockResolvedValue({
+			language: "en",
+			confirmationMode: "auto",
+			timezone: "UTC",
+		});
+
+		const deferredClassification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "I'll add a note to mom.",
+			commandType: "create_note",
+			contactRef: "mom",
+			commandPayload: { body: "park" },
+			confidence: 0.97,
+			needsClarification: false,
+		};
+
+		const createdRow = {
+			id: "cmd-defer-auto",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "park" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		mockCreatePendingCommand.mockResolvedValue(createdRow);
+		mockSetUnresolvedContactRef.mockResolvedValue({ ...createdRow, unresolvedContactRef: "mom" });
+		mockTransitionStatus.mockResolvedValue({
+			...createdRow,
+			status: "pending_confirmation",
+			version: 2,
+		});
+
+		const node = createExecuteActionNode(makeDeps());
+		const update = await node(makeState(deferredClassification, { unresolvedContactRef: "mom" }));
+
+		// Should NOT auto-confirm even if preferences allow it, because contact is unresolved
+		expect(update.actionOutcome?.type).toBe("pending_created");
+		expect(mockSchedulerExecute).not.toHaveBeenCalled();
 	});
 });

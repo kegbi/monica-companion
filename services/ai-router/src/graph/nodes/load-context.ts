@@ -65,10 +65,17 @@ export function createLoadContextNode(deps: LoadContextDeps) {
 					}
 				}
 
+				// Extract unresolvedContactRef from active pending command
+				const unresolvedContactRef: string | null = activeCommand
+					? (((activeCommand as Record<string, unknown>).unresolvedContactRef as string | null) ??
+						null)
+					: null;
+
 				return {
 					recentTurns,
 					activePendingCommand,
 					narrowingContext,
+					unresolvedContactRef,
 				};
 			} finally {
 				span.end();

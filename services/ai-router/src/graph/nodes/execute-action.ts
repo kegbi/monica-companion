@@ -65,6 +65,17 @@ export interface ExecuteActionDeps {
 		narrowingContext: Record<string, unknown>,
 	) => Promise<PendingCommandRow | null>;
 	clearNarrowingContext: (db: Database, id: string) => Promise<PendingCommandRow | null>;
+	updatePendingPayload: (
+		db: Database,
+		id: string,
+		expectedVersion: number,
+		newPayload: MutatingCommandPayload,
+	) => Promise<PendingCommandRow | null>;
+	setUnresolvedContactRef: (
+		db: Database,
+		id: string,
+		contactRef: string,
+	) => Promise<PendingCommandRow | null>;
 	buildConfirmedPayload: (record: PendingCommandRow) => ConfirmedCommandPayload;
 	schedulerClient: Pick<SchedulerClient, "execute">;
 	userManagementClient: Pick<UserManagementClient, "getPreferences">;
@@ -209,7 +220,10 @@ async function handleMutatingCommand(state: State, deps: ExecuteActionDeps): Pro
 	// strict validation catches malformed payloads before they enter the lifecycle.
 	// When needsClarification is true, skip validation: the payload is intentionally
 	// incomplete and will be validated after clarification resolves.
-	if (!intentClassification.needsClarification) {
+	// When unresolvedContactRef is set, skip validation: the contactId will be
+	// injected after deferred contact resolution on the confirm callback.
+	const hasUnresolvedContactRef = !!state.unresolvedContactRef;
+	if (!intentClassification.needsClarification && !hasUnresolvedContactRef) {
 		const validated = MutatingCommandPayloadSchema.safeParse(payload);
 		if (!validated.success) {
 			logger.warn("Payload validation failed for complete mutating command", {
@@ -229,6 +243,11 @@ async function handleMutatingCommand(state: State, deps: ExecuteActionDeps): Pro
 		correlationId,
 		ttlMinutes: deps.pendingCommandTtlMinutes,
 	});
+
+	// Store unresolvedContactRef in DB for deferred resolution
+	if (hasUnresolvedContactRef) {
+		await deps.setUnresolvedContactRef(deps.db, created.id, state.unresolvedContactRef!);
+	}
 
 	// Persist narrowing context if present
 	if (state.narrowingContext) {
@@ -256,6 +275,12 @@ async function handleMutatingCommand(state: State, deps: ExecuteActionDeps): Pro
 	// Clear narrowing context before transition to pending_confirmation
 	if (state.narrowingContext) {
 		await deps.clearNarrowingContext(deps.db, created.id);
+	}
+
+	// Skip auto-confirm when unresolvedContactRef is set -- the user must
+	// explicitly confirm so the confirm callback triggers deferred resolution.
+	if (hasUnresolvedContactRef) {
+		return transitionToConfirmationSkipAutoConfirm(deps, created);
 	}
 
 	return transitionToConfirmationAndCheckAutoConfirm(state, deps, created);
@@ -393,6 +418,42 @@ async function checkAutoConfirm(
 	}
 }
 
+/**
+ * Transition a draft to pending_confirmation WITHOUT checking auto-confirm.
+ * Used when unresolvedContactRef is set -- the user must explicitly confirm
+ * so the confirm callback triggers deferred contact resolution.
+ */
+async function transitionToConfirmationSkipAutoConfirm(
+	deps: ExecuteActionDeps,
+	draftRow: PendingCommandRow,
+): Promise<Update> {
+	const pendingRow = await deps.transitionStatus(
+		deps.db,
+		draftRow.id,
+		draftRow.version,
+		"draft",
+		"pending_confirmation",
+	);
+
+	if (!pendingRow) {
+		return { actionOutcome: { type: "passthrough" } as ActionOutcome };
+	}
+
+	return {
+		actionOutcome: {
+			type: "pending_created",
+			pendingCommandId: pendingRow.id,
+			version: pendingRow.version,
+		} as ActionOutcome,
+		activePendingCommand: {
+			pendingCommandId: pendingRow.id,
+			version: pendingRow.version,
+			status: "pending_confirmation",
+			commandType: pendingRow.commandType,
+		},
+	};
+}
+
 async function autoConfirm(
 	deps: ExecuteActionDeps,
 	pendingRow: PendingCommandRow,
@@ -528,7 +589,7 @@ async function handleCallbackAction(state: State, deps: ExecuteActionDeps): Prom
 
 	switch (action) {
 		case "confirm":
-			return handleConfirm(deps, command);
+			return handleConfirm(state, deps, command);
 		case "cancel":
 			return handleCancel(deps, command);
 		case "edit":
@@ -538,7 +599,108 @@ async function handleCallbackAction(state: State, deps: ExecuteActionDeps): Prom
 	}
 }
 
-async function handleConfirm(deps: ExecuteActionDeps, command: PendingCommandRow): Promise<Update> {
+async function handleConfirm(
+	state: State,
+	deps: ExecuteActionDeps,
+	command: PendingCommandRow,
+): Promise<Update> {
+	// --- Confirm-then-resolve: Handle deferred contact resolution ---
+	// When contactResolution is set from the resolveContactRef node's deferred
+	// resolution, we need to handle it before confirming.
+	const { contactResolution, intentClassification } = state;
+
+	if (contactResolution) {
+		// Deferred resolution produced a result
+		if (contactResolution.outcome === "resolved" && contactResolution.resolved) {
+			// Resolved: merge contactId into the pending command payload
+			const existingPayload = command.payload as Record<string, unknown>;
+			const mergedPayload = {
+				...existingPayload,
+				contactId: contactResolution.resolved.contactId,
+			} as MutatingCommandPayload;
+
+			// MEDIUM-2: Validate merged payload before confirming
+			const validated = MutatingCommandPayloadSchema.safeParse(mergedPayload);
+			if (!validated.success) {
+				logger.warn("Payload validation failed after deferred contact resolution", {
+					commandType: command.commandType,
+					correlationId: command.correlationId,
+				});
+				// Transition back to draft for manual fix
+				const draftRow = await deps.transitionStatus(
+					deps.db,
+					command.id,
+					command.version,
+					command.status as PendingCommandStatus,
+					"draft",
+				);
+				return {
+					actionOutcome: { type: "edit_draft" } as ActionOutcome,
+					activePendingCommand: draftRow
+						? {
+								pendingCommandId: draftRow.id,
+								version: draftRow.version,
+								status: "draft",
+								commandType: draftRow.commandType,
+							}
+						: null,
+				};
+			}
+
+			// Update the payload with contactId and clear unresolvedContactRef
+			const updatedRow = await deps.updatePendingPayload(
+				deps.db,
+				command.id,
+				command.version,
+				mergedPayload,
+			);
+
+			if (!updatedRow) {
+				return {
+					actionOutcome: {
+						type: "stale_rejected",
+						reason: "Could not update command payload — it may have been modified.",
+					} as ActionOutcome,
+				};
+			}
+
+			// Now confirm with the updated command
+			command = updatedRow;
+		} else if (
+			contactResolution.outcome === "ambiguous" ||
+			contactResolution.outcome === "no_match"
+		) {
+			// Ambiguous or no match: transition back to draft for disambiguation
+			const draftRow = await deps.transitionStatus(
+				deps.db,
+				command.id,
+				command.version,
+				command.status as PendingCommandStatus,
+				"draft",
+			);
+
+			if (!draftRow) {
+				return {
+					actionOutcome: {
+						type: "stale_rejected",
+						reason: "Could not transition command for disambiguation.",
+					} as ActionOutcome,
+				};
+			}
+
+			return {
+				actionOutcome: { type: "edit_draft" } as ActionOutcome,
+				activePendingCommand: {
+					pendingCommandId: draftRow.id,
+					version: draftRow.version,
+					status: "draft",
+					commandType: draftRow.commandType,
+				},
+			};
+		}
+	}
+
+	// Standard confirm path
 	const confirmedRow = await deps.transitionStatus(
 		deps.db,
 		command.id,

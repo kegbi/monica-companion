@@ -38,6 +38,7 @@ function makeState(overrides: Record<string, unknown> = {}) {
 		response: null,
 		intentClassification: null,
 		narrowingContext: null,
+		unresolvedContactRef: null,
 		actionOutcome: null,
 		...overrides,
 	};
@@ -231,6 +232,91 @@ describe("createLoadContextNode", () => {
 
 		const update = await node(makeState());
 		expect(update.narrowingContext).toBeNull();
+	});
+
+	it("loads unresolvedContactRef from active pending command when present", async () => {
+		const mockCommand = {
+			id: "cmd-123",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { body: "lunch" },
+			status: "pending_confirmation",
+			version: 2,
+			sourceMessageRef: "telegram:msg:100",
+			correlationId: "corr-0",
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			narrowingContext: null,
+			unresolvedContactRef: "mom",
+		};
+
+		const getRecentTurns = vi.fn().mockResolvedValue([]);
+		const getActivePendingCommandForUser = vi.fn().mockResolvedValue(mockCommand);
+
+		const node = createLoadContextNode({
+			db: {} as any,
+			maxTurns: 10,
+			getRecentTurns,
+			getActivePendingCommandForUser,
+		});
+
+		const update = await node(makeState());
+		expect(update.unresolvedContactRef).toBe("mom");
+	});
+
+	it("sets unresolvedContactRef to null when active command has no unresolvedContactRef", async () => {
+		const mockCommand = {
+			id: "cmd-123",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { body: "lunch" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "telegram:msg:100",
+			correlationId: "corr-0",
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			narrowingContext: null,
+			unresolvedContactRef: null,
+		};
+
+		const getRecentTurns = vi.fn().mockResolvedValue([]);
+		const getActivePendingCommandForUser = vi.fn().mockResolvedValue(mockCommand);
+
+		const node = createLoadContextNode({
+			db: {} as any,
+			maxTurns: 10,
+			getRecentTurns,
+			getActivePendingCommandForUser,
+		});
+
+		const update = await node(makeState());
+		expect(update.unresolvedContactRef).toBeNull();
+	});
+
+	it("sets unresolvedContactRef to null when no active pending command", async () => {
+		const getRecentTurns = vi.fn().mockResolvedValue([]);
+		const getActivePendingCommandForUser = vi.fn().mockResolvedValue(null);
+
+		const node = createLoadContextNode({
+			db: {} as any,
+			maxTurns: 10,
+			getRecentTurns,
+			getActivePendingCommandForUser,
+		});
+
+		const update = await node(makeState());
+		expect(update.unresolvedContactRef).toBeNull();
 	});
 
 	it("passes maxTurns to getRecentTurns", async () => {

@@ -79,6 +79,17 @@ export interface ConversationGraphConfig {
 		narrowingContext: Record<string, unknown>,
 	) => Promise<PendingCommandRow | null>;
 	clearNarrowingContext: (db: Database, id: string) => Promise<PendingCommandRow | null>;
+	updatePendingPayload: (
+		db: Database,
+		id: string,
+		expectedVersion: number,
+		newPayload: MutatingCommandPayload,
+	) => Promise<PendingCommandRow | null>;
+	setUnresolvedContactRef: (
+		db: Database,
+		id: string,
+		contactRef: string,
+	) => Promise<PendingCommandRow | null>;
 	schedulerClient: SchedulerClient;
 	deliveryClient: DeliveryClient;
 	userManagementClient: UserManagementClient;
@@ -110,6 +121,8 @@ export function createConversationGraph(config: ConversationGraphConfig) {
 		updateDraftPayload: config.updateDraftPayload,
 		updateNarrowingContext: config.updateNarrowingContext,
 		clearNarrowingContext: config.clearNarrowingContext,
+		updatePendingPayload: config.updatePendingPayload,
+		setUnresolvedContactRef: config.setUnresolvedContactRef,
 		buildConfirmedPayload,
 		schedulerClient: config.schedulerClient,
 		userManagementClient: config.userManagementClient,

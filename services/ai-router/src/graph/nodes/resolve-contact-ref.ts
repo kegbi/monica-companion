@@ -390,6 +390,26 @@ export function createResolveContactRefNode(deps: ResolveContactRefDeps) {
 			try {
 				const { intentClassification, userId, correlationId } = state;
 
+				// --- Confirm-then-resolve: Handle deferred resolution on callback_action ---
+				// MEDIUM-3: callback_action skip guard is now CONDITIONAL on unresolvedContactRef.
+				if (state.inboundEvent.type === "callback_action" && state.unresolvedContactRef) {
+					const { action } = state.inboundEvent;
+
+					if (action === "confirm") {
+						// Run deferred resolution using the stored contactRef
+						return await resolveDeferredContact(deps, state, state.unresolvedContactRef, span);
+					}
+
+					// Cancel/edit: clear unresolvedContactRef without resolving
+					logger.info("Clearing unresolvedContactRef on cancel/edit callback", {
+						correlationId,
+						action,
+						unresolvedContactRef: state.unresolvedContactRef,
+					});
+					span.setAttribute("ai-router.resolution_outcome", "deferred_cleared");
+					return { unresolvedContactRef: null };
+				}
+
 				// --- MEDIUM-2 fix: Check narrowing context FIRST, before skip guards ---
 				// When narrowingContext is present, the LLM may not set contactRef,
 				// so the existing skip guard would incorrectly return early.
@@ -440,6 +460,125 @@ export function createResolveContactRefNode(deps: ResolveContactRefDeps) {
 }
 
 /**
+ * Run deferred contact resolution after the user confirms a command.
+ * Uses the stored unresolvedContactRef to resolve the contact.
+ */
+async function resolveDeferredContact(
+	deps: ResolveContactRefDeps,
+	state: State,
+	contactRef: string,
+	span: { setAttribute: (key: string, value: string) => void },
+): Promise<Update> {
+	const { intentClassification, correlationId } = state;
+
+	logger.info("Running deferred contact resolution on confirm callback", {
+		correlationId,
+		contactRef,
+	});
+
+	// Fetch contact summaries
+	const summaries = await fetchSummaries(deps, state, span);
+	if (!summaries) return { unresolvedContactRef: null };
+
+	// Run deterministic matching
+	const candidates = matchContacts(contactRef, summaries);
+	const resolution = resolveFromCandidates(contactRef, candidates, summaries);
+
+	const baseClassification = intentClassification ?? {
+		intent: "clarification_response" as const,
+		detectedLanguage: "en",
+		userFacingText: "",
+		commandType: null,
+		contactRef: null,
+		commandPayload: null,
+		confidence: 1.0,
+	};
+
+	let updatedClassification: IntentClassificationResult;
+
+	switch (resolution.outcome) {
+		case "resolved": {
+			logger.info("Deferred contact resolved", {
+				correlationId,
+				contactRef,
+				contactId: resolution.resolved!.contactId,
+			});
+			updatedClassification = {
+				...baseClassification,
+				needsClarification: false,
+				commandPayload: {
+					...(baseClassification.commandPayload ?? {}),
+					contactId: resolution.resolved!.contactId,
+				},
+			};
+			break;
+		}
+		case "ambiguous": {
+			if (candidates.length > NARROWING_BUTTON_THRESHOLD) {
+				// Trigger progressive narrowing
+				const narrowingContextUpdate: NarrowingContext = {
+					originalContactRef: contactRef,
+					clarifications: [],
+					round: 0,
+					narrowingCandidateIds: candidates.map((c) => c.contactId),
+				};
+
+				updatedClassification = {
+					...baseClassification,
+					needsClarification: true,
+					clarificationReason: "ambiguous_contact" as const,
+					userFacingText: `I found ${candidates.length} contacts matching "${contactRef}". Can you tell me their name to help narrow it down?`,
+				};
+
+				span.setAttribute("ai-router.resolution_outcome", "deferred_ambiguous_narrowing");
+				return {
+					contactResolution: resolution,
+					contactSummariesCache: summaries,
+					intentClassification: updatedClassification,
+					narrowingContext: narrowingContextUpdate,
+					unresolvedContactRef: null,
+				};
+			}
+
+			const options = buildDisambiguationOptions(candidates, summaries);
+			logger.info("Deferred contact resolution ambiguous, presenting disambiguation", {
+				correlationId,
+				contactRef,
+				candidateCount: resolution.candidates.length,
+			});
+			updatedClassification = {
+				...baseClassification,
+				needsClarification: true,
+				clarificationReason: "ambiguous_contact" as const,
+				disambiguationOptions: options,
+			};
+			break;
+		}
+		case "no_match": {
+			logger.info("Deferred contact resolution found no match", {
+				correlationId,
+				contactRef,
+			});
+			updatedClassification = {
+				...baseClassification,
+				needsClarification: true,
+				clarificationReason: "ambiguous_contact" as const,
+			};
+			break;
+		}
+	}
+
+	span.setAttribute("ai-router.resolution_outcome", `deferred_${resolution.outcome}`);
+
+	return {
+		contactResolution: resolution,
+		contactSummariesCache: summaries,
+		intentClassification: updatedClassification,
+		unresolvedContactRef: null,
+	};
+}
+
+/**
  * Fetch contact summaries from cache or remote.
  * Returns null on failure (caller should return {} for graceful degradation).
  */
@@ -486,6 +625,8 @@ async function resolveNormal(
 	// or callback_action events (select/confirm/cancel/edit callbacks already
 	// carry the contactId or don't need resolution -- re-running resolution
 	// on the LLM's synthetic callback message causes spurious re-disambiguation).
+	// Note: callback_action with unresolvedContactRef is handled earlier in the
+	// createResolveContactRefNode function (confirm-then-resolve flow).
 	if (
 		!intentClassification ||
 		!intentClassification.contactRef ||
@@ -503,6 +644,31 @@ async function resolveNormal(
 	}
 
 	const contactRef = intentClassification.contactRef;
+
+	// --- Confirm-then-resolve: Defer resolution for mutating commands ---
+	// For mutating_command intents with a contactRef, defer contact resolution.
+	// The system first confirms the ACTION with the user, then resolves the contact
+	// only after the user confirms. This prevents wasted disambiguation effort.
+	// Read queries and clarification responses still resolve immediately.
+	if (intentClassification.intent === "mutating_command") {
+		logger.info("Deferring contact resolution for mutating command (confirm-then-resolve)", {
+			correlationId,
+			contactRef,
+			commandType: intentClassification.commandType,
+		});
+		span.setAttribute("ai-router.resolution_outcome", "deferred");
+		const result: Update = {
+			unresolvedContactRef: contactRef,
+			intentClassification: {
+				...intentClassification,
+				needsClarification: false,
+			},
+		};
+		if (abandoningNarrowing) {
+			result.narrowingContext = null;
+		}
+		return result;
+	}
 
 	// Fetch or use cached summaries
 	const summaries = await fetchSummaries(deps, state, span);

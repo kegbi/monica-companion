@@ -71,6 +71,15 @@ export const pendingCommands = pgTable(
 		 * Nullable -- only present during active narrowing.
 		 */
 		narrowingContext: jsonb("narrowing_context"),
+		/**
+		 * Deferred contact reference for confirm-then-resolve flow.
+		 * When a mutating command has an unresolved contact reference, the system
+		 * first confirms the ACTION with the user, then resolves the contact only
+		 * after the user confirms. This avoids wasted disambiguation effort when
+		 * the user wants to cancel or edit the action.
+		 * Nullable -- only present when contact resolution has been deferred.
+		 */
+		unresolvedContactRef: text("unresolved_contact_ref"),
 	},
 	(table) => [
 		index("idx_pending_commands_user_status").on(table.userId, table.status),

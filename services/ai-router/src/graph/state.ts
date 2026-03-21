@@ -110,6 +110,8 @@ export const ConversationStateSchema = z.object({
 	actionOutcome: ActionOutcomeSchema.nullable().default(null),
 	/** Progressive narrowing state for contact disambiguation */
 	narrowingContext: NarrowingContextSchema.nullable().default(null),
+	/** Deferred contact reference for confirm-then-resolve flow */
+	unresolvedContactRef: z.string().nullable().default(null),
 	/** The final output of the graph */
 	response: GraphResponseSchema.nullable().default(null),
 });
@@ -151,6 +153,10 @@ export const ConversationAnnotation = Annotation.Root({
 		default: () => null,
 	}),
 	narrowingContext: Annotation<NarrowingContext | null>({
+		reducer: (_prev, next) => next,
+		default: () => null,
+	}),
+	unresolvedContactRef: Annotation<string | null>({
 		reducer: (_prev, next) => next,
 		default: () => null,
 	}),

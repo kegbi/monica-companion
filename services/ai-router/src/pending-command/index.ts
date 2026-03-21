@@ -7,7 +7,9 @@ export {
 	getActivePendingCommandForUser,
 	getPendingCommand,
 	type PendingCommandRow,
+	setUnresolvedContactRef,
 	transitionStatus,
 	updateDraftPayload,
+	updatePendingPayload,
 } from "./repository.js";
 export { assertTransition, isActive, isTerminal } from "./state-machine.js";

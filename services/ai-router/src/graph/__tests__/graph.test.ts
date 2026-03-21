@@ -71,6 +71,8 @@ const mockGetPendingCommand = vi.fn();
 const mockUpdateDraftPayload = vi.fn();
 const mockUpdateNarrowingContext = vi.fn().mockResolvedValue({});
 const mockClearNarrowingContext = vi.fn().mockResolvedValue({});
+const mockUpdatePendingPayload = vi.fn();
+const mockSetUnresolvedContactRef = vi.fn().mockResolvedValue({});
 const mockSchedulerExecute = vi.fn().mockResolvedValue({ executionId: "exec-1", status: "queued" });
 const mockDeliveryDeliver = vi.fn().mockResolvedValue({ deliveryId: "del-1", status: "delivered" });
 const mockGetDeliveryRouting = vi
@@ -99,6 +101,8 @@ function makeConfig() {
 		updateDraftPayload: mockUpdateDraftPayload,
 		updateNarrowingContext: mockUpdateNarrowingContext,
 		clearNarrowingContext: mockClearNarrowingContext,
+		updatePendingPayload: mockUpdatePendingPayload,
+		setUnresolvedContactRef: mockSetUnresolvedContactRef,
 		schedulerClient: { execute: mockSchedulerExecute },
 		deliveryClient: { deliver: mockDeliveryDeliver },
 		userManagementClient: {
@@ -134,6 +138,8 @@ describe("createConversationGraph", () => {
 		mockUpdateDraftPayload.mockReset();
 		mockUpdateNarrowingContext.mockReset().mockResolvedValue({});
 		mockClearNarrowingContext.mockReset().mockResolvedValue({});
+		mockUpdatePendingPayload.mockReset();
+		mockSetUnresolvedContactRef.mockReset().mockResolvedValue({});
 		mockSchedulerExecute.mockReset().mockResolvedValue({ executionId: "exec-1", status: "queued" });
 		mockDeliveryDeliver.mockReset().mockResolvedValue({ deliveryId: "del-1", status: "delivered" });
 		mockGetDeliveryRouting
@@ -178,10 +184,10 @@ describe("createConversationGraph", () => {
 		}
 	});
 
-	it("sets intentClassification in graph state (with contact resolution applied)", async () => {
+	it("sets intentClassification in graph state (with deferred contact resolution)", async () => {
 		mockInvoke.mockResolvedValueOnce(mutatingResult);
 
-		// For mutating commands, executeAction creates a pending command
+		// For mutating commands with contactRef, resolution is now deferred (confirm-then-resolve)
 		const createdRow = {
 			id: "cmd-1",
 			userId: "550e8400-e29b-41d4-a716-446655440000",
@@ -209,15 +215,12 @@ describe("createConversationGraph", () => {
 		const graph = createConversationGraph(makeConfig());
 		const result = await graph.invoke(makeState());
 
-		// After contact resolution, the classification should have contactId injected
-		// and needsClarification set to false
+		// With confirm-then-resolve, contactId is NOT injected yet (deferred)
+		// Instead, unresolvedContactRef is set
 		expect(result.intentClassification?.intent).toBe("mutating_command");
 		expect(result.intentClassification?.contactRef).toBe("Jane");
-		expect(result.intentClassification?.commandPayload).toEqual({
-			contactId: 42,
-			body: "our lunch",
-		});
 		expect(result.intentClassification?.needsClarification).toBe(false);
+		expect(result.unresolvedContactRef).toBe("Jane");
 	});
 
 	it("processes a voice_message event", async () => {
@@ -438,8 +441,14 @@ describe("createConversationGraph", () => {
 	// --- Step 5: Compiled graph integration tests ---
 
 	it("auto-confirms when user preferences allow and confidence exceeds threshold", async () => {
+		// Use create_contact (no contactRef) to test auto-confirm without deferred resolution
 		const highConfResult: IntentClassificationResult = {
-			...mutatingResult,
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "I'll create a contact named Xavier.",
+			commandType: "create_contact",
+			contactRef: null,
+			commandPayload: { firstName: "Xavier", genderId: 0 },
 			confidence: 0.97,
 		};
 		mockInvoke.mockResolvedValueOnce(highConfResult);
@@ -452,8 +461,8 @@ describe("createConversationGraph", () => {
 		const createdRow = {
 			id: "cmd-auto",
 			userId: "550e8400-e29b-41d4-a716-446655440000",
-			commandType: "create_note",
-			payload: { type: "create_note", contactId: 42, body: "our lunch" },
+			commandType: "create_contact",
+			payload: { type: "create_contact", firstName: "Xavier", genderId: 0 },
 			status: "draft",
 			version: 1,
 			sourceMessageRef: "telegram:msg:456",
@@ -919,8 +928,9 @@ describe("createConversationGraph", () => {
 
 	// --- Progressive contact narrowing integration tests ---
 
-	it("9a: narrowing initiation - 8 candidates triggers text clarification", async () => {
-		// 8 contacts matching "mom" via kinship
+	it("9a: mutating command with contactRef defers resolution (confirm-then-resolve)", async () => {
+		// With confirm-then-resolve, mutating_command with contactRef defers resolution
+		// and produces a confirmation_prompt instead of triggering narrowing
 		const summaries = Array.from({ length: 8 }, (_, i) => ({
 			contactId: i + 1,
 			displayName: `Parent Contact ${i + 1}`,
@@ -939,7 +949,6 @@ describe("createConversationGraph", () => {
 			contactRef: "mom",
 			commandPayload: { body: "went to park" },
 			confidence: 0.85,
-			needsClarification: true, // resolveContactRef will override
 		};
 		mockInvoke.mockResolvedValueOnce(narrowingInitResult);
 
@@ -961,18 +970,21 @@ describe("createConversationGraph", () => {
 			updatedAt: new Date(),
 		};
 		mockCreatePendingCommand.mockResolvedValue(createdRow);
-		mockUpdateNarrowingContext.mockResolvedValue({ ...createdRow, version: 2 });
+		mockTransitionStatus.mockResolvedValue({
+			...createdRow,
+			status: "pending_confirmation",
+			version: 2,
+		});
 
 		const graph = createConversationGraph(makeConfig());
 		const result = await graph.invoke(makeState());
 
-		// Should produce a text response (not disambiguation_prompt) asking for name
-		expect(result.response?.type).toBe("text");
-		expect(result.response?.text).toContain("8 contacts");
-		// Should have narrowing context set
-		expect(result.narrowingContext).not.toBeNull();
-		expect(result.narrowingContext?.round).toBe(0);
-		expect(result.narrowingContext?.narrowingCandidateIds).toHaveLength(8);
+		// Should produce a confirmation_prompt (deferred resolution, not narrowing)
+		expect(result.response?.type).toBe("confirmation_prompt");
+		// unresolvedContactRef should be set
+		expect(result.unresolvedContactRef).toBe("mom");
+		// Contact summaries should NOT be fetched (deferred)
+		expect(mockFetchContactSummaries).not.toHaveBeenCalled();
 	});
 
 	it("9b: narrowing continuation - clarification narrows to 2 -> buttons", async () => {

@@ -69,6 +69,18 @@ describe("database auto-migration", () => {
 		expect(columns[0].is_nullable).toBe("YES");
 	});
 
+	it("pending_commands has unresolved_contact_ref column (confirm-then-resolve migration)", async () => {
+		const columns = await sql`
+			SELECT column_name, data_type, is_nullable
+			FROM information_schema.columns
+			WHERE table_name = 'pending_commands'
+			AND column_name = 'unresolved_contact_ref'
+		`;
+		expect(columns).toHaveLength(1);
+		expect(columns[0].data_type).toBe("text");
+		expect(columns[0].is_nullable).toBe("YES");
+	});
+
 	afterAll(async () => {
 		await sql.end();
 	});

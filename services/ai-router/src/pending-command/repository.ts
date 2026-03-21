@@ -216,6 +216,65 @@ export async function clearNarrowingContext(
 }
 
 /**
+ * Update the payload of a pending command in pending_confirmation status.
+ * Merges the new payload (e.g. adding contactId after deferred resolution),
+ * bumps the version, and clears the unresolvedContactRef.
+ *
+ * Returns the updated row, or null if the version/status didn't match.
+ * Only works on commands in 'pending_confirmation' status.
+ */
+export async function updatePendingPayload(
+	db: Database,
+	id: string,
+	expectedVersion: number,
+	newPayload: MutatingCommandPayload,
+): Promise<PendingCommandRow | null> {
+	const now = new Date();
+
+	const rows = await db
+		.update(pendingCommands)
+		.set({
+			payload: newPayload,
+			unresolvedContactRef: null,
+			version: sql`${pendingCommands.version} + 1`,
+			updatedAt: now,
+		})
+		.where(
+			and(
+				eq(pendingCommands.id, id),
+				eq(pendingCommands.version, expectedVersion),
+				eq(pendingCommands.status, "pending_confirmation"),
+			),
+		)
+		.returning();
+
+	return rows[0] ?? null;
+}
+
+/**
+ * Set the unresolved contact reference on a pending command.
+ * Idempotent: sets the column regardless of current value.
+ * Does NOT bump the version (like clearNarrowingContext).
+ *
+ * Returns the updated row, or null if the command was not found.
+ */
+export async function setUnresolvedContactRef(
+	db: Database,
+	id: string,
+	contactRef: string,
+): Promise<PendingCommandRow | null> {
+	const rows = await db
+		.update(pendingCommands)
+		.set({
+			unresolvedContactRef: contactRef,
+		})
+		.where(eq(pendingCommands.id, id))
+		.returning();
+
+	return rows[0] ?? null;
+}
+
+/**
  * Expire all stale pending commands that have passed their TTL.
  * Only transitions active (non-terminal) commands.
  * Returns the number of expired commands.

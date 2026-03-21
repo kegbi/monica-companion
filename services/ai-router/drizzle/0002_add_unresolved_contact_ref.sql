@@ -1,0 +1,1 @@
+ALTER TABLE "pending_commands" ADD COLUMN "unresolved_contact_ref" text;

@@ -75,6 +75,7 @@ function makeState(
 		intentClassification,
 		actionOutcome: null,
 		narrowingContext: null,
+		unresolvedContactRef: null,
 		response: null,
 		...overrides,
 	};
@@ -113,8 +114,9 @@ describe("resolveContactRefNode", () => {
 		];
 		mockFetchContactSummaries.mockResolvedValue(summaries);
 
+		// Use clarification_response intent because mutating_command now defers resolution
 		const classification: IntentClassificationResult = {
-			intent: "mutating_command",
+			intent: "clarification_response",
 			detectedLanguage: "en",
 			userFacingText: "I'll add a note to John about the meeting.",
 			commandType: "create_note",
@@ -156,8 +158,9 @@ describe("resolveContactRefNode", () => {
 		];
 		mockFetchContactSummaries.mockResolvedValue(summaries);
 
+		// Use clarification_response intent because mutating_command now defers resolution
 		const classification: IntentClassificationResult = {
-			intent: "mutating_command",
+			intent: "clarification_response",
 			detectedLanguage: "en",
 			userFacingText: "I'll add a note to Sherry.",
 			commandType: "create_note",
@@ -186,8 +189,9 @@ describe("resolveContactRefNode", () => {
 		];
 		mockFetchContactSummaries.mockResolvedValue(summaries);
 
+		// Use clarification_response intent because mutating_command now defers resolution
 		const classification: IntentClassificationResult = {
-			intent: "mutating_command",
+			intent: "clarification_response",
 			detectedLanguage: "fr",
 			userFacingText: "Je vais ajouter une note pour Xavier.",
 			commandType: "create_note",
@@ -293,8 +297,9 @@ describe("resolveContactRefNode", () => {
 	it("returns empty state update on fetchContactSummaries failure (M2 fix)", async () => {
 		mockFetchContactSummaries.mockRejectedValue(new Error("Service unreachable"));
 
+		// Use clarification_response intent because mutating_command now defers resolution
 		const classification: IntentClassificationResult = {
-			intent: "mutating_command",
+			intent: "clarification_response",
 			detectedLanguage: "en",
 			userFacingText: "I'll add a note to John.",
 			commandType: "create_note",
@@ -317,8 +322,9 @@ describe("resolveContactRefNode", () => {
 			makeSummary({ contactId: 42, displayName: "John Doe", aliases: ["John", "Doe"] }),
 		];
 
+		// Use clarification_response intent because mutating_command now defers resolution
 		const classification: IntentClassificationResult = {
-			intent: "mutating_command",
+			intent: "clarification_response",
 			detectedLanguage: "en",
 			userFacingText: "I'll add a note to John Doe.",
 			commandType: "create_note",
@@ -372,8 +378,9 @@ describe("resolveContactRefNode", () => {
 		];
 		mockFetchContactSummaries.mockResolvedValue(summaries);
 
+		// Use clarification_response intent because mutating_command now defers resolution
 		const classification: IntentClassificationResult = {
-			intent: "mutating_command",
+			intent: "clarification_response",
 			detectedLanguage: "en",
 			userFacingText: "Adding a note to John Doe.",
 			commandType: "create_note",
@@ -412,8 +419,9 @@ describe("resolveContactRefNode", () => {
 	it("ends span even when fetch fails", async () => {
 		mockFetchContactSummaries.mockRejectedValue(new Error("Network error"));
 
+		// Use clarification_response intent because mutating_command now defers resolution
 		const classification: IntentClassificationResult = {
-			intent: "mutating_command",
+			intent: "clarification_response",
 			detectedLanguage: "en",
 			userFacingText: "Adding a note to John.",
 			commandType: "create_note",
@@ -536,8 +544,9 @@ describe("resolveContactRefNode", () => {
 		];
 		mockFetchContactSummaries.mockResolvedValue(summaries);
 
+		// Use clarification_response intent because mutating_command now defers resolution
 		const classification: IntentClassificationResult = {
-			intent: "mutating_command",
+			intent: "clarification_response",
 			detectedLanguage: "en",
 			userFacingText: "Adding a note to mom.",
 			commandType: "create_note",
@@ -576,8 +585,9 @@ describe("resolveContactRefNode", () => {
 		];
 		mockFetchContactSummaries.mockResolvedValue(summaries);
 
+		// Use clarification_response intent because mutating_command now defers resolution
 		const classification: IntentClassificationResult = {
-			intent: "mutating_command",
+			intent: "clarification_response",
 			detectedLanguage: "en",
 			userFacingText: "Adding a note to Elena.",
 			commandType: "create_note",
@@ -609,8 +619,9 @@ describe("resolveContactRefNode", () => {
 		);
 		mockFetchContactSummaries.mockResolvedValue(summaries);
 
+		// Use clarification_response intent because mutating_command now defers resolution
 		const classification: IntentClassificationResult = {
-			intent: "mutating_command",
+			intent: "clarification_response",
 			detectedLanguage: "en",
 			userFacingText: "Adding a note to mom.",
 			commandType: "create_note",
@@ -644,8 +655,9 @@ describe("resolveContactRefNode", () => {
 		);
 		mockFetchContactSummaries.mockResolvedValue(summaries);
 
+		// Use clarification_response intent because mutating_command now defers resolution
 		const classification: IntentClassificationResult = {
-			intent: "mutating_command",
+			intent: "clarification_response",
 			detectedLanguage: "en",
 			userFacingText: "Adding a note to mom.",
 			commandType: "create_note",
@@ -930,6 +942,7 @@ describe("resolveContactRefNode", () => {
 		];
 		mockFetchContactSummaries.mockResolvedValue(summaries);
 
+		// mutating_command with narrowingContext: abandons narrowing, then defers resolution
 		const classification: IntentClassificationResult = {
 			intent: "mutating_command",
 			detectedLanguage: "en",
@@ -950,10 +963,11 @@ describe("resolveContactRefNode", () => {
 		const node = createResolveContactRefNode(makeDeps());
 		const update = await node(makeState(classification, { narrowingContext }));
 
-		// Should abandon narrowing and process normally
+		// Should abandon narrowing and defer resolution (confirm-then-resolve)
 		expect(update.narrowingContext).toBeNull();
-		expect(update.contactResolution?.outcome).toBe("resolved");
-		expect(update.contactResolution?.resolved?.contactId).toBe(42);
+		expect(update.unresolvedContactRef).toBe("John Doe");
+		// Should NOT fetch summaries (deferred)
+		expect(mockFetchContactSummaries).not.toHaveBeenCalled();
 	});
 
 	it("handles narrowing when contactRef is null in clarification_response (uses text)", async () => {
@@ -1029,9 +1043,10 @@ describe("resolveContactRefNode", () => {
 		];
 		mockFetchContactSummaries.mockResolvedValue(summaries);
 
-		// "mom" matches both via kinship normalization → "parent" relationship
+		// "mom" matches both via kinship normalization -> "parent" relationship
+		// Use clarification_response intent because mutating_command now defers resolution
 		const classification: IntentClassificationResult = {
-			intent: "mutating_command",
+			intent: "clarification_response",
 			detectedLanguage: "en",
 			userFacingText: "Adding a note to mom.",
 			commandType: "create_note",
@@ -1047,5 +1062,280 @@ describe("resolveContactRefNode", () => {
 			{ label: "Elena Yuryevna (Mama), b. 15 Mar 1965", value: "10" },
 			{ label: "Maria Petrova (Мама), b. 20 Jun", value: "20" },
 		]);
+	});
+
+	// --- Confirm-then-resolve: 5b - Defer resolution for initial mutating commands ---
+
+	it("defers resolution for mutating_command with contactRef by setting unresolvedContactRef", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({ contactId: 42, displayName: "John Doe", aliases: ["John", "Doe"] }),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "I'll add a note to mom about the park.",
+			commandType: "create_note",
+			contactRef: "mom",
+			commandPayload: { body: "park" },
+			confidence: 0.9,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		// Should defer resolution: set unresolvedContactRef, do NOT run matcher
+		expect(update.unresolvedContactRef).toBe("mom");
+		expect(update.contactResolution).toBeUndefined();
+		// Should NOT fetch contact summaries (resolution is deferred)
+		expect(mockFetchContactSummaries).not.toHaveBeenCalled();
+		// Should set needsClarification to false so executeAction transitions to pending_confirmation
+		expect(update.intentClassification?.needsClarification).toBe(false);
+	});
+
+	it("does NOT defer resolution for read_query intent (resolves immediately)", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({ contactId: 42, displayName: "Jane Doe", aliases: ["Jane", "Doe"] }),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "read_query",
+			detectedLanguage: "en",
+			userFacingText: "Jane's birthday is March 15th.",
+			commandType: "query_birthday",
+			contactRef: "Jane Doe",
+			commandPayload: { contactId: 99 },
+			confidence: 0.92,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		// Should resolve immediately, not defer
+		expect(update.contactResolution?.outcome).toBe("resolved");
+		expect(update.unresolvedContactRef).toBeUndefined();
+	});
+
+	// --- Confirm-then-resolve: 5a - Deferred resolution on confirm callback ---
+
+	it("runs deferred resolution on confirm callback when unresolvedContactRef is present", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({ contactId: 42, displayName: "Mom Contact", aliases: ["Mom", "Mother"] }),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Done! Note created.",
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: null,
+			confidence: 1.0,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(
+			makeState(classification, {
+				unresolvedContactRef: "mom",
+				inboundEvent: {
+					type: "callback_action" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "tg:cb:789",
+					correlationId: "corr-123",
+					action: "confirm",
+					data: "cmd-1:2",
+				},
+			}),
+		);
+
+		// Should run resolution using the deferred contactRef "mom"
+		expect(mockFetchContactSummaries).toHaveBeenCalled();
+		expect(update.contactResolution).toBeDefined();
+		// Should clear unresolvedContactRef after resolution
+		expect(update.unresolvedContactRef).toBeNull();
+	});
+
+	it("returns ambiguous result on confirm callback when deferred resolution is ambiguous", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({
+				contactId: 10,
+				displayName: "Elena Yuryevna",
+				aliases: ["Elena", "Yuryevna"],
+				relationshipLabels: ["parent"],
+			}),
+			makeSummary({
+				contactId: 20,
+				displayName: "Maria Petrova",
+				aliases: ["Maria", "Petrova"],
+				relationshipLabels: ["parent"],
+			}),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Done! Note created.",
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: null,
+			confidence: 1.0,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(
+			makeState(classification, {
+				unresolvedContactRef: "mom",
+				inboundEvent: {
+					type: "callback_action" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "tg:cb:789",
+					correlationId: "corr-123",
+					action: "confirm",
+					data: "cmd-1:2",
+				},
+			}),
+		);
+
+		// Should run resolution, find ambiguous contacts
+		expect(update.contactResolution?.outcome).toBe("ambiguous");
+		expect(update.intentClassification?.needsClarification).toBe(true);
+		expect(update.unresolvedContactRef).toBeNull();
+	});
+
+	// --- Confirm-then-resolve: 5c - Cancel/edit callbacks clear unresolvedContactRef ---
+
+	it("skips resolution on cancel callback when unresolvedContactRef is present and clears it", async () => {
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Command cancelled.",
+			commandType: null,
+			contactRef: null,
+			commandPayload: null,
+			confidence: 1.0,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(
+			makeState(classification, {
+				unresolvedContactRef: "mom",
+				inboundEvent: {
+					type: "callback_action" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "tg:cb:789",
+					correlationId: "corr-123",
+					action: "cancel",
+					data: "cmd-1:2",
+				},
+			}),
+		);
+
+		// Should NOT run resolution
+		expect(mockFetchContactSummaries).not.toHaveBeenCalled();
+		// Should clear unresolvedContactRef
+		expect(update.unresolvedContactRef).toBeNull();
+	});
+
+	it("skips resolution on edit callback when unresolvedContactRef is present and clears it", async () => {
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "What would you like to change?",
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: null,
+			confidence: 1.0,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(
+			makeState(classification, {
+				unresolvedContactRef: "mom",
+				inboundEvent: {
+					type: "callback_action" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "tg:cb:789",
+					correlationId: "corr-123",
+					action: "edit",
+					data: "cmd-1:2",
+				},
+			}),
+		);
+
+		// Should NOT run resolution
+		expect(mockFetchContactSummaries).not.toHaveBeenCalled();
+		// Should clear unresolvedContactRef
+		expect(update.unresolvedContactRef).toBeNull();
+	});
+
+	it("skips resolution on callback_action when unresolvedContactRef is null (existing behavior)", async () => {
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Done! Note created.",
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: null,
+			confidence: 1.0,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(
+			makeState(classification, {
+				inboundEvent: {
+					type: "callback_action" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "tg:cb:789",
+					correlationId: "corr-123",
+					action: "confirm",
+					data: "cmd-1:2",
+				},
+			}),
+		);
+
+		// Should skip resolution as before (no unresolvedContactRef)
+		expect(mockFetchContactSummaries).not.toHaveBeenCalled();
+		expect(update).toEqual({});
+	});
+
+	it("handles deferred resolution no-match on confirm callback", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({ contactId: 1, displayName: "Alice Smith", aliases: ["Alice", "Smith"] }),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Done! Note created.",
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: null,
+			confidence: 1.0,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(
+			makeState(classification, {
+				unresolvedContactRef: "Xavier",
+				inboundEvent: {
+					type: "callback_action" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "tg:cb:789",
+					correlationId: "corr-123",
+					action: "confirm",
+					data: "cmd-1:2",
+				},
+			}),
+		);
+
+		// Should resolve as no_match
+		expect(update.contactResolution?.outcome).toBe("no_match");
+		expect(update.intentClassification?.needsClarification).toBe(true);
+		expect(update.unresolvedContactRef).toBeNull();
 	});
 });
