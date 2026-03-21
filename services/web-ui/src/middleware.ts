@@ -29,7 +29,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
 	const isSecure = url.protocol === "https:";
 	const cookieName = getCsrfCookieName(isSecure);
-	const expectedOrigin = import.meta.env.EXPECTED_ORIGIN || `${url.protocol}//${url.host}`;
+	const expectedOrigin =
+		import.meta.env.EXPECTED_ORIGIN ||
+		process.env.EXPECTED_ORIGIN ||
+		`${url.protocol}//${url.host}`;
 
 	if (request.method === "GET") {
 		const csrfToken = generateCsrfToken();
