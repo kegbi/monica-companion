@@ -152,7 +152,18 @@ describe("onboarding pages direct to web-ui", () => {
 
 // ---------------------------------------------------------------------------
 // 3. End-to-end onboarding flow: issue token -> load form -> submit -> success
+//    Uses Caddy URL when available, falls back to direct web-ui URL.
 // ---------------------------------------------------------------------------
+let formBaseUrl = config.WEB_UI_URL;
+try {
+	const probe = await fetch(config.CADDY_URL + "/setup/success", {
+		signal: AbortSignal.timeout(2000),
+	});
+	if (probe.ok) formBaseUrl = config.CADDY_URL;
+} catch {
+	// Caddy not available — use direct web-ui URL
+}
+
 describe("end-to-end onboarding flow", () => {
 	const sql = postgres(config.POSTGRES_URL, { max: 1 });
 	let tokenId: string;
@@ -217,7 +228,7 @@ describe("end-to-end onboarding flow", () => {
 
 	it("step 2: form page loads with all expected fields and sets CSRF cookie", async () => {
 		const { csrfCookie, csrfToken, html } = await getCsrfFromPage(
-			config.CADDY_URL + "/setup/" + tokenId + "?sig=" + encodeURIComponent(sig),
+			formBaseUrl + "/setup/" + tokenId + "?sig=" + encodeURIComponent(sig),
 		);
 
 		expect(html).toContain("monicaBaseUrl");
@@ -235,9 +246,8 @@ describe("end-to-end onboarding flow", () => {
 	});
 
 	it("step 3: form submission with CSRF creates user and redirects to success", async () => {
-		// Get CSRF token through Caddy (production path) to satisfy Astro origin check
 		const { csrfCookie, csrfToken } = await getCsrfFromPage(
-			config.CADDY_URL + "/setup/" + tokenId + "?sig=" + encodeURIComponent(sig),
+			formBaseUrl + "/setup/" + tokenId + "?sig=" + encodeURIComponent(sig),
 		);
 
 		const formData = new URLSearchParams({
@@ -253,7 +263,7 @@ describe("end-to-end onboarding flow", () => {
 			reminderTime: "08:00",
 		});
 
-		const res = await fetch(config.CADDY_URL + "/setup/submit", {
+		const res = await fetch(formBaseUrl + "/setup/submit", {
 			method: "POST",
 			headers: {
 				"content-type": "application/x-www-form-urlencoded",
@@ -298,7 +308,7 @@ describe("end-to-end onboarding flow", () => {
 
 	it("step 5: replaying the same token fails (already consumed)", async () => {
 		// Get a fresh CSRF token
-		const { csrfCookie, csrfToken } = await getCsrfFromPage(config.CADDY_URL + "/setup/success");
+		const { csrfCookie, csrfToken } = await getCsrfFromPage(formBaseUrl + "/setup/success");
 
 		const formData = new URLSearchParams({
 			tokenId,
@@ -313,7 +323,7 @@ describe("end-to-end onboarding flow", () => {
 			reminderTime: "08:00",
 		});
 
-		const res = await fetch(config.CADDY_URL + "/setup/submit", {
+		const res = await fetch(formBaseUrl + "/setup/submit", {
 			method: "POST",
 			headers: {
 				"content-type": "application/x-www-form-urlencoded",
@@ -336,9 +346,9 @@ describe("end-to-end onboarding flow", () => {
 // ---------------------------------------------------------------------------
 describe("CSRF protection on form submission", () => {
 	it("POST /setup/submit without Origin header returns 403", async () => {
-		const { csrfCookie, csrfToken } = await getCsrfFromPage(config.CADDY_URL + "/setup/success");
+		const { csrfCookie, csrfToken } = await getCsrfFromPage(formBaseUrl + "/setup/success");
 
-		const res = await fetch(config.CADDY_URL + "/setup/submit", {
+		const res = await fetch(formBaseUrl + "/setup/submit", {
 			method: "POST",
 			headers: {
 				"content-type": "application/x-www-form-urlencoded",
@@ -352,7 +362,7 @@ describe("CSRF protection on form submission", () => {
 	});
 
 	it("POST /setup/submit without CSRF cookie returns 403", async () => {
-		const res = await fetch(config.CADDY_URL + "/setup/submit", {
+		const res = await fetch(formBaseUrl + "/setup/submit", {
 			method: "POST",
 			headers: {
 				"content-type": "application/x-www-form-urlencoded",
