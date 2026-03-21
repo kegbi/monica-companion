@@ -277,7 +277,12 @@ describe("end-to-end onboarding flow", () => {
 			signal: AbortSignal.timeout(15_000),
 		});
 
-		expect(res.status).toBe(303);
+		if (res.status !== 303) {
+			const body = await res.text().catch(() => "(no body)");
+			throw new Error(
+				`Expected 303 but got ${res.status}. Body: ${body}. Cookie sent: ${csrfCookie.substring(0, 30)}... Origin: http://localhost. URL: ${formBaseUrl}/setup/submit`,
+			);
+		}
 		const location = res.headers.get("location");
 		expect(location).toContain("/setup/success");
 	});
