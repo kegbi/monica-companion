@@ -1,11 +1,12 @@
 {
 	"taskId": "migrate-llm-evaluation-to-promptfoo",
 	"taskGroup": "Migrate LLM Evaluation to promptfoo",
-	"phase": "committing",
+	"phase": "completed",
 	"planAttempts": 2,
 	"codeAttempts": 1,
 	"smokeAttempts": 1,
-	"status": "in-progress",
+	"status": "completed",
 	"mode": "auto",
-	"startedAt": "2026-03-21T00:00:00.000Z"
+	"startedAt": "2026-03-21T00:00:00.000Z",
+	"completedAt": "2026-03-21T22:00:00.000Z"
 }
