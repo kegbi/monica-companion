@@ -97,9 +97,11 @@ jobs:
           SERVICE_NAME=ai-router npx tsx services/ai-router/src/index.ts &
           SERVICE_NAME=voice-transcription npx tsx services/voice-transcription/src/index.ts &
           SERVICE_NAME=scheduler npx tsx services/scheduler/src/index.ts &
+          SERVICE_NAME=telegram-bridge npx tsx services/telegram-bridge/src/index.ts &
+          SERVICE_NAME=monica-integration npx tsx services/monica-integration/src/index.ts &
 
           # Wait for health
-          services=("http://localhost:3007" "http://localhost:3006" "http://localhost:3002" "http://localhost:3003" "http://localhost:3005")
+          services=("http://localhost:3007" "http://localhost:3006" "http://localhost:3002" "http://localhost:3003" "http://localhost:3005" "http://localhost:3001" "http://localhost:3004")
           for url in "${services[@]}"; do
             echo "Waiting for $url ..."
             retries=30
@@ -146,6 +148,8 @@ jobs:
           DELIVERY_URL: http://localhost:3006
           VOICE_TRANSCRIPTION_URL: http://localhost:3003
           SCHEDULER_URL: http://localhost:3005
+          TELEGRAM_BRIDGE_URL: http://localhost:3001
+          MONICA_INTEGRATION_URL: http://localhost:3004
           CADDY_URL: http://localhost:80
           POSTGRES_URL: postgresql://monica:monica_dev@localhost:5432/monica_companion
 
