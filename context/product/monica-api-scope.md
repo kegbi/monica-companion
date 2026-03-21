@@ -890,7 +890,7 @@ HTTP status codes: `200` (success), `201` (created), `404` (not found), `422` (v
 ## Source Code References (v4.1.1)
 
 Source: [monicahq/monica v4.1.1](https://github.com/monicahq/monica/tree/v4.1.1).
-Local copy: `references/remote/app/` (gitignored; see `AGENTS.md` for re-download instructions).
+Local copy: `references/remote/app/` (gitignored). See `AGENTS.md` § "Re-download" for instructions to restore these files locally.
 
 These files are the definitive source for response shapes and validation rules:
 

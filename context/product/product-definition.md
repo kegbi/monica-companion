@@ -116,7 +116,7 @@ Individuals who use MonicaHQ v4 (self-hosted or the hosted instance at app.monic
 - Per-service `/health` endpoints for Docker readiness/liveness probes on the internal network only.
 - Public ingress limited to the Telegram webhook and onboarding web UI. Telegram webhook requests must present the configured `X-Telegram-Bot-Api-Secret-Token` and pass ingress rate/body-size controls.
 - Modular architecture with a clear connector interface for future platforms.
-- The logical architecture defines 8 application services, and the initial Telegram-only V1 deployment profile runs them as 8 separate application containers (16 total with infrastructure and observability). See `context/spec/adr-v1-deployment-profile.md`.
+- The logical architecture defines 8 application services, and the initial Telegram-only V1 deployment profile runs them as 8 separate application containers (16 total with infrastructure and observability). See `context/product/adr-v1-deployment-profile.md`.
 
 ### 3.2. What's Out-of-Scope (Non-Goals)
 

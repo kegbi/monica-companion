@@ -1,21 +1,17 @@
 # System Architecture Overview: Monica Companion
 
-> Status: Planned target architecture. As of 2026-03-15 the repository contains documentation only; the pnpm workspace, service packages, Docker Compose stack, and GitHub Actions workflows described below are target-state artifacts, not committed implementation.
+> Status: Implemented. The architecture described below is deployed as the V1 stack. See `context/product/v1-release-readiness-report.md` for conformance details.
 
 ---
 
 ## 0. Repository State
 
-### Current Repository State
-
-- The repository currently contains product, review, and rules documentation.
-- No pnpm workspace, service packages, Docker Compose file, or GitHub Actions workflows are committed yet.
-
-### Target Repository State
-
-- A pnpm monorepo with shared packages and the logical service boundaries described below.
-- An initial Telegram-only V1 deployment profile with 8 application containers: `telegram-bridge`, `ai-router`, `voice-transcription`, `monica-integration`, `scheduler`, `delivery`, `user-management`, and `web-ui`.
-- The service boundaries are deployed separately from the start in V1. See `context/spec/adr-v1-deployment-profile.md`.
+- A pnpm monorepo with shared packages and the 8 logical service boundaries described below.
+- The initial Telegram-only V1 deployment profile runs 8 application containers: `telegram-bridge`, `ai-router`, `voice-transcription`, `monica-integration`, `scheduler`, `delivery`, `user-management`, and `web-ui`.
+- The service boundaries are deployed separately from the start in V1. See `context/product/adr-v1-deployment-profile.md`.
+- Docker Compose stacks exist for development, smoke testing, CI, and real-Monica smoke testing.
+- GitHub Actions workflows cover CI (`ci.yml`), Monica smoke tests (`monica-smoke.yml`), and LLM smoke tests (`llm-smoke.yml`).
+- A `deps-init` init container runs once at startup to install pnpm dependencies and then exits. It is not counted in the running container total.
 
 ---
 
@@ -23,7 +19,7 @@
 
 - **Language & Runtime:** TypeScript on Node.js
 - **Package Manager:** pnpm with workspaces for the monorepo
-- **Target Monorepo Structure:** Shared packages (`types`, `utils`, `monica-api-lib`, `auth`, `idempotency`, `redaction`) plus logical service packages (`ai-router`, `telegram-bridge`, `voice-transcription`, `monica-integration`, `scheduler`, `delivery`, `user-management`, `web-ui`). The initial V1 deployment profile uses 8 application containers, one per service boundary.
+- **Monorepo Structure:** Shared packages (`types`, `utils`, `monica-api-lib`, `auth`, `idempotency`, `redaction`, `guardrails`, `observability`) plus logical service packages (`ai-router`, `telegram-bridge`, `voice-transcription`, `monica-integration`, `scheduler`, `delivery`, `user-management`, `web-ui`). The initial V1 deployment profile uses 8 application containers, one per service boundary.
 - **AI Framework:** LangGraph TS orchestrates LLM-powered command routing, disambiguation flows, and multi-turn conversation management.
 - **LLM Provider:** OpenAI `gpt-5.4-mini` (400K context, structured outputs, reasoning tokens) handles intent parsing and command extraction with medium reasoning effort. V1 uses a shared operator-provided API key with per-user request-size limits, concurrency caps, budget alarms, and an operator kill switch.
 - **Speech-to-Text Boundary:** OpenAI `gpt-4o-transcribe` (default) or `whisper-1` (legacy fallback) transcribes voice messages in any supported language through a dedicated connector-neutral `voice-transcription` service using the `/v1/audio/transcriptions` endpoint with `json` response format. The contract is binary upload or short-lived fetch URL plus media metadata.

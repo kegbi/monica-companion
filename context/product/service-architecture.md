@@ -179,6 +179,8 @@ Logical architecture and initial Telegram-only V1 deployment profile: **16 conta
 | Log redaction | `@monica-companion/redaction` | Sanitizes secrets and personal data in logs, traces, dead letters, and support tooling. |
 | Security / auth | `@monica-companion/auth` | Signed JWTs, user identity propagation, and per-endpoint caller-allowlist enforcement. |
 | Shared types | `@monica-companion/types` | Connector-neutral command, delivery, and contact-projection contracts. |
+| AI guardrails | `@monica-companion/guardrails` | Per-user rate limits, concurrency caps, budget alarms, and operator kill switch for shared OpenAI usage. |
+| Observability | `@monica-companion/observability` | OpenTelemetry SDK initialization and redaction-aware log/trace processors for all services. |
 
 ---
 

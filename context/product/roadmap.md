@@ -1,6 +1,8 @@
 # Product Roadmap: Monica Companion
 
-_This roadmap is an execution plan for the selected V1 logical architecture and deployment profile documented in `context/spec/adr-v1-deployment-profile.md`. It prioritizes security contracts and core behavior before future connector expansion or service refactoring._
+_This roadmap is an execution plan for the selected V1 logical architecture and deployment profile documented in `context/product/adr-v1-deployment-profile.md`. It prioritizes security contracts and core behavior before future connector expansion or service refactoring._
+
+> **Current status:** Phases 1-7 complete. Phase 8 contains remaining V1-blocking gaps — see `context/product/v1-release-readiness-report.md` for details.
 
 ---
 
@@ -178,7 +180,7 @@ _Wire the LLM brain into the existing infrastructure. The plumbing (pending comm
   - [x] Wire callback actions (confirm/edit/cancel from Telegram buttons) through the LangGraph graph so edits re-enter the parsing pipeline with updated context.
 
 - [x] **LLM Smoke Tests & Benchmark Activation**
-  - [x] **Command parsing smoke tests:** Docker Compose smoke tests that send representative text messages through the live `telegram-bridge → ai-router` path and verify that correct command types and payloads are produced. Cover all V1 command types: contact create, note create, activity log, field updates, and read queries.
+  - [x] **Command parsing smoke tests:** Docker Compose smoke tests that send representative text messages through the live `ai-router /internal/process` endpoint and verify that correct command types and payloads are produced. Cover all V1 command types: contact create, note create, activity log, field updates, and read queries.
   - [x] **Multi-stage dialog smoke tests:** Smoke tests that simulate a full clarification round-trip: initial ambiguous message → system asks clarification → user replies → system produces correct command. Verify the pending command stays in `draft` through clarification and transitions to `pending_confirmation` only when resolved.
   - [x] **Context preservation smoke tests:** Smoke tests that send two consecutive messages where the second references the first ("add a note to John" → "also update his birthday to March 5th") and verify the second message resolves "his" to John without re-asking.
   - [x] **Out-of-scope rejection smoke tests:** Verify that messages outside the Monica domain ("what's the weather?") produce a polite decline and do NOT create pending commands or trigger mutations.

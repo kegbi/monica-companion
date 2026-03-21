@@ -15,7 +15,13 @@ These documents describe the planned Monica Companion target state unless a docu
 | Monica v4 API endpoints and contracts | `context/product/monica-api-scope.md` |
 | Monica v4.1.1 reference source code | `references/remote/app/` (gitignored) |
 | Monica Docker image (entrypoint, Dockerfile) | `references/remote/docker/` (gitignored) |
-| V1 deployment profile ADR | `context/spec/adr-v1-deployment-profile.md` |
+| V1 deployment profile ADR | `context/product/adr-v1-deployment-profile.md` |
+| Testing strategy and release gates | `context/product/testing-strategy.md` |
+| V1 release readiness report | `context/product/v1-release-readiness-report.md` |
+| Data governance spec | `context/spec/data-governance.md` |
+| Connector extension guide | `context/spec/connector-extension-guide.md` |
+| Operational review findings | `context/spec/operational-review-findings.md` |
+| Secret rotation policy | `docs/secret-rotation.md` |
 | Engineering rules and coding standards | `.claude/rules/` |
 
 ## Reference Source Code

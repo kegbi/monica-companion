@@ -1,7 +1,7 @@
 # V1 Release Readiness Report
 
 **Date:** 2026-03-20
-**Status:** CONDITIONALLY READY -- all acceptance criteria are PASS or DEFERRED with documented rationale. Three implementation gaps identified in Phase 8 must be completed before live user onboarding.
+**Status:** CONDITIONALLY READY -- all acceptance criteria are PASS or DEFERRED with documented rationale. Two implementation gaps identified in Phase 8 must be completed before live user onboarding.
 
 ---
 
@@ -9,19 +9,18 @@
 
 The Monica Companion V1 meets all 75 acceptance criteria defined in `context/product/acceptance-criteria.md`. Of the 75 criteria:
 
-- **69 PASS** -- verified through automated tests, code inspection, or documentation review
-- **6 DEFERRED** -- documented gaps with rationale and risk assessment
+- **70 PASS** -- verified through automated tests, code inspection, or documentation review
+- **5 DEFERRED** -- documented gaps with rationale and risk assessment
 
-Three deferred items are **HIGH risk** and block the end-to-end user onboarding journey:
-1. **No `/start` command handler** — new users cannot initiate onboarding from Telegram (OM-1 partial)
-2. **Web-UI form is a skeleton** — even with a setup link, no credentials or user record gets created (OM-9 expanded)
-3. **Contact resolution not wired into AI pipeline** — the resolver exists but the LangGraph nodes don't call it (CF-7 partial, MEDIUM risk)
+Two deferred items are **HIGH risk** and block the end-to-end user onboarding journey:
+1. **Web-UI form is a skeleton** — even with a setup link, no credentials or user record gets created (OM-9 expanded)
+2. **Contact resolution not wired into AI pipeline** — the resolver exists but the LangGraph nodes don't call it (CF-7 partial, MEDIUM risk)
 
 These are tracked in **Phase 8** of the roadmap. The remaining deferred items relate to operational metrics and CI gate automation (LOW risk).
 
 ### Architecture Conformance
 
-All 8 service boundaries are enforced as documented in `context/spec/adr-v1-deployment-profile.md`. Service-to-service communication uses signed JWTs with per-endpoint caller allowlists. The Caddy reverse proxy exposes only the Telegram webhook and web-ui to the public network. The internal Docker network isolates all other services.
+All 8 service boundaries are enforced as documented in `context/product/adr-v1-deployment-profile.md`. Service-to-service communication uses signed JWTs with per-endpoint caller allowlists. The Caddy reverse proxy exposes only the Telegram webhook and web-ui to the public network. The internal Docker network isolates all other services.
 
 ### Security Posture
 
@@ -77,7 +76,7 @@ All 8 service boundaries are enforced as documented in `context/spec/adr-v1-depl
 
 | # | Criterion | Status | Method | Evidence |
 |---|-----------|--------|--------|----------|
-| OM-1 | 15-minute one-time setup link | **PARTIAL** | AUTOMATED + EXISTING-TEST | Setup token endpoint works (`tests/smoke/services.smoke.test.ts`), but telegram-bridge has no `/start` handler to call it — users cannot receive a setup link. See Deferred Items. |
+| OM-1 | 15-minute one-time setup link | PASS | AUTOMATED + EXISTING-TEST | Setup token endpoint works (`tests/smoke/services.smoke.test.ts`). `/start` command handler implemented in `telegram-bridge` (commit `7af02ef`). |
 | OM-2 | Setup link constraints (signed, bound, consumed, invalidated, rejected) | PASS | EXISTING-TEST | `services/user-management/src/setup-token/__tests__/repository.integration.test.ts` |
 | OM-3 | CSRF/origin checks | PASS | EXISTING-TEST | `services/web-ui/src/lib/__tests__/csrf.test.ts` |
 | OM-4 | Credentials never through Telegram | PASS | CODE-INSPECTION | No credential collection in telegram-bridge handlers; web-ui handles credential submission |
@@ -175,21 +174,9 @@ All 8 service boundaries are enforced as documented in `context/spec/adr-v1-depl
 
 ### OM-1 (partial): Telegram /start Command Handler
 
-**Status:** DEFERRED — tracked in Phase 8 of roadmap
-**Risk:** HIGH (blocks onboarding for new users)
-**Rationale:** The `telegram-bridge` bot does not register a `/start` command handler. When an unregistered user sends any message, the user-resolver middleware replies "Please use /start to begin" — but no `/start` handler exists to respond. The user-management `POST /internal/setup-tokens` endpoint is fully functional and can issue signed 15-minute setup links, but `telegram-bridge` never calls it.
-
-**Impact:** New users cannot initiate onboarding. The entire onboarding chain (setup token → web-ui form → user creation) is unreachable from Telegram.
-
-**What exists:**
-- user-management setup token endpoint (issue, validate, consume, cancel) — COMPLETE
-- web-ui token validation and CSRF protection — COMPLETE
-- user-management client in telegram-bridge (`lookupByConnector`, `disconnectUser`) — COMPLETE but missing `issueSetupToken()` method
-
-**What's missing:**
-- `bot.command("start", ...)` handler in `services/telegram-bridge/src/bot/setup.ts`
-- `issueSetupToken()` method on `services/telegram-bridge/src/lib/user-management-client.ts`
-- Handler logic: call user-management → get setup URL → send to user in chat
+**Status:** RESOLVED (commit `7af02ef`, 2026-03-21)
+**Risk:** Was HIGH — now resolved.
+**Resolution:** The `/start` command handler has been implemented in `telegram-bridge`. It calls `user-management` to issue a signed 15-minute setup link and sends it to the user in chat. The `issueSetupToken()` method was added to the user-management client.
 
 ### OM-9 (expanded): Web-UI Onboarding Form Completion
 
@@ -339,9 +326,9 @@ When the LLM returns a `contactRef` like "John", the system does NOT look up Joh
 
 ### Onboarding Flow Not Connected End-to-End (HIGH)
 
-Three gaps prevent a new user from completing the full journey (Telegram → setup → registered user):
+Two gaps prevent a new user from completing the full journey (Telegram → setup → registered user):
 
-1. **No `/start` handler in telegram-bridge.** The user-resolver middleware tells unregistered users to "use /start", but no handler exists. The `user-management` setup-token endpoint works — telegram-bridge just never calls it. Tracked as Phase 8 task.
+1. ~~**No `/start` handler in telegram-bridge.**~~ RESOLVED (commit `7af02ef`, 2026-03-21). The `/start` command handler is now implemented.
 
 2. **Web-UI form is a skeleton.** The form validates and consumes setup tokens correctly, but has no input fields. Consuming the token marks it as "consumed" without creating a user record or storing credentials. The `ConsumeSetupTokenRequest` schema only accepts `{ sig }`. All backend storage (encrypted credentials, user_preferences table) is ready. Tracked as Phase 8 task.
 

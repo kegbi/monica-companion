@@ -2,6 +2,8 @@
 
 _This summary describes the planned target product and the initial V1 deployment profile._
 
+_Derived from [product-definition.md](product-definition.md). When in conflict, product-definition.md is authoritative._
+
 ## Vision
 
 Enable MonicaHQ v4 users to capture and retrieve relationship information effortlessly through voice and text messages in Telegram, in any language. Talk into your phone after a call, and AI handles the rest — transcribing, identifying the contact, and saving to MonicaHQ. Each user connects to their own MonicaHQ instance.

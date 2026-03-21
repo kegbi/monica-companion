@@ -242,15 +242,15 @@ The data governance and retention specifications are detailed but proportional t
 
 ## Resolution Checklist
 
-- [ ] **#1 [HIGH]** Broken ADR cross-reference in 6 locations — update all `context/spec/adr-v1-deployment-profile.md` references to `context/product/adr-v1-deployment-profile.md`
-- [ ] **#2 [HIGH]** Stale "Current Repository State" in `architecture.md` — rewrite Section 0 and update status banner to reflect implemented state
-- [ ] **#3 [MEDIUM]** Missing shared packages — add `guardrails` and `observability` to shared package lists in `architecture.md:26` and `service-architecture.md:175-181`
-- [ ] **#4 [MEDIUM]** Summary doc drift risk — add "derived from" header to `product-definition-lite.md` marking `product-definition.md` as authoritative
-- [ ] **#5 [MEDIUM]** Stale architecture status line — update `architecture.md:3` to say "Implemented" instead of "Planned target"
-- [ ] **#6 [MEDIUM]** Roadmap status ambiguity — add a current-status note to `roadmap.md` clarifying Phase 8 contains V1-blocking work
-- [ ] **#7 [MEDIUM]** Stale release readiness report — update OM-1 to RESOLVED, adjust executive summary deferred-item count
-- [ ] **#8 [MEDIUM]** Undocumented deps-init container — add a note about the init container to architecture or service-architecture docs
-- [ ] **#9 [LOW]** Incomplete AGENTS.md index — add missing entries for testing-strategy, release readiness report, data-governance spec, connector guide, operational review, secret rotation
-- [ ] **#10 [LOW]** LLM smoke test path contradiction — verify actual test path and update the incorrect document (testing-strategy.md or roadmap.md)
-- [ ] **#11 [LOW]** Missing re-download reference in monica-api-scope.md — add cross-reference to AGENTS.md for gitignored source paths
+- [x] **#1 [HIGH]** Broken ADR cross-reference in 6 locations — updated all `context/spec/adr-v1-deployment-profile.md` references to `context/product/adr-v1-deployment-profile.md`
+- [x] **#2 [HIGH]** Stale "Current Repository State" in `architecture.md` — rewrote Section 0 and updated status banner to reflect implemented state
+- [x] **#3 [MEDIUM]** Missing shared packages — added `guardrails` and `observability` to shared package lists in `architecture.md` and `service-architecture.md`
+- [x] **#4 [MEDIUM]** Summary doc drift risk — added "derived from" header to `product-definition-lite.md` marking `product-definition.md` as authoritative
+- [x] **#5 [MEDIUM]** Stale architecture status line — updated `architecture.md` to say "Implemented" instead of "Planned target"
+- [x] **#6 [MEDIUM]** Roadmap status ambiguity — added a current-status note to `roadmap.md` clarifying Phase 8 contains V1-blocking work
+- [x] **#7 [MEDIUM]** Stale release readiness report — updated OM-1 to RESOLVED, adjusted executive summary deferred-item count (3→2 HIGH, 69→70 PASS, 6→5 DEFERRED)
+- [x] **#8 [MEDIUM]** Undocumented deps-init container — added note about the init container to `architecture.md` Section 0
+- [x] **#9 [LOW]** Incomplete AGENTS.md index — added entries for testing-strategy, release readiness report, data-governance spec, connector guide, operational review, secret rotation
+- [x] **#10 [LOW]** LLM smoke test path contradiction — verified smoke tests hit `ai-router /internal/process` directly; updated `roadmap.md` to match `testing-strategy.md`
+- [x] **#11 [LOW]** Missing re-download reference in monica-api-scope.md — added cross-reference to AGENTS.md for gitignored source paths
 - [ ] **#12 [LOW]** Stale test counts in release readiness report — re-run `pnpm test` and update Section 4 before release decisions
