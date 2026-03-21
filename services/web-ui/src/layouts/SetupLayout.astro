@@ -1,0 +1,90 @@
+---
+interface Props {
+	title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="light dark" />
+		<title>{title}</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+		<script is:inline>
+			// Restore theme preference before paint to avoid flash
+			(function() {
+				const stored = localStorage.getItem("theme");
+				if (stored === "dark" || stored === "light") {
+					document.documentElement.setAttribute("data-theme", stored);
+				}
+			})();
+		</script>
+	</head>
+	<body class="min-h-screen bg-bg text-text antialiased">
+		<div class="mx-auto flex min-h-screen max-w-lg flex-col px-4 py-8 sm:py-12">
+			<!-- Header -->
+			<header class="mb-8 flex items-center justify-between">
+				<div class="flex items-center gap-2.5">
+					<div class="flex h-9 w-9 items-center justify-center rounded-lg bg-bg-accent">
+						<svg class="h-5 w-5 text-text-inverse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+						</svg>
+					</div>
+					<span class="text-lg font-semibold tracking-tight">Monica Companion</span>
+				</div>
+				<button
+					id="theme-toggle"
+					type="button"
+					class="focus-ring flex h-9 w-9 items-center justify-center rounded-lg border border-border transition-colors hover:bg-bg-hover"
+					aria-label="Toggle theme"
+				>
+					<!-- Sun icon (shown in dark mode) -->
+					<svg class="hidden h-4.5 w-4.5 [[data-theme=dark]_&]:block [.dark_&]:block [@media(prefers-color-scheme:dark)]:[:not([data-theme=light])_&]:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<circle cx="12" cy="12" r="5" />
+						<path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+					</svg>
+					<!-- Moon icon (shown in light mode) -->
+					<svg class="block h-4.5 w-4.5 [[data-theme=dark]_&]:hidden [.dark_&]:hidden [@media(prefers-color-scheme:dark)]:[:not([data-theme=light])_&]:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+					</svg>
+				</button>
+			</header>
+
+			<!-- Main content -->
+			<main class="flex-1">
+				<slot />
+			</main>
+
+			<!-- Footer -->
+			<footer class="mt-12 border-t border-border pt-6 text-center text-sm text-text-muted">
+				<p>Monica Companion &mdash; Your personal CRM assistant</p>
+			</footer>
+		</div>
+
+		<script>
+			const toggle = document.getElementById("theme-toggle");
+			if (toggle) {
+				toggle.addEventListener("click", () => {
+					const html = document.documentElement;
+					const current = html.getAttribute("data-theme");
+					const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+					let next: string;
+					if (current === "dark" || (!current && prefersDark)) {
+						next = "light";
+					} else {
+						next = "dark";
+					}
+
+					html.setAttribute("data-theme", next);
+					localStorage.setItem("theme", next);
+				});
+			}
+		</script>
+	</body>
+</html>

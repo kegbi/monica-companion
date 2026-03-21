@@ -1,15 +1,26 @@
 ---
+import SetupLayout from "../../layouts/SetupLayout.astro";
+import "../../styles/global.css";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>Monica Companion — Setup Complete</title>
-	</head>
-	<body>
-		<h1>Setup Complete</h1>
-		<p>Your Monica Companion has been configured successfully.</p>
-		<p>Return to Telegram and send a message to start using your companion.</p>
-	</body>
-</html>
+<SetupLayout title="Monica Companion — Setup Complete">
+	<div class="flex flex-1 items-center justify-center">
+		<div class="max-w-sm rounded-xl border border-border bg-bg-card p-8 text-center shadow-md">
+			<div class="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-bg-success/10">
+				<svg class="h-7 w-7 text-text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+				</svg>
+			</div>
+			<h1 class="text-xl font-bold tracking-tight">You're all set!</h1>
+			<p class="mt-3 text-sm leading-relaxed text-text-muted">
+				Your Monica Companion has been configured successfully.
+				Return to Telegram and send a message to start using your companion.
+			</p>
+			<div class="mt-6 rounded-lg bg-bg-muted px-4 py-3">
+				<p class="text-xs font-medium text-text-muted">
+					Try saying: "Add a note to John about our lunch today"
+				</p>
+			</div>
+		</div>
+	</div>
+</SetupLayout>

@@ -25,7 +25,17 @@ async function main() {
 	});
 
 	if (config.telegramMode === "polling") {
-		await bot.api.deleteWebhook();
+		// Validate the bot token before starting polling
+		try {
+			const me = await bot.api.getMe();
+			logger.info(`Bot authenticated as @${me.username} (${me.id})`);
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			throw new Error(
+				`Telegram bot token is invalid or expired (${msg}). Get a new token from @BotFather.`,
+			);
+		}
+		// bot.start() calls deleteWebhook internally before polling
 		bot.start({
 			onStart: () => logger.info("telegram-bridge polling started"),
 		});

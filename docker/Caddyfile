@@ -18,5 +18,19 @@
 		reverse_proxy web-ui:4321
 	}
 
+	# Astro/Vite dev assets — required for dev mode CSS/JS loading
+	handle /@vite/* {
+		reverse_proxy web-ui:4321
+	}
+	handle /@id/* {
+		reverse_proxy web-ui:4321
+	}
+	handle /src/* {
+		reverse_proxy web-ui:4321
+	}
+	handle /node_modules/* {
+		reverse_proxy web-ui:4321
+	}
+
 	respond "Not Found" 404
 }
