@@ -224,13 +224,13 @@ _Close the remaining gaps that block the end-to-end user journey: a new user mus
   - [x] For already-registered users: reply with a "you're already set up" message (or offer re-setup / settings link).
   - [x] Update tests: the bot setup test currently expects 1 command (`/disconnect`); update to expect 2 (`/start`, `/disconnect`).
 
-- [ ] **Web-UI Onboarding Form Completion**
-  - [ ] Add form fields to `[tokenId].astro`: Monica base URL, Monica API key, preferred language, confirmation mode, IANA timezone selector, reminder cadence, reminder time.
-  - [ ] Extend the `ConsumeSetupTokenRequest` Zod schema in `@monica-companion/types` to include all onboarding fields alongside `sig`.
-  - [ ] Update the `web-ui` form submission handler (`submit.ts`) to extract and validate all fields, then forward them to `user-management`.
-  - [ ] Update the `user-management` consume endpoint to accept the extended payload: create or update the `users` row with encrypted Monica credentials, populate the `user_preferences` row with timezone, language, confirmation mode, reminder cadence, and reminder time.
-  - [ ] Add client-side validation: Monica URL must be HTTPS and well-formed, timezone must be a valid IANA identifier, API key must be non-empty.
-  - [ ] Add a success page or redirect after consumption that instructs the user to return to Telegram.
+- [x] **Web-UI Onboarding Form Completion**
+  - [x] Add form fields to `[tokenId].astro`: Monica base URL, Monica API key, preferred language, confirmation mode, IANA timezone selector, reminder cadence, reminder time.
+  - [x] Extend the `ConsumeSetupTokenRequest` Zod schema in `@monica-companion/types` to include all onboarding fields alongside `sig`.
+  - [x] Update the `web-ui` form submission handler (`submit.ts`) to extract and validate all fields, then forward them to `user-management`.
+  - [x] Update the `user-management` consume endpoint to accept the extended payload: create or update the `users` row with encrypted Monica credentials, populate the `user_preferences` row with timezone, language, confirmation mode, reminder cadence, and reminder time.
+  - [x] Add client-side validation: Monica URL must be HTTPS and well-formed, timezone must be a valid IANA identifier, API key must be non-empty.
+  - [x] Add a success page or redirect after consumption that instructs the user to return to Telegram.
 
 - [ ] **Contact Resolution Integration into LangGraph Pipeline**
   - [ ] Wire the existing contact resolver (`ai-router/src/contact-resolution/`) into the LangGraph `executeAction` node so that `contactRef` strings from the LLM are resolved against real Monica contact data via `monica-integration`.
