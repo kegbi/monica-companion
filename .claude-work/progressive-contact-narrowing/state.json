@@ -1,11 +1,12 @@
 {
 	"taskId": "progressive-contact-narrowing",
 	"taskGroup": "Progressive Contact Narrowing",
-	"phase": "committing",
+	"phase": "completed",
 	"planAttempts": 2,
 	"codeAttempts": 1,
 	"smokeAttempts": 1,
-	"status": "in-progress",
+	"status": "completed",
 	"mode": "auto",
-	"startedAt": "2026-03-21T00:00:00.000Z"
+	"startedAt": "2026-03-21T00:00:00.000Z",
+	"completedAt": "2026-03-21T18:00:00.000Z"
 }
