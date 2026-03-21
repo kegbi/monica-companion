@@ -268,7 +268,7 @@ _Fix fundamental issues with kinship matching and disambiguation UX discovered d
   - [x] When the contact resolves unambiguously (single high-confidence match), execute immediately after action confirmation — no extra "which contact?" step.
   - [x] When the contact is ambiguous, enter the progressive narrowing flow (clarification or buttons depending on candidate count).
 
-- [ ] **Disambiguation Label & Callback Fixes (done)**
+- [x] **Disambiguation Label & Callback Fixes (done)**
   - [x] Fix select callback re-triggering contact resolution — skip `resolveContactRef` for `callback_action` events.
   - [x] Fix double-parenthetical labels — strip Monica's built-in nickname parenthetical from `complete_name` before appending suffix.
   - [x] Remove confusing relationship labels from disambiguation buttons. Show: full name, nickname (if informative), and birthdate (if available). Format: `Elena Yuryevna (Mama), b. 15 Mar 1965`.
