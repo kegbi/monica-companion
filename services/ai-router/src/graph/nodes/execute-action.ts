@@ -284,6 +284,27 @@ async function handleClarificationResponse(state: State, deps: ExecuteActionDeps
 		};
 	}
 
+	// Clarification resolved: validate the final payload before transitioning.
+	// This prevents incomplete payloads (e.g. missing contactId after a retried
+	// voice message) from reaching the scheduler.
+	const resolvedPayload = updatedRow.payload as Record<string, unknown>;
+	const validated = MutatingCommandPayloadSchema.safeParse(resolvedPayload);
+	if (!validated.success) {
+		logger.warn("Payload validation failed after clarification resolved — staying in draft", {
+			commandType: intentClassification.commandType,
+			correlationId: state.correlationId,
+		});
+		return {
+			actionOutcome: { type: "edit_draft" } as ActionOutcome,
+			activePendingCommand: {
+				pendingCommandId: updatedRow.id,
+				version: updatedRow.version,
+				status: "draft",
+				commandType: updatedRow.commandType,
+			},
+		};
+	}
+
 	// Clarification resolved: transition to pending_confirmation
 	return transitionToConfirmationAndCheckAutoConfirm(state, deps, updatedRow);
 }
@@ -645,6 +666,25 @@ async function handleSelect(
 
 	// If clarification is still incomplete, stay in draft
 	if (intentClassification.needsClarification) {
+		return {
+			actionOutcome: { type: "edit_draft" } as ActionOutcome,
+			activePendingCommand: {
+				pendingCommandId: updatedRow.id,
+				version: updatedRow.version,
+				status: "draft",
+				commandType: updatedRow.commandType,
+			},
+		};
+	}
+
+	// Validate the merged payload before transitioning to pending_confirmation.
+	const selectPayload = updatedRow.payload as Record<string, unknown>;
+	const selectValidated = MutatingCommandPayloadSchema.safeParse(selectPayload);
+	if (!selectValidated.success) {
+		logger.warn("Payload validation failed after select — staying in draft", {
+			commandType: updatedRow.commandType,
+			correlationId: state.correlationId,
+		});
 		return {
 			actionOutcome: { type: "edit_draft" } as ActionOutcome,
 			activePendingCommand: {

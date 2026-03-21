@@ -967,6 +967,59 @@ describe("executeActionNode", () => {
 		});
 	});
 
+	// --- Clarification resolved with incomplete payload ---
+
+	it("stays in draft when clarification resolves but payload is missing contactId", async () => {
+		// This reproduces the bug where a retried voice message was classified as
+		// clarification_response, contact resolution was skipped, and the draft was
+		// promoted to pending_confirmation without contactId — causing scheduler rejection.
+		const activePendingCommand: PendingCommandRef = {
+			pendingCommandId: "cmd-clar-missing",
+			version: 1,
+			status: "draft",
+			commandType: "create_note",
+		};
+
+		const clarificationWithoutContactId: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "I'll create a note about the artillery park.",
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: { body: "Today we talked about going to the artillery park." },
+			confidence: 0.85,
+			needsClarification: false, // LLM thinks it's complete, but contactId is missing
+		};
+
+		const updatedRow = {
+			id: "cmd-clar-missing",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			// Payload stored WITHOUT contactId — the bug scenario
+			payload: { type: "create_note", body: "Today we talked about going to the artillery park." },
+			status: "draft",
+			version: 2,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		mockUpdateDraftPayload.mockResolvedValue(updatedRow);
+
+		const node = createExecuteActionNode(makeDeps());
+		const update = await node(makeState(clarificationWithoutContactId, { activePendingCommand }));
+
+		// Must NOT transition to pending_confirmation — payload is incomplete
+		expect(mockTransitionStatus).not.toHaveBeenCalled();
+		// Should stay in draft so the user can provide the missing info
+		expect(update.actionOutcome).toEqual({ type: "edit_draft" });
+	});
+
 	// --- Step 4: Select callback handling ---
 
 	it("select callback with version 0 is NOT stale-rejected when an active draft exists", async () => {

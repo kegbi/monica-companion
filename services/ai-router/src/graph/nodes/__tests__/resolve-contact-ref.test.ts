@@ -422,6 +422,39 @@ describe("resolveContactRefNode", () => {
 		);
 	});
 
+	// --- clarification_response with contactRef resolves (bug fix) ---
+
+	it("resolves contact for clarification_response with contactRef", async () => {
+		// Reproduces the scenario where a retried voice message was classified as
+		// clarification_response with a contactRef. Previously, resolution was
+		// skipped for clarification_response, causing contactId to be missing.
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({ contactId: 77, displayName: "Elena Yuryevna", aliases: ["Elena", "Yuryevna"] }),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "I'll create a note about the artillery park.",
+			commandType: "create_note",
+			contactRef: "Elena Yuryevna",
+			commandPayload: { body: "Today we talked about going to the artillery park." },
+			confidence: 0.85,
+			needsClarification: false,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		expect(update.contactResolution?.outcome).toBe("resolved");
+		expect(update.intentClassification?.commandPayload).toEqual({
+			body: "Today we talked about going to the artillery park.",
+			contactId: 77,
+		});
+		expect(update.intentClassification?.needsClarification).toBe(false);
+	});
+
 	// --- Disambiguation label format ---
 
 	it("uses just display name when contact has no relationship labels", async () => {

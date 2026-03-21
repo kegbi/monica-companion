@@ -138,13 +138,15 @@ export function createResolveContactRefNode(deps: ResolveContactRefDeps) {
 			try {
 				const { intentClassification, userId, correlationId } = state;
 
-				// Skip conditions: no classification, no contactRef, non-applicable intents
+				// Skip conditions: no classification, no contactRef, non-applicable intents.
+				// Note: clarification_response is NOT skipped — when the user provides
+				// a follow-up that includes a contactRef, it must still be resolved
+				// (e.g. retried voice message classified as clarification for an existing draft).
 				if (
 					!intentClassification ||
 					!intentClassification.contactRef ||
 					intentClassification.intent === "greeting" ||
 					intentClassification.intent === "out_of_scope" ||
-					intentClassification.intent === "clarification_response" ||
 					intentClassification.commandType === "create_contact"
 				) {
 					span.setAttribute("ai-router.resolution_outcome", "skipped");
