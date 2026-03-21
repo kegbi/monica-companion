@@ -255,12 +255,12 @@ _Fix fundamental issues with kinship matching and disambiguation UX discovered d
   - [x] Adjust scoring: both directions produce the same score (0.9) since either is a valid but uncertain signal. The disambiguation flow handles narrowing.
   - [x] Add unit tests with real-world relationship topologies (parent on contact A pointing to contact B does NOT mean A is a parent — it means B is A's parent).
 
-- [ ] **Progressive Contact Narrowing**
-  - [ ] When contact resolution produces more than 5 ambiguous candidates, do NOT render them all as inline keyboard buttons. Instead, generate a clarifying question asking for the contact's name, surname, or other identifying detail ("What's your mom's name?").
-  - [ ] When the user responds with additional info, re-run the matcher against the same cached contact summaries using the combined original query + clarification as a compound query (e.g., kinship "mom" + name "Elena" narrows the pool).
-  - [ ] Repeat clarification rounds until the candidate pool is ≤ 5, then present buttons.
-  - [ ] If the pool reaches 0 after clarification, fall back to a "no match" flow (offer to create a new contact or re-phrase).
-  - [ ] Cap clarification rounds at 3 to prevent infinite loops — after 3 rounds, present whatever candidates remain (even if > 5) or give up gracefully.
+- [x] **Progressive Contact Narrowing**
+  - [x] When contact resolution produces more than 5 ambiguous candidates, do NOT render them all as inline keyboard buttons. Instead, generate a clarifying question asking for the contact's name, surname, or other identifying detail ("What's your mom's name?").
+  - [x] When the user responds with additional info, re-run the matcher against the same cached contact summaries using the combined original query + clarification as a compound query (e.g., kinship "mom" + name "Elena" narrows the pool).
+  - [x] Repeat clarification rounds until the candidate pool is ≤ 5, then present buttons.
+  - [x] If the pool reaches 0 after clarification, fall back to a "no match" flow (offer to create a new contact or re-phrase).
+  - [x] Cap clarification rounds at 3 to prevent infinite loops — after 3 rounds, present whatever candidates remain (even if > 5) or give up gracefully.
 
 - [ ] **Confirm-Then-Resolve Conversation Flow**
   - [ ] Restructure the graph so that for mutating commands with an unresolved contact reference, the system first confirms the ACTION (command type + payload, e.g., "Add note: 'Went to park today'?") with Yes/Edit/Cancel buttons.
