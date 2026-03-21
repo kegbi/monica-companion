@@ -18,7 +18,12 @@ import { createVoiceTranscriptionClient } from "./lib/voice-transcription-client
 import { rateLimiter } from "./middleware/rate-limiter";
 import { webhookSecret } from "./middleware/webhook-secret";
 
-export function createApp(config: Config, redis?: Redis) {
+export interface AppResult {
+	app: Hono;
+	bot: Bot<BotContext>;
+}
+
+export function createApp(config: Config, redis?: Redis): AppResult {
 	const app = new Hono();
 
 	app.use(otelMiddleware());
@@ -73,19 +78,21 @@ export function createApp(config: Config, redis?: Redis) {
 		? new UpdateDedup(redis)
 		: new UpdateDedup({ set: async () => "OK" } as never);
 
-	// Webhook endpoint
-	const webhook = new Hono();
-	webhook.use(
-		rateLimiter({
-			windowMs: config.rateLimitWindowMs,
-			maxRequests: config.rateLimitMaxRequests,
-		}),
-	);
-	webhook.use(webhookSecret(config.telegramWebhookSecret));
-	webhook.use(bodyLimit({ maxSize: 256 * 1024 }));
-	webhook.post("/telegram", createWebhookHandler(bot, dedup));
+	// Webhook endpoint (only in webhook mode)
+	if (config.telegramMode === "webhook") {
+		const webhook = new Hono();
+		webhook.use(
+			rateLimiter({
+				windowMs: config.rateLimitWindowMs,
+				maxRequests: config.rateLimitMaxRequests,
+			}),
+		);
+		webhook.use(webhookSecret(config.telegramWebhookSecret));
+		webhook.use(bodyLimit({ maxSize: 256 * 1024 }));
+		webhook.post("/telegram", createWebhookHandler(bot, dedup));
 
-	app.route("/webhook", webhook);
+		app.route("/webhook", webhook);
+	}
 
 	// Internal send endpoint (caller: delivery only)
 	const internal = new Hono();
@@ -119,5 +126,5 @@ export function createApp(config: Config, redis?: Redis) {
 
 	app.route("/internal", internal);
 
-	return app;
+	return { app, bot };
 }

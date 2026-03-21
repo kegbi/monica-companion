@@ -3,7 +3,8 @@ import { z } from "zod/v4";
 
 const configSchema = z.object({
 	PORT: z.coerce.number().int().positive().default(3001),
-	TELEGRAM_WEBHOOK_SECRET: z.string().min(1),
+	TELEGRAM_MODE: z.enum(["webhook", "polling"]).default("webhook"),
+	TELEGRAM_WEBHOOK_SECRET: z.string().min(1).optional(),
 	TELEGRAM_BOT_TOKEN: z.string().min(1),
 	AI_ROUTER_URL: z.string().min(1),
 	VOICE_TRANSCRIPTION_URL: z.string().min(1),
@@ -18,6 +19,7 @@ const configSchema = z.object({
 
 export interface Config {
 	port: number;
+	telegramMode: "webhook" | "polling";
 	telegramWebhookSecret: string;
 	telegramBotToken: string;
 	aiRouterUrl: string;
@@ -34,10 +36,14 @@ export interface Config {
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
 	const parsed = configSchema.parse(env);
+	if (parsed.TELEGRAM_MODE === "webhook" && !parsed.TELEGRAM_WEBHOOK_SECRET) {
+		throw new Error("TELEGRAM_WEBHOOK_SECRET is required when TELEGRAM_MODE=webhook");
+	}
 	const auth = loadAuthConfig(env);
 	return {
 		port: parsed.PORT,
-		telegramWebhookSecret: parsed.TELEGRAM_WEBHOOK_SECRET,
+		telegramMode: parsed.TELEGRAM_MODE,
+		telegramWebhookSecret: parsed.TELEGRAM_WEBHOOK_SECRET ?? "",
 		telegramBotToken: parsed.TELEGRAM_BOT_TOKEN,
 		aiRouterUrl: parsed.AI_ROUTER_URL,
 		voiceTranscriptionUrl: parsed.VOICE_TRANSCRIPTION_URL,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadConfig } from "../config";
 
 const baseEnv = {
+	TELEGRAM_MODE: "webhook" as const,
 	TELEGRAM_WEBHOOK_SECRET: "my-secret",
 	TELEGRAM_BOT_TOKEN: "123456:ABC-DEF",
 	AI_ROUTER_URL: "http://ai-router:3002",
@@ -45,13 +46,21 @@ describe("loadConfig", () => {
 		expect(config.userManagementTimeoutMs).toBe(5000);
 	});
 
-	it("throws when TELEGRAM_WEBHOOK_SECRET is missing", () => {
+	it("throws when TELEGRAM_WEBHOOK_SECRET is missing in webhook mode", () => {
 		const { TELEGRAM_WEBHOOK_SECRET, ...rest } = baseEnv;
 		expect(() => loadConfig(rest)).toThrow();
 	});
 
-	it("throws when TELEGRAM_WEBHOOK_SECRET is empty", () => {
-		expect(() => loadConfig({ ...baseEnv, TELEGRAM_WEBHOOK_SECRET: "" })).toThrow();
+	it("does not throw when TELEGRAM_WEBHOOK_SECRET is missing in polling mode", () => {
+		const { TELEGRAM_WEBHOOK_SECRET, ...rest } = baseEnv;
+		const config = loadConfig({ ...rest, TELEGRAM_MODE: "polling" });
+		expect(config.telegramMode).toBe("polling");
+	});
+
+	it("defaults TELEGRAM_MODE to webhook", () => {
+		const { TELEGRAM_MODE, ...rest } = baseEnv;
+		const config = loadConfig(rest);
+		expect(config.telegramMode).toBe("webhook");
 	});
 
 	it("throws when TELEGRAM_BOT_TOKEN is missing", () => {

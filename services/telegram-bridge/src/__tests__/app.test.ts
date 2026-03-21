@@ -7,6 +7,7 @@ const JWT_SECRET = "test-secret-256-bit-minimum-key!";
 
 const testConfig: Config = {
 	port: 3001,
+	telegramMode: "webhook",
 	telegramWebhookSecret: "test-secret-xyz",
 	telegramBotToken: "123456:TEST-TOKEN",
 	aiRouterUrl: "http://ai-router:3002",
@@ -26,7 +27,7 @@ const testConfig: Config = {
 
 describe("createApp integration", () => {
 	it("GET /health returns 200 without auth", async () => {
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const res = await app.request("/health");
 		expect(res.status).toBe(200);
 		const body = await res.json();
@@ -34,13 +35,13 @@ describe("createApp integration", () => {
 	});
 
 	it("GET /health sets X-Correlation-ID header", async () => {
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const res = await app.request("/health");
 		expect(res.headers.get("X-Correlation-ID")).toBeDefined();
 	});
 
 	it("GET /health uses provided X-Correlation-ID", async () => {
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const res = await app.request("/health", {
 			headers: { "X-Correlation-ID": "trace-abc" },
 		});
@@ -48,7 +49,7 @@ describe("createApp integration", () => {
 	});
 
 	it("POST /webhook/telegram returns 401 without secret header", async () => {
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const res = await app.request("/webhook/telegram", {
 			method: "POST",
 			headers: { "content-type": "application/json" },
@@ -58,7 +59,7 @@ describe("createApp integration", () => {
 	});
 
 	it("POST /webhook/telegram returns 200 with correct secret", async () => {
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const res = await app.request("/webhook/telegram", {
 			method: "POST",
 			headers: {
@@ -73,7 +74,7 @@ describe("createApp integration", () => {
 	});
 
 	it("POST /webhook/telegram rejects oversized body", async () => {
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const largeBody = JSON.stringify({ data: "x".repeat(300_000) });
 		const res = await app.request("/webhook/telegram", {
 			method: "POST",
@@ -88,13 +89,13 @@ describe("createApp integration", () => {
 	});
 
 	it("returns 404 for unknown routes", async () => {
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const res = await app.request("/unknown");
 		expect(res.status).toBe(404);
 	});
 
 	it("rate limits excessive requests", async () => {
-		const app = createApp({
+		const { app } = createApp({
 			...testConfig,
 			rateLimitMaxRequests: 2,
 		});
@@ -123,7 +124,7 @@ describe("createApp integration", () => {
 
 describe("internal endpoint auth", () => {
 	it("POST /internal/send returns 401 without token", async () => {
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const res = await app.request("/internal/send", { method: "POST" });
 		expect(res.status).toBe(401);
 		const body = await res.json();
@@ -131,7 +132,7 @@ describe("internal endpoint auth", () => {
 	});
 
 	it("POST /internal/send returns 401 with invalid token", async () => {
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const res = await app.request("/internal/send", {
 			method: "POST",
 			headers: { Authorization: "Bearer invalid.token.here" },
@@ -145,7 +146,7 @@ describe("internal endpoint auth", () => {
 			audience: "telegram-bridge",
 			secret: JWT_SECRET,
 		});
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const res = await app.request("/internal/send", {
 			method: "POST",
 			headers: { Authorization: `Bearer ${token}` },
@@ -161,7 +162,7 @@ describe("internal endpoint auth", () => {
 			audience: "telegram-bridge",
 			secret: JWT_SECRET,
 		});
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const res = await app.request("/internal/send", {
 			method: "POST",
 			headers: { Authorization: `Bearer ${token}` },
@@ -177,7 +178,7 @@ describe("internal endpoint auth", () => {
 			secret: JWT_SECRET,
 			correlationId: "corr-xyz",
 		});
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const res = await app.request("/internal/send", {
 			method: "POST",
 			headers: {
@@ -196,7 +197,7 @@ describe("internal endpoint auth", () => {
 			audience: "ai-router",
 			secret: JWT_SECRET,
 		});
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const res = await app.request("/internal/send", {
 			method: "POST",
 			headers: { Authorization: `Bearer ${token}` },

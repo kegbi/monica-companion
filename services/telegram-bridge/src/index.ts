@@ -18,14 +18,27 @@ async function main() {
 		logger.warn("Failed to connect to Redis for update dedup -- proceeding without dedup");
 	}
 
-	const app = createApp(config, redis);
+	const { app, bot } = createApp(config, redis);
 
 	serve({ fetch: app.fetch, port: config.port }, (info) => {
 		logger.info(`telegram-bridge listening on :${info.port}`);
 	});
 
+	if (config.telegramMode === "polling") {
+		await bot.api.deleteWebhook();
+		bot.start({
+			onStart: () => logger.info("telegram-bridge polling started"),
+		});
+		logger.info("telegram-bridge running in POLLING mode (no public URL needed)");
+	} else {
+		logger.info("telegram-bridge running in WEBHOOK mode");
+	}
+
 	const shutdown = async () => {
 		logger.info("Shutting down telegram-bridge");
+		if (config.telegramMode === "polling") {
+			await bot.stop();
+		}
 		if (redis) {
 			await redis.quit();
 		}

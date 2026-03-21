@@ -4,6 +4,7 @@ import type { Config } from "../config";
 
 const testConfig: Config = {
 	port: 3001,
+	telegramMode: "webhook",
 	telegramWebhookSecret: "test-secret-xyz",
 	telegramBotToken: "123456:TEST-TOKEN",
 	aiRouterUrl: "http://ai-router:3002",
@@ -23,7 +24,7 @@ const testConfig: Config = {
 
 describe("observability integration", () => {
 	it("GET /health responds successfully with otelMiddleware applied", async () => {
-		const app = createApp(testConfig);
+		const { app } = createApp(testConfig);
 		const res = await app.request("/health");
 		expect(res.status).toBe(200);
 		const body = await res.json();
