@@ -7,6 +7,11 @@ export default defineConfig({
 	adapter: node({
 		mode: "standalone",
 	}),
+	security: {
+		// Disable Astro's built-in CSRF check — we enforce our own double-submit
+		// cookie CSRF validation in middleware.ts with timing-safe comparison.
+		checkOrigin: false,
+	},
 	vite: {
 		plugins: [tailwindcss()],
 	},
