@@ -216,13 +216,13 @@ _Close remaining gaps between implemented infrastructure and V1 acceptance crite
 
 _Close the remaining gaps that block the end-to-end user journey: a new user must be able to start the bot, receive a setup link, fill in credentials, and have the AI resolve contacts against their real Monica data._
 
-- [ ] **Telegram /start Command Handler**
-  - [ ] Register a `/start` command handler in `telegram-bridge` bot setup.
-  - [ ] For unregistered users: call `user-management` `POST /internal/setup-tokens` with the Telegram user ID to issue a signed 15-minute setup link.
-  - [ ] Add an `issueSetupToken()` method to the `telegram-bridge` user-management client.
-  - [ ] Send the setup URL to the user in the Telegram chat with a clear onboarding prompt.
-  - [ ] For already-registered users: reply with a "you're already set up" message (or offer re-setup / settings link).
-  - [ ] Update tests: the bot setup test currently expects 1 command (`/disconnect`); update to expect 2 (`/start`, `/disconnect`).
+- [x] **Telegram /start Command Handler**
+  - [x] Register a `/start` command handler in `telegram-bridge` bot setup.
+  - [x] For unregistered users: call `user-management` `POST /internal/setup-tokens` with the Telegram user ID to issue a signed 15-minute setup link.
+  - [x] Add an `issueSetupToken()` method to the `telegram-bridge` user-management client.
+  - [x] Send the setup URL to the user in the Telegram chat with a clear onboarding prompt.
+  - [x] For already-registered users: reply with a "you're already set up" message (or offer re-setup / settings link).
+  - [x] Update tests: the bot setup test currently expects 1 command (`/disconnect`); update to expect 2 (`/start`, `/disconnect`).
 
 - [ ] **Web-UI Onboarding Form Completion**
   - [ ] Add form fields to `[tokenId].astro`: Monica base URL, Monica API key, preferred language, confirmation mode, IANA timezone selector, reminder cadence, reminder time.
