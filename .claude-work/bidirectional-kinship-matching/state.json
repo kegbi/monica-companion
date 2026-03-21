@@ -1,0 +1,11 @@
+{
+	"taskId": "bidirectional-kinship-matching",
+	"taskGroup": "Bidirectional Kinship Matching",
+	"phase": "committing",
+	"planAttempts": 1,
+	"codeAttempts": 1,
+	"smokeAttempts": 1,
+	"status": "in-progress",
+	"mode": "auto",
+	"startedAt": "2026-03-21T00:00:00.000Z"
+}
