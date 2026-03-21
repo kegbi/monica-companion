@@ -7,47 +7,95 @@ import type {
 /**
  * Static lookup table mapping common natural-language kinship terms
  * to Monica relationship type names. English-only in V1.
+ *
+ * Each entry maps a user-facing term to an array of Monica relationship
+ * labels that could indicate the relationship. For symmetric types
+ * (e.g., spouse, sibling), the array has one element. For asymmetric
+ * types (e.g., parent/child), the array includes both directions
+ * because Monica's label semantics are directional: `relationshipLabels:
+ * ["parent"]` on contact A means "A has a parent listed", not "A is a
+ * parent." Both the direct and inverse labels are valid match signals;
+ * disambiguation narrows ambiguous results downstream.
  */
-const KINSHIP_MAP = new Map<string, string>([
-	["mom", "parent"],
-	["mother", "parent"],
-	["mama", "parent"],
-	["mum", "parent"],
-	["dad", "parent"],
-	["father", "parent"],
-	["papa", "parent"],
-	["brother", "sibling"],
-	["bro", "sibling"],
-	["sister", "sibling"],
-	["sis", "sibling"],
-	["grandma", "grandparent"],
-	["grandmother", "grandparent"],
-	["nana", "grandparent"],
-	["grandpa", "grandparent"],
-	["grandfather", "grandparent"],
-	["uncle", "uncle"],
-	["aunt", "uncle"],
-	["auntie", "uncle"],
-	["nephew", "nephew"],
-	["niece", "nephew"],
-	["cousin", "cousin"],
-	["wife", "spouse"],
-	["husband", "spouse"],
-	["partner", "partner"],
-	["boyfriend", "partner"],
-	["girlfriend", "partner"],
-	["boss", "boss"],
-	["colleague", "colleague"],
-	["coworker", "colleague"],
-	["friend", "friend"],
-	["buddy", "friend"],
-	["pal", "friend"],
-	["best friend", "bestfriend"],
-	["bestfriend", "bestfriend"],
-	["bff", "bestfriend"],
-	["mentor", "mentor"],
-	["godfather", "godparent"],
-	["godmother", "godparent"],
+const KINSHIP_MAP = new Map<string, string[]>([
+	// Asymmetric: parent/child
+	["mom", ["parent", "child"]],
+	["mother", ["parent", "child"]],
+	["mama", ["parent", "child"]],
+	["mum", ["parent", "child"]],
+	["dad", ["parent", "child"]],
+	["father", ["parent", "child"]],
+	["papa", ["parent", "child"]],
+	["son", ["child", "parent"]],
+	["daughter", ["child", "parent"]],
+
+	// Symmetric: sibling
+	["brother", ["sibling"]],
+	["bro", ["sibling"]],
+	["sister", ["sibling"]],
+	["sis", ["sibling"]],
+
+	// Asymmetric: grandparent/grandchild
+	["grandma", ["grandparent", "grandchild"]],
+	["grandmother", ["grandparent", "grandchild"]],
+	["nana", ["grandparent", "grandchild"]],
+	["grandpa", ["grandparent", "grandchild"]],
+	["grandfather", ["grandparent", "grandchild"]],
+
+	// Asymmetric: uncle/nephew
+	["uncle", ["uncle", "nephew"]],
+	["aunt", ["uncle", "nephew"]],
+	["auntie", ["uncle", "nephew"]],
+	["nephew", ["nephew", "uncle"]],
+	["niece", ["nephew", "uncle"]],
+
+	// Symmetric: cousin
+	["cousin", ["cousin"]],
+
+	// Symmetric: spouse
+	["wife", ["spouse"]],
+	["husband", ["spouse"]],
+
+	// Symmetric: partner
+	["partner", ["partner"]],
+	["boyfriend", ["partner"]],
+	["girlfriend", ["partner"]],
+
+	// Asymmetric: boss/subordinate
+	["boss", ["boss", "subordinate"]],
+	["subordinate", ["subordinate", "boss"]],
+
+	// Symmetric: colleague
+	["colleague", ["colleague"]],
+	["coworker", ["colleague"]],
+
+	// Symmetric: friend
+	["friend", ["friend"]],
+	["buddy", ["friend"]],
+	["pal", ["friend"]],
+
+	// Symmetric: bestfriend
+	["best friend", ["bestfriend"]],
+	["bestfriend", ["bestfriend"]],
+	["bff", ["bestfriend"]],
+
+	// Asymmetric: mentor/protege
+	["mentor", ["mentor", "protege"]],
+	["protege", ["protege", "mentor"]],
+
+	// Asymmetric: godparent/godchild
+	["godfather", ["godparent", "godchild"]],
+	["godmother", ["godparent", "godchild"]],
+	["godson", ["godchild", "godparent"]],
+	["goddaughter", ["godchild", "godparent"]],
+
+	// Asymmetric: stepparent/stepchild
+	["stepmom", ["stepparent", "stepchild"]],
+	["stepmother", ["stepparent", "stepchild"]],
+	["stepdad", ["stepparent", "stepchild"]],
+	["stepfather", ["stepparent", "stepchild"]],
+	["stepson", ["stepchild", "stepparent"]],
+	["stepdaughter", ["stepchild", "stepparent"]],
 ]);
 
 /** Minimum prefix length required for prefix matching. */
@@ -187,9 +235,9 @@ function scoreRelationship(term: string, labels: string[]): number {
 	// Direct match: the term itself is a label
 	if (normalizedLabels.includes(term)) return 1;
 
-	// Kinship normalization: map the term to a Monica label
-	const mapped = KINSHIP_MAP.get(term);
-	if (mapped && normalizedLabels.includes(mapped)) return 1;
+	// Kinship normalization: map the term to Monica labels (direct + inverse)
+	const mappedLabels = KINSHIP_MAP.get(term);
+	if (mappedLabels && mappedLabels.some((label) => normalizedLabels.includes(label))) return 1;
 
 	return 0;
 }

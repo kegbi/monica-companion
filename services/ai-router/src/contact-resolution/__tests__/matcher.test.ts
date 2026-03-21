@@ -392,4 +392,282 @@ describe("matchContacts", () => {
 		const result = matchContacts("   ", candidates);
 		expect(result).toHaveLength(0);
 	});
+
+	describe("bidirectional kinship matching", () => {
+		it("'mom' matches contact with relationshipLabels ['child'] (contact IS a parent)", () => {
+			const candidates = [
+				makeSummary({
+					contactId: 100,
+					displayName: "Elena Yuryevna",
+					aliases: ["Elena", "Yuryevna"],
+					relationshipLabels: ["child"],
+				}),
+			];
+
+			const result = matchContacts("mom", candidates);
+
+			expect(result).toHaveLength(1);
+			expect(result[0].contactId).toBe(100);
+			expect(result[0].score).toBe(0.9);
+			expect(result[0].matchReason).toBe("relationship_label_match");
+		});
+
+		it("'mom' matches contact with relationshipLabels ['parent'] (backward compat)", () => {
+			const candidates = [
+				makeSummary({
+					contactId: 101,
+					displayName: "Olga Petrova",
+					aliases: ["Olga", "Petrova"],
+					relationshipLabels: ["parent"],
+				}),
+			];
+
+			const result = matchContacts("mom", candidates);
+
+			expect(result).toHaveLength(1);
+			expect(result[0].contactId).toBe(101);
+			expect(result[0].score).toBe(0.9);
+			expect(result[0].matchReason).toBe("relationship_label_match");
+		});
+
+		it("'mom' matches BOTH directions, producing ambiguous result", () => {
+			const candidates = [
+				makeSummary({
+					contactId: 100,
+					displayName: "Elena Yuryevna",
+					aliases: ["Elena", "Yuryevna"],
+					relationshipLabels: ["child"],
+				}),
+				makeSummary({
+					contactId: 101,
+					displayName: "Olga Petrova",
+					aliases: ["Olga", "Petrova"],
+					relationshipLabels: ["parent"],
+				}),
+			];
+
+			const result = matchContacts("mom", candidates);
+
+			expect(result).toHaveLength(2);
+			expect(result[0].score).toBe(0.9);
+			expect(result[1].score).toBe(0.9);
+			// Both contacts matched at the same score
+			expect(result.map((r) => r.contactId).sort()).toEqual([100, 101]);
+		});
+
+		it("'dad' matches contacts with either 'parent' or 'child' labels", () => {
+			const candidates = [
+				makeSummary({
+					contactId: 200,
+					displayName: "Ivan Petrov",
+					aliases: ["Ivan", "Petrov"],
+					relationshipLabels: ["parent"],
+				}),
+				makeSummary({
+					contactId: 201,
+					displayName: "Dmitry Smirnov",
+					aliases: ["Dmitry", "Smirnov"],
+					relationshipLabels: ["child"],
+				}),
+			];
+
+			const result = matchContacts("dad", candidates);
+
+			expect(result).toHaveLength(2);
+			expect(result[0].score).toBe(0.9);
+			expect(result[1].score).toBe(0.9);
+			expect(result.map((r) => r.contactId).sort()).toEqual([200, 201]);
+		});
+
+		it("'boss' matches contacts with either 'boss' or 'subordinate' labels", () => {
+			const candidates = [
+				makeSummary({
+					contactId: 300,
+					displayName: "Director Dan",
+					aliases: ["Dan"],
+					relationshipLabels: ["boss"],
+				}),
+				makeSummary({
+					contactId: 301,
+					displayName: "Manager Mike",
+					aliases: ["Mike"],
+					relationshipLabels: ["subordinate"],
+				}),
+			];
+
+			const result = matchContacts("boss", candidates);
+
+			expect(result).toHaveLength(2);
+			expect(result[0].score).toBe(0.9);
+			expect(result[1].score).toBe(0.9);
+		});
+
+		it("'uncle' matches contacts with either 'uncle' or 'nephew' labels", () => {
+			const candidates = [
+				makeSummary({
+					contactId: 400,
+					displayName: "Uncle Bob",
+					aliases: ["Bob"],
+					relationshipLabels: ["uncle"],
+				}),
+				makeSummary({
+					contactId: 401,
+					displayName: "Cousin Steve",
+					aliases: ["Steve"],
+					relationshipLabels: ["nephew"],
+				}),
+			];
+
+			const result = matchContacts("uncle", candidates);
+
+			expect(result).toHaveLength(2);
+			expect(result[0].score).toBe(0.9);
+			expect(result[1].score).toBe(0.9);
+		});
+
+		it("symmetric types still work: 'wife' matches 'spouse' only", () => {
+			const candidates = [
+				makeSummary({
+					contactId: 500,
+					displayName: "Jane Doe",
+					aliases: ["Jane"],
+					relationshipLabels: ["spouse"],
+				}),
+				makeSummary({
+					contactId: 501,
+					displayName: "Alice Wonder",
+					aliases: ["Alice"],
+					relationshipLabels: ["friend"],
+				}),
+			];
+
+			const result = matchContacts("wife", candidates);
+
+			expect(result).toHaveLength(1);
+			expect(result[0].contactId).toBe(500);
+			expect(result[0].score).toBe(0.9);
+			expect(result[0].matchReason).toBe("relationship_label_match");
+		});
+
+		it("'grandma' matches contacts with either 'grandparent' or 'grandchild' labels", () => {
+			const candidates = [
+				makeSummary({
+					contactId: 600,
+					displayName: "Grandma Rose",
+					aliases: ["Rose"],
+					relationshipLabels: ["grandparent"],
+				}),
+				makeSummary({
+					contactId: 601,
+					displayName: "Nana Betty",
+					aliases: ["Betty"],
+					relationshipLabels: ["grandchild"],
+				}),
+			];
+
+			const result = matchContacts("grandma", candidates);
+
+			expect(result).toHaveLength(2);
+			expect(result[0].score).toBe(0.9);
+			expect(result[1].score).toBe(0.9);
+		});
+
+		it("real-world topology: 3-contact family demonstrates fundamental ambiguity", () => {
+			// Alice has a parent and a sibling listed
+			// Mom Mary has children (IS parent) and a spouse
+			// Dad Tom has children (IS parent) and a spouse
+			const candidates = [
+				makeSummary({
+					contactId: 700,
+					displayName: "Alice",
+					aliases: ["Alice"],
+					relationshipLabels: ["parent", "sibling"],
+				}),
+				makeSummary({
+					contactId: 701,
+					displayName: "Mom Mary",
+					aliases: ["Mary"],
+					relationshipLabels: ["child", "spouse"],
+				}),
+				makeSummary({
+					contactId: 702,
+					displayName: "Dad Tom",
+					aliases: ["Tom"],
+					relationshipLabels: ["child", "spouse"],
+				}),
+			];
+
+			const result = matchContacts("mom", candidates);
+
+			// All three match at 0.9: Alice has "parent" label, Mary and Tom have "child" label
+			// This ambiguity is by design -- disambiguation narrows downstream
+			expect(result).toHaveLength(3);
+			expect(result.every((r) => r.score === 0.9)).toBe(true);
+		});
+
+		it("'mentor' matches both 'mentor' and 'protege' labels", () => {
+			const candidates = [
+				makeSummary({
+					contactId: 800,
+					displayName: "Dr. Smith",
+					aliases: ["Smith"],
+					relationshipLabels: ["mentor"],
+				}),
+				makeSummary({
+					contactId: 801,
+					displayName: "Junior Dev",
+					aliases: ["Junior"],
+					relationshipLabels: ["protege"],
+				}),
+			];
+
+			const result = matchContacts("mentor", candidates);
+
+			expect(result).toHaveLength(2);
+			expect(result[0].score).toBe(0.9);
+			expect(result[1].score).toBe(0.9);
+		});
+
+		it("'godmother' matches both 'godparent' and 'godchild' labels", () => {
+			const candidates = [
+				makeSummary({
+					contactId: 900,
+					displayName: "Fairy Godmother",
+					aliases: ["Fairy"],
+					relationshipLabels: ["godparent"],
+				}),
+				makeSummary({
+					contactId: 901,
+					displayName: "Little Timmy",
+					aliases: ["Timmy"],
+					relationshipLabels: ["godchild"],
+				}),
+			];
+
+			const result = matchContacts("godmother", candidates);
+
+			expect(result).toHaveLength(2);
+			expect(result[0].score).toBe(0.9);
+			expect(result[1].score).toBe(0.9);
+		});
+
+		it("direct match path survives refactor: 'parent' label matches term 'parent'", () => {
+			// LOW-3 review finding: verify the direct match path still works
+			const candidates = [
+				makeSummary({
+					contactId: 950,
+					displayName: "Some Contact",
+					aliases: [],
+					relationshipLabels: ["parent"],
+				}),
+			];
+
+			const result = matchContacts("parent", candidates);
+
+			expect(result).toHaveLength(1);
+			expect(result[0].contactId).toBe(950);
+			expect(result[0].score).toBe(0.9);
+			expect(result[0].matchReason).toBe("relationship_label_match");
+		});
+	});
 });

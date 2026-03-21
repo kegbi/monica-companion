@@ -130,6 +130,66 @@ const ambiguousContacts: ContactResolutionSummary[] = [
 	},
 ];
 
+/** Contacts used for bidirectional kinship test cases. */
+const bidirectionalKinshipContacts: ContactResolutionSummary[] = [
+	{
+		contactId: 110,
+		displayName: "Elena Yuryevna",
+		aliases: ["Elena", "Yuryevna"],
+		relationshipLabels: ["child"],
+		importantDates: [{ label: "birthdate", date: "1958-09-14", isYearUnknown: false }],
+		lastInteractionAt: "2026-03-18T10:00:00Z",
+	},
+	{
+		contactId: 111,
+		displayName: "Dmitry Petrov",
+		aliases: ["Dmitry", "Petrov"],
+		relationshipLabels: ["child", "spouse"],
+		importantDates: [],
+		lastInteractionAt: "2026-03-17T08:00:00Z",
+	},
+	{
+		contactId: 112,
+		displayName: "Viktor Orlov",
+		aliases: ["Viktor", "Orlov"],
+		relationshipLabels: ["boss"],
+		importantDates: [],
+		lastInteractionAt: "2026-03-10T14:00:00Z",
+	},
+	{
+		contactId: 113,
+		displayName: "Marina Orlova",
+		aliases: ["Marina", "Orlova"],
+		relationshipLabels: ["subordinate"],
+		importantDates: [],
+		lastInteractionAt: null,
+	},
+	{
+		contactId: 114,
+		displayName: "Uncle Sergei",
+		aliases: ["Sergei"],
+		relationshipLabels: ["uncle"],
+		importantDates: [],
+		lastInteractionAt: "2026-02-20T12:00:00Z",
+	},
+	{
+		contactId: 115,
+		displayName: "Nephew Andrei",
+		aliases: ["Andrei"],
+		relationshipLabels: ["nephew"],
+		importantDates: [],
+		lastInteractionAt: null,
+	},
+	{
+		contactId: 116,
+		displayName: "Cousin Natasha",
+		aliases: ["Natasha"],
+		relationshipLabels: ["parent", "sibling"],
+		importantDates: [],
+		lastInteractionAt: "2026-03-01T09:00:00Z",
+	},
+];
+
 export const contactResolutionCases: ContactResolutionBenchmarkCase[] = [
 	// ---- Exact display name match (5 cases) ----
 	{
@@ -630,5 +690,74 @@ export const contactResolutionCases: ContactResolutionBenchmarkCase[] = [
 		description: "Edge case - leading/trailing whitespace is trimmed",
 		input: { query: "  Emily Chen  ", contacts: sharedContacts },
 		expected: { outcome: "resolved", resolvedContactId: 7, candidateContactIds: [] },
+	},
+
+	// ---- Bidirectional kinship matching (5 cases) ----
+	{
+		id: "cr-046",
+		category: "contact_resolution",
+		status: "active",
+		description:
+			"Bidirectional kinship - 'mom' resolved via inverse label 'child' (single contact)",
+		input: {
+			query: "mom",
+			contacts: [bidirectionalKinshipContacts[0]], // Elena, labels: ["child"]
+		},
+		expected: { outcome: "resolved", resolvedContactId: 110, candidateContactIds: [] },
+	},
+	{
+		id: "cr-047",
+		category: "contact_resolution",
+		status: "active",
+		description:
+			"Bidirectional kinship - 'dad' resolved via inverse label 'child' + 'spouse' (single contact)",
+		input: {
+			query: "dad",
+			contacts: [bidirectionalKinshipContacts[1]], // Dmitry, labels: ["child", "spouse"]
+		},
+		expected: { outcome: "resolved", resolvedContactId: 111, candidateContactIds: [] },
+	},
+	{
+		id: "cr-048",
+		category: "contact_resolution",
+		status: "active",
+		description: "Bidirectional kinship - 'boss' resolved via inverse label 'subordinate'",
+		input: {
+			query: "boss",
+			contacts: [bidirectionalKinshipContacts[3]], // Marina, labels: ["subordinate"]
+		},
+		expected: { outcome: "resolved", resolvedContactId: 113, candidateContactIds: [] },
+	},
+	{
+		id: "cr-049",
+		category: "contact_resolution",
+		status: "active",
+		description:
+			"Bidirectional kinship - 'uncle' ambiguous with contacts having 'uncle' and 'nephew' labels",
+		input: {
+			query: "uncle",
+			contacts: [bidirectionalKinshipContacts[4], bidirectionalKinshipContacts[5]], // Sergei (uncle), Andrei (nephew)
+		},
+		expected: {
+			outcome: "ambiguous",
+			resolvedContactId: null,
+			candidateContactIds: [114, 115],
+		},
+	},
+	{
+		id: "cr-050",
+		category: "contact_resolution",
+		status: "active",
+		description:
+			"Bidirectional kinship - 'mom' ambiguous with multiple parent-like contacts (both directions)",
+		input: {
+			query: "mom",
+			contacts: bidirectionalKinshipContacts, // All 7 contacts -- 3 match via parent/child labels
+		},
+		expected: {
+			outcome: "ambiguous",
+			resolvedContactId: null,
+			candidateContactIds: [110, 111, 116],
+		},
 	},
 ];
