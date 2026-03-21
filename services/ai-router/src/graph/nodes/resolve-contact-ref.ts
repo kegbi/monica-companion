@@ -55,14 +55,23 @@ function buildDisambiguationLabel(
 	summaries: ContactResolutionSummary[],
 ): string {
 	const summary = summaries.find((s) => s.contactId === candidate.contactId);
+	const displayLower = candidate.displayName.toLowerCase();
 
-	// Prefer aliases (nickname, first/last name variants) over relationship labels
-	// for disambiguation — they're more recognizable to the user.
+	// Prefer aliases that add new info (not already a substring of displayName).
+	// e.g. "Mama" for "Elena Yuryevna" is useful, but "Sherry" for "Sherry Miller" is not.
 	const aliases = summary?.aliases ?? [];
-	const nickname = aliases.find((a) => a.toLowerCase() !== candidate.displayName.toLowerCase());
+	const nickname = aliases.find(
+		(a) => !displayLower.includes(a.toLowerCase()) && a.toLowerCase() !== displayLower,
+	);
 
 	if (nickname) {
 		return `${candidate.displayName} (${nickname})`;
+	}
+
+	// Fall back to relationship labels if no useful alias exists
+	const labels = summary?.relationshipLabels ?? [];
+	if (labels.length > 0) {
+		return `${candidate.displayName} (${labels[0]})`;
 	}
 
 	return candidate.displayName;

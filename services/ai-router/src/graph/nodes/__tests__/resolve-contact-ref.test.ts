@@ -163,8 +163,8 @@ describe("resolveContactRefNode", () => {
 		expect(update.intentClassification?.needsClarification).toBe(true);
 		expect(update.intentClassification?.clarificationReason).toBe("ambiguous_contact");
 		expect(update.intentClassification?.disambiguationOptions).toEqual([
-			{ label: "Sherry Miller -- friend", value: "10" },
-			{ label: "Sherry Johnson -- colleague", value: "20" },
+			{ label: "Sherry Miller (friend)", value: "10" },
+			{ label: "Sherry Johnson (colleague)", value: "20" },
 		]);
 	});
 
@@ -456,7 +456,7 @@ describe("resolveContactRefNode", () => {
 
 		expect(update.intentClassification?.disambiguationOptions).toEqual([
 			{ label: "Sherry Miller", value: "10" },
-			{ label: "Sherry Johnson -- colleague", value: "20" },
+			{ label: "Sherry Johnson (colleague)", value: "20" },
 		]);
 	});
 });
