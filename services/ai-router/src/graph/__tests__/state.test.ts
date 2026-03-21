@@ -183,4 +183,65 @@ describe("ConversationStateSchema", () => {
 		});
 		expect(result.success).toBe(false);
 	});
+
+	it("accepts valid contactResolution with resolved outcome", () => {
+		const result = ConversationStateSchema.safeParse({
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			correlationId: "corr-456",
+			inboundEvent: validInboundEvent,
+			contactResolution: {
+				outcome: "resolved",
+				resolved: {
+					contactId: 42,
+					displayName: "Jane Doe",
+					aliases: ["Jane"],
+					relationshipLabels: ["friend"],
+					importantDates: [],
+					lastInteractionAt: null,
+				},
+				candidates: [],
+				query: "Jane",
+			},
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("defaults contactResolution to null", () => {
+		const result = ConversationStateSchema.safeParse({
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			correlationId: "corr-456",
+			inboundEvent: validInboundEvent,
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.contactResolution).toBeNull();
+		}
+	});
+
+	it("defaults contactSummariesCache to null", () => {
+		const result = ConversationStateSchema.safeParse({
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			correlationId: "corr-456",
+			inboundEvent: validInboundEvent,
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.contactSummariesCache).toBeNull();
+		}
+	});
+
+	it("does not accept the old resolvedContact field", () => {
+		const result = ConversationStateSchema.safeParse({
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			correlationId: "corr-456",
+			inboundEvent: validInboundEvent,
+			resolvedContact: { id: 42, name: "Jane" },
+		});
+		// If the schema still has resolvedContact, this field will be accepted.
+		// After the migration, we expect it to be stripped (strict) or ignored.
+		// The key assertion is that the parsed data does NOT contain resolvedContact.
+		if (result.success) {
+			expect("resolvedContact" in result.data).toBe(false);
+		}
+	});
 });

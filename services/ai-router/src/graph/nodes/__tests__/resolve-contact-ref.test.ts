@@ -1,0 +1,462 @@
+/**
+ * Tests for the resolveContactRef graph node.
+ *
+ * Verifies contact resolution outcomes (resolved/ambiguous/no_match),
+ * skip conditions, graceful degradation, and OTel span instrumentation.
+ */
+
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+/** Captured span data for assertions. */
+let lastSpan: { setAttribute: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> } | undefined;
+let spanNames: string[] = [];
+
+vi.mock("@opentelemetry/api", () => ({
+	trace: {
+		getTracer: () => ({
+			startActiveSpan: (
+				name: string,
+				fn: (span: {
+					setAttribute: ReturnType<typeof vi.fn>;
+					end: ReturnType<typeof vi.fn>;
+				}) => unknown,
+			) => {
+				const span = {
+					setAttribute: vi.fn(),
+					end: vi.fn(),
+				};
+				lastSpan = span;
+				spanNames.push(name);
+				return fn(span);
+			},
+		}),
+	},
+}));
+
+vi.mock("../../../contact-resolution/client.js", () => ({
+	fetchContactSummaries: vi.fn(),
+}));
+
+import type { ContactResolutionSummary } from "@monica-companion/types";
+import { fetchContactSummaries } from "../../../contact-resolution/client.js";
+import type { IntentClassificationResult } from "../../intent-schemas.js";
+import { createResolveContactRefNode } from "../resolve-contact-ref.js";
+
+const mockFetchContactSummaries = vi.mocked(fetchContactSummaries);
+
+function makeState(
+	intentClassification: IntentClassificationResult | null,
+	overrides: Record<string, unknown> = {},
+) {
+	return {
+		userId: "550e8400-e29b-41d4-a716-446655440000",
+		correlationId: "corr-123",
+		inboundEvent: {
+			type: "text_message" as const,
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			sourceRef: "telegram:msg:456",
+			correlationId: "corr-123",
+			text: "Add a note to John about the meeting",
+		},
+		recentTurns: [],
+		activePendingCommand: null,
+		contactResolution: null,
+		contactSummariesCache: null,
+		userPreferences: null,
+		intentClassification,
+		actionOutcome: null,
+		response: null,
+		...overrides,
+	};
+}
+
+const mockServiceClient = { fetch: vi.fn() } as any;
+
+function makeDeps() {
+	return { monicaIntegrationClient: mockServiceClient };
+}
+
+function makeSummary(overrides: Partial<ContactResolutionSummary> = {}): ContactResolutionSummary {
+	return {
+		contactId: 1,
+		displayName: "John Doe",
+		aliases: ["John"],
+		relationshipLabels: ["friend"],
+		importantDates: [],
+		lastInteractionAt: null,
+		...overrides,
+	};
+}
+
+describe("resolveContactRefNode", () => {
+	afterEach(() => {
+		lastSpan = undefined;
+		spanNames = [];
+		vi.clearAllMocks();
+	});
+
+	// --- Resolved outcome ---
+
+	it("resolves a single exact-match contact and injects contactId into commandPayload", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({ contactId: 42, displayName: "John Doe", aliases: ["John", "Doe"] }),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "I'll add a note to John about the meeting.",
+			commandType: "create_note",
+			contactRef: "John Doe",
+			commandPayload: { body: "meeting notes" },
+			confidence: 0.9,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		expect(update.contactResolution).toBeDefined();
+		expect(update.contactResolution?.outcome).toBe("resolved");
+		expect(update.contactResolution?.resolved?.contactId).toBe(42);
+		expect(update.intentClassification?.commandPayload).toEqual({
+			body: "meeting notes",
+			contactId: 42,
+		});
+		expect(update.intentClassification?.needsClarification).toBe(false);
+		expect(update.contactSummariesCache).toEqual(summaries);
+	});
+
+	// --- Ambiguous outcome ---
+
+	it("returns ambiguous when multiple contacts match and sets disambiguationOptions with real data", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({
+				contactId: 10,
+				displayName: "Sherry Miller",
+				aliases: ["Sherry", "Miller"],
+				relationshipLabels: ["friend"],
+			}),
+			makeSummary({
+				contactId: 20,
+				displayName: "Sherry Johnson",
+				aliases: ["Sherry", "Johnson"],
+				relationshipLabels: ["colleague"],
+			}),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "I'll add a note to Sherry.",
+			commandType: "create_note",
+			contactRef: "Sherry",
+			commandPayload: { body: "coffee" },
+			confidence: 0.85,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		expect(update.contactResolution?.outcome).toBe("ambiguous");
+		expect(update.intentClassification?.needsClarification).toBe(true);
+		expect(update.intentClassification?.clarificationReason).toBe("ambiguous_contact");
+		expect(update.intentClassification?.disambiguationOptions).toEqual([
+			{ label: "Sherry Miller -- friend", value: "10" },
+			{ label: "Sherry Johnson -- colleague", value: "20" },
+		]);
+	});
+
+	// --- No match outcome ---
+
+	it("returns no_match when no contacts match and preserves LLM userFacingText (M3 fix)", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({ contactId: 1, displayName: "Alice Smith", aliases: ["Alice", "Smith"] }),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "fr",
+			userFacingText: "Je vais ajouter une note pour Xavier.",
+			commandType: "create_note",
+			contactRef: "Xavier",
+			commandPayload: { body: "meeting" },
+			confidence: 0.8,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		expect(update.contactResolution?.outcome).toBe("no_match");
+		expect(update.intentClassification?.needsClarification).toBe(true);
+		expect(update.intentClassification?.clarificationReason).toBe("ambiguous_contact");
+		// M3 fix: preserve the LLM's original userFacingText instead of hardcoded English
+		expect(update.intentClassification?.userFacingText).toBe(
+			"Je vais ajouter une note pour Xavier.",
+		);
+	});
+
+	// --- Skip conditions ---
+
+	it("skips resolution for create_contact command type", async () => {
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "I'll create a contact named Xavier.",
+			commandType: "create_contact",
+			contactRef: "Xavier",
+			commandPayload: { firstName: "Xavier" },
+			confidence: 0.9,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		expect(update).toEqual({});
+		expect(mockFetchContactSummaries).not.toHaveBeenCalled();
+	});
+
+	it("skips resolution when contactRef is null", async () => {
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "What should I do?",
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: { body: "meeting" },
+			confidence: 0.5,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		expect(update).toEqual({});
+		expect(mockFetchContactSummaries).not.toHaveBeenCalled();
+	});
+
+	it("skips resolution when intentClassification is null", async () => {
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(null));
+
+		expect(update).toEqual({});
+		expect(mockFetchContactSummaries).not.toHaveBeenCalled();
+	});
+
+	it("skips resolution for greeting intent", async () => {
+		const classification: IntentClassificationResult = {
+			intent: "greeting",
+			detectedLanguage: "en",
+			userFacingText: "Hello!",
+			commandType: null,
+			contactRef: null,
+			commandPayload: null,
+			confidence: 0.99,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		expect(update).toEqual({});
+	});
+
+	it("skips resolution for out_of_scope intent", async () => {
+		const classification: IntentClassificationResult = {
+			intent: "out_of_scope",
+			detectedLanguage: "en",
+			userFacingText: "I can only help with CRM tasks.",
+			commandType: null,
+			contactRef: null,
+			commandPayload: null,
+			confidence: 0.95,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		expect(update).toEqual({});
+	});
+
+	// --- Graceful degradation (M2 fix) ---
+
+	it("returns empty state update on fetchContactSummaries failure (M2 fix)", async () => {
+		mockFetchContactSummaries.mockRejectedValue(new Error("Service unreachable"));
+
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "I'll add a note to John.",
+			commandType: "create_note",
+			contactRef: "John",
+			commandPayload: { body: "meeting" },
+			confidence: 0.9,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		// M2 fix: return {} (no state changes) instead of mapping to no_match
+		expect(update).toEqual({});
+	});
+
+	// --- Cache behavior ---
+
+	it("uses cached summaries when contactSummariesCache is already populated", async () => {
+		const cachedSummaries: ContactResolutionSummary[] = [
+			makeSummary({ contactId: 42, displayName: "John Doe", aliases: ["John", "Doe"] }),
+		];
+
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "I'll add a note to John Doe.",
+			commandType: "create_note",
+			contactRef: "John Doe",
+			commandPayload: { body: "meeting" },
+			confidence: 0.9,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(
+			makeState(classification, { contactSummariesCache: cachedSummaries }),
+		);
+
+		expect(mockFetchContactSummaries).not.toHaveBeenCalled();
+		expect(update.contactResolution?.outcome).toBe("resolved");
+		expect(update.contactResolution?.resolved?.contactId).toBe(42);
+	});
+
+	// --- Read query support ---
+
+	it("resolves contacts for read_query intents", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({ contactId: 42, displayName: "Jane Doe", aliases: ["Jane", "Doe"] }),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "read_query",
+			detectedLanguage: "en",
+			userFacingText: "Jane's birthday is March 15th.",
+			commandType: "query_birthday",
+			contactRef: "Jane Doe",
+			commandPayload: { contactId: 99 },
+			confidence: 0.92,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		expect(update.contactResolution?.outcome).toBe("resolved");
+		expect(update.intentClassification?.commandPayload).toEqual({
+			contactId: 42,
+		});
+	});
+
+	// --- OTel span instrumentation (M1 fix) ---
+
+	it("creates a span named ai-router.graph.resolve_contact_ref and records outcome", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({ contactId: 42, displayName: "John Doe", aliases: ["John", "Doe"] }),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Adding a note to John Doe.",
+			commandType: "create_note",
+			contactRef: "John Doe",
+			commandPayload: { body: "meeting" },
+			confidence: 0.9,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		await node(makeState(classification));
+
+		expect(spanNames).toContain("ai-router.graph.resolve_contact_ref");
+		expect(lastSpan?.setAttribute).toHaveBeenCalledWith("ai-router.resolution_outcome", "resolved");
+		expect(lastSpan?.end).toHaveBeenCalled();
+	});
+
+	it("records skipped outcome as span attribute when resolution is skipped", async () => {
+		const classification: IntentClassificationResult = {
+			intent: "greeting",
+			detectedLanguage: "en",
+			userFacingText: "Hello!",
+			commandType: null,
+			contactRef: null,
+			commandPayload: null,
+			confidence: 0.99,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		await node(makeState(classification));
+
+		expect(spanNames).toContain("ai-router.graph.resolve_contact_ref");
+		expect(lastSpan?.setAttribute).toHaveBeenCalledWith("ai-router.resolution_outcome", "skipped");
+		expect(lastSpan?.end).toHaveBeenCalled();
+	});
+
+	it("ends span even when fetch fails", async () => {
+		mockFetchContactSummaries.mockRejectedValue(new Error("Network error"));
+
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Adding a note to John.",
+			commandType: "create_note",
+			contactRef: "John",
+			commandPayload: { body: "meeting" },
+			confidence: 0.9,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		await node(makeState(classification));
+
+		expect(lastSpan?.end).toHaveBeenCalled();
+		expect(lastSpan?.setAttribute).toHaveBeenCalledWith(
+			"ai-router.resolution_outcome",
+			"fetch_error",
+		);
+	});
+
+	// --- Disambiguation label format ---
+
+	it("uses just display name when contact has no relationship labels", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({
+				contactId: 10,
+				displayName: "Sherry Miller",
+				aliases: ["Sherry", "Miller"],
+				relationshipLabels: [],
+			}),
+			makeSummary({
+				contactId: 20,
+				displayName: "Sherry Johnson",
+				aliases: ["Sherry", "Johnson"],
+				relationshipLabels: ["colleague"],
+			}),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Adding a note to Sherry.",
+			commandType: "create_note",
+			contactRef: "Sherry",
+			commandPayload: { body: "coffee" },
+			confidence: 0.85,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		expect(update.intentClassification?.disambiguationOptions).toEqual([
+			{ label: "Sherry Miller", value: "10" },
+			{ label: "Sherry Johnson -- colleague", value: "20" },
+		]);
+	});
+});

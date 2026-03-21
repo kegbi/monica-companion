@@ -8,7 +8,11 @@
  */
 
 import { Annotation } from "@langchain/langgraph";
-import { InboundEventSchema } from "@monica-companion/types";
+import {
+	ContactResolutionResult,
+	type ContactResolutionSummary,
+	InboundEventSchema,
+} from "@monica-companion/types";
 import { z } from "zod/v4";
 import {
 	type IntentClassificationResult,
@@ -81,8 +85,10 @@ export const ConversationStateSchema = z.object({
 	recentTurns: z.array(TurnSummarySchema).default([]),
 	/** Provisional: reference to active pending command */
 	activePendingCommand: PendingCommandRefSchema.nullable().default(null),
-	/** Provisional: resolved contact from Monica */
-	resolvedContact: z.record(z.string(), z.unknown()).nullable().default(null),
+	/** Contact resolution result from the resolveContactRef node */
+	contactResolution: ContactResolutionResult.nullable().default(null),
+	/** Cached contact summaries loaded once per graph invocation */
+	contactSummariesCache: z.array(z.any()).nullable().default(null),
 	/** Provisional: user preferences (language, timezone, etc.) */
 	userPreferences: z.record(z.string(), z.unknown()).nullable().default(null),
 	/** Intent classification result from LLM */
@@ -109,7 +115,11 @@ export const ConversationAnnotation = Annotation.Root({
 		reducer: (_prev, next) => next,
 		default: () => null,
 	}),
-	resolvedContact: Annotation<Record<string, unknown> | null>({
+	contactResolution: Annotation<z.infer<typeof ContactResolutionResult> | null>({
+		reducer: (_prev, next) => next,
+		default: () => null,
+	}),
+	contactSummariesCache: Annotation<ContactResolutionSummary[] | null>({
 		reducer: (_prev, next) => next,
 		default: () => null,
 	}),

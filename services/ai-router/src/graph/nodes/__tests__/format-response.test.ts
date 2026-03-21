@@ -29,7 +29,8 @@ function makeState(
 		},
 		recentTurns: [],
 		activePendingCommand: null,
-		resolvedContact: null,
+		contactResolution: null,
+		contactSummariesCache: null,
 		userPreferences: null,
 		response: null,
 		intentClassification,
@@ -294,6 +295,46 @@ describe("formatResponseNode", () => {
 		};
 
 		const update = formatResponseNode(makeState(classification));
+		const parsed = GraphResponseSchema.safeParse(update.response);
+		expect(parsed.success).toBe(true);
+	});
+
+	it("renders disambiguation with real-data-style options (contactId as value, display name + relationship as label)", () => {
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Which Sherry did you mean?",
+			commandType: "create_note",
+			contactRef: "Sherry",
+			commandPayload: { body: "coffee" },
+			confidence: 0.6,
+			needsClarification: true,
+			clarificationReason: "ambiguous_contact",
+			disambiguationOptions: [
+				{ label: "Sherry Miller -- friend", value: "10" },
+				{ label: "Sherry Johnson -- colleague", value: "20" },
+			],
+		};
+
+		const activePendingCommand: PendingCommandRef = {
+			pendingCommandId: "cmd-789",
+			version: 1,
+			status: "draft",
+			commandType: "create_note",
+		};
+
+		const update = formatResponseNode(makeState(classification, { activePendingCommand }));
+		expect(update.response).toEqual({
+			type: "disambiguation_prompt",
+			text: "Which Sherry did you mean?",
+			options: [
+				{ label: "Sherry Miller -- friend", value: "10" },
+				{ label: "Sherry Johnson -- colleague", value: "20" },
+			],
+			pendingCommandId: "cmd-789",
+			version: 1,
+		});
+
 		const parsed = GraphResponseSchema.safeParse(update.response);
 		expect(parsed.success).toBe(true);
 	});

@@ -1,10 +1,11 @@
 /**
  * LangGraph conversation graph.
  *
- * Topology: START -> loadContext -> classifyIntent -> executeAction -> formatResponse -> deliverResponse -> persistTurn -> END
+ * Topology: START -> loadContext -> classifyIntent -> resolveContactRef -> executeAction -> formatResponse -> deliverResponse -> persistTurn -> END
  *
  * loadContext: Loads recent turn summaries and active pending command from DB.
  * classifyIntent: Invokes the LLM to classify the user's utterance with context.
+ * resolveContactRef: Resolves contact references against real Monica data via monica-integration.
  * executeAction: Creates/transitions pending commands, sends to scheduler, handles callbacks.
  * formatResponse: Maps classification + action outcome to a GraphResponse.
  * deliverResponse: Sends the formatted response to delivery service (best-effort).
@@ -12,6 +13,7 @@
  */
 
 import { END, START, StateGraph } from "@langchain/langgraph";
+import type { ServiceClient } from "@monica-companion/auth";
 import type { MutatingCommandPayload, PendingCommandStatus } from "@monica-companion/types";
 import type { Database } from "../db/connection.js";
 import type { InsertTurnParams } from "../db/turn-repository.js";
@@ -27,6 +29,7 @@ import { createExecuteActionNode } from "./nodes/execute-action.js";
 import { formatResponseNode } from "./nodes/format-response.js";
 import { createLoadContextNode } from "./nodes/load-context.js";
 import { createPersistTurnNode } from "./nodes/persist-turn.js";
+import { createResolveContactRefNode } from "./nodes/resolve-contact-ref.js";
 import type { TurnSummary } from "./state.js";
 import { ConversationAnnotation } from "./state.js";
 
@@ -72,6 +75,7 @@ export interface ConversationGraphConfig {
 	schedulerClient: SchedulerClient;
 	deliveryClient: DeliveryClient;
 	userManagementClient: UserManagementClient;
+	monicaIntegrationClient: ServiceClient;
 }
 
 /**
@@ -113,16 +117,22 @@ export function createConversationGraph(config: ConversationGraphConfig) {
 		redactString: config.redactString,
 	});
 
+	const resolveContactRefNode = createResolveContactRefNode({
+		monicaIntegrationClient: config.monicaIntegrationClient,
+	});
+
 	const graph = new StateGraph(ConversationAnnotation)
 		.addNode("loadContext", loadContextNode)
 		.addNode("classifyIntent", classifyIntentNode)
+		.addNode("resolveContactRef", resolveContactRefNode)
 		.addNode("executeAction", executeActionNode)
 		.addNode("formatResponse", formatResponseNode)
 		.addNode("deliverResponse", deliverResponseNode)
 		.addNode("persistTurn", persistTurnNode)
 		.addEdge(START, "loadContext")
 		.addEdge("loadContext", "classifyIntent")
-		.addEdge("classifyIntent", "executeAction")
+		.addEdge("classifyIntent", "resolveContactRef")
+		.addEdge("resolveContactRef", "executeAction")
 		.addEdge("executeAction", "formatResponse")
 		.addEdge("formatResponse", "deliverResponse")
 		.addEdge("deliverResponse", "persistTurn")

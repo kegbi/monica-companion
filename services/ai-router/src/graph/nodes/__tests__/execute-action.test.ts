@@ -29,7 +29,8 @@ function makeState(
 		},
 		recentTurns: [],
 		activePendingCommand: null,
-		resolvedContact: null,
+		contactResolution: null,
+		contactSummariesCache: null,
 		userPreferences: null,
 		intentClassification,
 		actionOutcome: null,
@@ -1283,5 +1284,106 @@ describe("executeActionNode", () => {
 		expect(mockUpdateDraftPayload).not.toHaveBeenCalled();
 		expect(mockTransitionStatus).not.toHaveBeenCalled();
 		expect(update.actionOutcome).toEqual({ type: "passthrough" });
+	});
+
+	// --- Contact resolution integration ---
+
+	it("creates pending command with resolved contactId from contact resolution", async () => {
+		// Simulates the state after resolveContactRef has run and set contactId
+		const resolvedClassification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "I'll add a note for Jane about lunch.",
+			commandType: "create_note",
+			contactRef: "Jane",
+			commandPayload: { contactId: 42, body: "lunch" },
+			confidence: 0.9,
+			needsClarification: false,
+		};
+
+		const createdRow = {
+			id: "cmd-cr",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", contactId: 42, body: "lunch" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		mockCreatePendingCommand.mockResolvedValue(createdRow);
+		mockTransitionStatus.mockResolvedValue({
+			...createdRow,
+			status: "pending_confirmation",
+			version: 2,
+		});
+
+		const node = createExecuteActionNode(makeDeps());
+		const update = await node(makeState(resolvedClassification));
+
+		// Verify the contactId from resolution is in the pending command payload
+		expect(mockCreatePendingCommand).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				payload: expect.objectContaining({
+					contactId: 42,
+				}),
+			}),
+		);
+		expect(update.actionOutcome?.type).toBe("pending_created");
+	});
+
+	it("keeps command in draft when contact resolution sets needsClarification", async () => {
+		// Simulates the state after resolveContactRef has set ambiguous outcome
+		const ambiguousClassification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Which Sherry did you mean?",
+			commandType: "create_note",
+			contactRef: "Sherry",
+			commandPayload: { body: "coffee" },
+			confidence: 0.85,
+			needsClarification: true,
+			clarificationReason: "ambiguous_contact",
+			disambiguationOptions: [
+				{ label: "Sherry Miller -- friend", value: "10" },
+				{ label: "Sherry Johnson -- colleague", value: "20" },
+			],
+		};
+
+		const createdRow = {
+			id: "cmd-amb",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "coffee" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		mockCreatePendingCommand.mockResolvedValue(createdRow);
+
+		const node = createExecuteActionNode(makeDeps());
+		const update = await node(makeState(ambiguousClassification));
+
+		// needsClarification is true, so command stays in draft
+		expect(update.actionOutcome?.type).toBe("edit_draft");
+		expect(update.activePendingCommand?.status).toBe("draft");
+		// Should not transition to pending_confirmation
+		expect(mockTransitionStatus).not.toHaveBeenCalled();
 	});
 });

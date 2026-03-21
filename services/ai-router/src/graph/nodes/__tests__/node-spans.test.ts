@@ -36,6 +36,11 @@ vi.mock("@opentelemetry/api", () => ({
 	},
 }));
 
+vi.mock("../../../contact-resolution/client.js", () => ({
+	fetchContactSummaries: vi.fn(),
+}));
+
+import { fetchContactSummaries } from "../../../contact-resolution/client.js";
 import type { IntentClassificationResult } from "../../intent-schemas.js";
 import { createClassifyIntentNode } from "../classify-intent.js";
 import { createDeliverResponseNode } from "../deliver-response.js";
@@ -43,6 +48,9 @@ import { createExecuteActionNode } from "../execute-action.js";
 import { formatResponseNode } from "../format-response.js";
 import { createLoadContextNode } from "../load-context.js";
 import { createPersistTurnNode } from "../persist-turn.js";
+import { createResolveContactRefNode } from "../resolve-contact-ref.js";
+
+const mockFetchContactSummaries = vi.mocked(fetchContactSummaries);
 
 function makeBaseState(overrides: Record<string, unknown> = {}) {
 	return {
@@ -57,7 +65,8 @@ function makeBaseState(overrides: Record<string, unknown> = {}) {
 		},
 		recentTurns: [],
 		activePendingCommand: null,
-		resolvedContact: null,
+		contactResolution: null,
+		contactSummariesCache: null,
 		userPreferences: null,
 		response: null,
 		intentClassification: null,
@@ -337,6 +346,102 @@ describe("Node OTel span instrumentation", () => {
 			});
 
 			// Should not throw (best-effort persistence)
+			await node(state);
+
+			expect(lastSpan?.end).toHaveBeenCalled();
+		});
+	});
+
+	describe("resolveContactRefNode", () => {
+		it("creates a span named ai-router.graph.resolve_contact_ref and ends it on success", async () => {
+			mockFetchContactSummaries.mockResolvedValue([
+				{
+					contactId: 42,
+					displayName: "John Doe",
+					aliases: ["John", "Doe"],
+					relationshipLabels: ["friend"],
+					importantDates: [],
+					lastInteractionAt: null,
+				},
+			]);
+
+			const node = createResolveContactRefNode({
+				monicaIntegrationClient: { fetch: vi.fn() } as any,
+			});
+
+			const state = makeBaseState({
+				intentClassification: {
+					intent: "mutating_command",
+					detectedLanguage: "en",
+					userFacingText: "Adding a note to John Doe.",
+					commandType: "create_note",
+					contactRef: "John Doe",
+					commandPayload: { body: "meeting" },
+					confidence: 0.9,
+				},
+			});
+
+			await node(state);
+
+			expect(spanNames).toContain("ai-router.graph.resolve_contact_ref");
+			expect(lastSpan?.end).toHaveBeenCalled();
+		});
+
+		it("records resolution outcome as span attribute", async () => {
+			mockFetchContactSummaries.mockResolvedValue([
+				{
+					contactId: 42,
+					displayName: "John Doe",
+					aliases: ["John", "Doe"],
+					relationshipLabels: ["friend"],
+					importantDates: [],
+					lastInteractionAt: null,
+				},
+			]);
+
+			const node = createResolveContactRefNode({
+				monicaIntegrationClient: { fetch: vi.fn() } as any,
+			});
+
+			const state = makeBaseState({
+				intentClassification: {
+					intent: "mutating_command",
+					detectedLanguage: "en",
+					userFacingText: "Adding a note to John Doe.",
+					commandType: "create_note",
+					contactRef: "John Doe",
+					commandPayload: { body: "meeting" },
+					confidence: 0.9,
+				},
+			});
+
+			await node(state);
+
+			expect(lastSpan?.setAttribute).toHaveBeenCalledWith(
+				"ai-router.resolution_outcome",
+				"resolved",
+			);
+		});
+
+		it("ends span even when fetch fails", async () => {
+			mockFetchContactSummaries.mockRejectedValue(new Error("Network error"));
+
+			const node = createResolveContactRefNode({
+				monicaIntegrationClient: { fetch: vi.fn() } as any,
+			});
+
+			const state = makeBaseState({
+				intentClassification: {
+					intent: "mutating_command",
+					detectedLanguage: "en",
+					userFacingText: "Adding a note to John.",
+					commandType: "create_note",
+					contactRef: "John",
+					commandPayload: { body: "meeting" },
+					confidence: 0.9,
+				},
+			});
+
 			await node(state);
 
 			expect(lastSpan?.end).toHaveBeenCalled();

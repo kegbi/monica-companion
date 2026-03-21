@@ -56,6 +56,13 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 		baseUrl: config.userManagementUrl,
 	});
 
+	const monicaIntegrationServiceClient = createServiceClient({
+		issuer: "ai-router",
+		audience: "monica-integration",
+		secret: jwtSecret,
+		baseUrl: config.monicaIntegrationUrl,
+	});
+
 	const deliveryClient = createDeliveryClient(deliveryServiceClient);
 	const schedulerClient = createSchedulerClient(schedulerServiceClient);
 	const userManagementClient = createUserManagementClient(userManagementServiceClient);
@@ -77,6 +84,7 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 		schedulerClient,
 		deliveryClient,
 		userManagementClient,
+		monicaIntegrationClient: monicaIntegrationServiceClient,
 	});
 
 	app.use(otelMiddleware());

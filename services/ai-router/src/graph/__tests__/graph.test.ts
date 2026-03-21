@@ -9,8 +9,15 @@ vi.mock("@opentelemetry/api", () => ({
 	},
 }));
 
+vi.mock("../../contact-resolution/client.js", () => ({
+	fetchContactSummaries: vi.fn(),
+}));
+
+import { fetchContactSummaries } from "../../contact-resolution/client.js";
 import type { IntentClassificationResult } from "../intent-schemas.js";
 import { GraphResponseSchema } from "../state.js";
+
+const mockFetchContactSummaries = vi.mocked(fetchContactSummaries);
 
 // Mock the LLM module to avoid real OpenAI calls
 const mockInvoke = vi.fn();
@@ -62,6 +69,8 @@ const mockGetPreferences = vi
 	.fn()
 	.mockResolvedValue({ language: "en", confirmationMode: "explicit", timezone: "UTC" });
 
+const mockMonicaIntegrationClient = { fetch: vi.fn() } as any;
+
 function makeConfig() {
 	return {
 		openaiApiKey: "sk-test-key",
@@ -83,10 +92,23 @@ function makeConfig() {
 			getDeliveryRouting: mockGetDeliveryRouting,
 			getPreferences: mockGetPreferences,
 		},
+		monicaIntegrationClient: mockMonicaIntegrationClient,
 	};
 }
 
 describe("createConversationGraph", () => {
+	/** Default contact summaries for resolution. Jane (contactId 42) matches the mutatingResult fixture. */
+	const defaultSummaries = [
+		{
+			contactId: 42,
+			displayName: "Jane",
+			aliases: ["Jane"],
+			relationshipLabels: ["friend"],
+			importantDates: [],
+			lastInteractionAt: null,
+		},
+	];
+
 	beforeEach(() => {
 		mockInvoke.mockReset();
 		mockGetRecentTurns.mockReset().mockResolvedValue([]);
@@ -105,6 +127,7 @@ describe("createConversationGraph", () => {
 		mockGetPreferences
 			.mockReset()
 			.mockResolvedValue({ language: "en", confirmationMode: "explicit", timezone: "UTC" });
+		mockFetchContactSummaries.mockReset().mockResolvedValue(defaultSummaries);
 	});
 
 	const makeState = (overrides: Record<string, unknown> = {}) => ({
@@ -140,7 +163,7 @@ describe("createConversationGraph", () => {
 		}
 	});
 
-	it("sets intentClassification in graph state", async () => {
+	it("sets intentClassification in graph state (with contact resolution applied)", async () => {
 		mockInvoke.mockResolvedValueOnce(mutatingResult);
 
 		// For mutating commands, executeAction creates a pending command
@@ -171,7 +194,15 @@ describe("createConversationGraph", () => {
 		const graph = createConversationGraph(makeConfig());
 		const result = await graph.invoke(makeState());
 
-		expect(result.intentClassification).toEqual(mutatingResult);
+		// After contact resolution, the classification should have contactId injected
+		// and needsClarification set to false
+		expect(result.intentClassification?.intent).toBe("mutating_command");
+		expect(result.intentClassification?.contactRef).toBe("Jane");
+		expect(result.intentClassification?.commandPayload).toEqual({
+			contactId: 42,
+			body: "our lunch",
+		});
+		expect(result.intentClassification?.needsClarification).toBe(false);
 	});
 
 	it("processes a voice_message event", async () => {
