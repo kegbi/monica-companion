@@ -273,8 +273,19 @@ _Fix fundamental issues with kinship matching and disambiguation UX discovered d
   - [x] Fix double-parenthetical labels — strip Monica's built-in nickname parenthetical from `complete_name` before appending suffix.
   - [x] Remove confusing relationship labels from disambiguation buttons. Show: full name, nickname (if informative), and birthdate (if available). Format: `Elena Yuryevna (Mama), b. 15 Mar 1965`.
 
-- [ ] **LLM Integration Tests for Multi-Turn Contact Flow**
-  - [ ] Add LLM integration test: "add note to mom about going to park" → LLM classifies as `create_note` with `contactRef: "mom"` and extracts note body.
+- [ ] **Migrate LLM Evaluation to promptfoo**
+  - [ ] Install `promptfoo` as a dev dependency in `ai-router`. Pin exact version.
+  - [ ] Create a custom promptfoo provider that wraps `createIntentClassifier()` — accepts utterance text, returns the `IntentClassificationResult` JSON.
+  - [ ] Convert the 100 write-intent fixtures from `write-intents.ts` to a `write-intents.yaml` promptfoo dataset with `javascript`/`is-json` assertions on intent, commandType, and contactRef fields.
+  - [ ] Convert the 60 read-intent fixtures from `read-intents.ts` to a `read-intents.yaml` dataset.
+  - [ ] Convert the 25 clarification fixtures from `clarification-turns.ts` to a `clarification.yaml` dataset.
+  - [ ] Convert out-of-scope and greeting fixtures to a `guardrails.yaml` dataset. Include a custom `isMutating` scorer that flags false-positive mutations (replacing the manual `falsePositiveMutationRate` calculation in `evaluate.ts`).
+  - [ ] Create `promptfooconfig.yaml` with pass-rate thresholds matching acceptance criteria: read accuracy ≥ 92%, write accuracy ≥ 90%, false-positive mutation rate < 1%. Wire into CI via `pnpm bench:ai`.
+  - [ ] Delete `evaluateIntentCase()` and the intent aggregation path from `evaluate.ts`. Slim `benchmark.test.ts` down to the contact-resolution quality gate only (deterministic, stays in Vitest).
+  - [ ] Migrate applicable tests from `llm-integration.test.ts` (intent classification, payload extraction, language detection, out-of-scope rejection) into the promptfoo datasets. Keep multi-turn context tests and prompt injection tests as Vitest integration tests.
+  - [ ] Verify CI runs both: `promptfoo eval` for LLM quality gates and `vitest` for contact-resolution precision + graph integration tests.
+
+- [ ] **Graph-Level Integration Tests for Multi-Turn Contact Flow**
   - [ ] Add graph-level test: full round-trip for kinship disambiguation — initial message → action confirmation → clarification question ("What's your mom's name?") → user answers → buttons presented → user selects → command executed.
   - [ ] Add graph-level test: confirm-then-resolve flow where user cancels at action confirmation step (contact resolution never runs).
   - [ ] Add graph-level test: unambiguous contact with kinship term (only one "parent" candidate) → action confirmation → auto-resolve → execute.
