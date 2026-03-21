@@ -19,6 +19,18 @@ function parseCookies(cookieHeader: string | null): Record<string, string> {
 	return cookies;
 }
 
+function getExpectedOrigin(url: URL): string {
+	// Try process.env first (works in Node.js SSR), then import.meta.env,
+	// then fall back to the request's own origin.
+	if (typeof process !== "undefined" && process.env?.EXPECTED_ORIGIN) {
+		return process.env.EXPECTED_ORIGIN;
+	}
+	if (import.meta.env.EXPECTED_ORIGIN) {
+		return import.meta.env.EXPECTED_ORIGIN;
+	}
+	return `${url.protocol}//${url.host}`;
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
 	const { url, request } = context;
 
@@ -29,10 +41,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
 	const isSecure = url.protocol === "https:";
 	const cookieName = getCsrfCookieName(isSecure);
-	const expectedOrigin =
-		import.meta.env.EXPECTED_ORIGIN ||
-		process.env.EXPECTED_ORIGIN ||
-		`${url.protocol}//${url.host}`;
+	const expectedOrigin = getExpectedOrigin(url);
 
 	if (request.method === "GET") {
 		const csrfToken = generateCsrfToken();
