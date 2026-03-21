@@ -519,6 +519,188 @@ describe("POST /internal/setup-tokens/:tokenId/consume", () => {
 	});
 });
 
+describe("POST /internal/setup-tokens/:tokenId/consume (with onboarding)", () => {
+	/** Helper: issue a token and return tokenId + sig */
+	async function issueTokenForUser(app: ReturnType<typeof createApp>, telegramUserId: string) {
+		const bridgeToken = await signToken("telegram-bridge");
+		const issueRes = await app.request("/internal/setup-tokens", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${bridgeToken}`,
+			},
+			body: JSON.stringify({ telegramUserId, step: "onboarding" }),
+		});
+		const issueBody = await issueRes.json();
+		const sig = new URL(issueBody.setupUrl).searchParams.get("sig");
+		return { tokenId: issueBody.tokenId as string, sig: sig as string };
+	}
+
+	it("consumes token and creates user with onboarding data", async () => {
+		const app = createApp(testConfig, db);
+		const { tokenId, sig } = await issueTokenForUser(app, "user-onboard-1");
+
+		const webUiToken = await signToken("web-ui");
+		const res = await app.request(`/internal/setup-tokens/${tokenId}/consume`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${webUiToken}`,
+			},
+			body: JSON.stringify({
+				sig,
+				monicaBaseUrl: "https://app.monicahq.com",
+				monicaApiKey: "test-api-key-123",
+				language: "en",
+				confirmationMode: "explicit",
+				timezone: "America/New_York",
+				reminderCadence: "daily",
+				reminderTime: "08:00",
+			}),
+		});
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.consumed).toBe(true);
+
+		// Verify user was created in the database
+		const userRows = await db.execute(
+			sql`SELECT * FROM users WHERE telegram_user_id = 'user-onboard-1'`,
+		);
+		expect(userRows.length).toBe(1);
+		expect(userRows[0].monica_base_url).toContain("monicahq.com");
+
+		// Verify preferences were created
+		const prefRows = await db.execute(
+			sql`SELECT * FROM user_preferences WHERE user_id = ${userRows[0].id}`,
+		);
+		expect(prefRows.length).toBe(1);
+		expect(prefRows[0].timezone).toBe("America/New_York");
+		expect(prefRows[0].language).toBe("en");
+		expect(prefRows[0].connector_routing_id).toBe("user-onboard-1");
+	});
+
+	it("returns 400 for invalid timezone", async () => {
+		const app = createApp(testConfig, db);
+		const { tokenId, sig } = await issueTokenForUser(app, "user-bad-tz");
+
+		const webUiToken = await signToken("web-ui");
+		const res = await app.request(`/internal/setup-tokens/${tokenId}/consume`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${webUiToken}`,
+			},
+			body: JSON.stringify({
+				sig,
+				monicaBaseUrl: "https://app.monicahq.com",
+				monicaApiKey: "test-key",
+				timezone: "Invalid/Timezone_XYZ",
+			}),
+		});
+		expect(res.status).toBe(400);
+		const body = await res.json();
+		expect(body.error).toContain("timezone");
+	});
+
+	it("returns 400 for http:// Monica URL", async () => {
+		const app = createApp(testConfig, db);
+		const { tokenId, sig } = await issueTokenForUser(app, "user-http-url");
+
+		const webUiToken = await signToken("web-ui");
+		const res = await app.request(`/internal/setup-tokens/${tokenId}/consume`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${webUiToken}`,
+			},
+			body: JSON.stringify({
+				sig,
+				monicaBaseUrl: "http://app.monicahq.com",
+				monicaApiKey: "test-key",
+				timezone: "America/New_York",
+			}),
+		});
+		expect(res.status).toBe(400);
+		const body = await res.json();
+		expect(body.error).toContain("HTTPS");
+	});
+
+	it("handles re-setup upsert (same telegramUserId, new credentials)", async () => {
+		const app = createApp(testConfig, db);
+
+		// First setup
+		const first = await issueTokenForUser(app, "user-ressetup");
+		const webUiToken1 = await signToken("web-ui");
+		const res1 = await app.request(`/internal/setup-tokens/${first.tokenId}/consume`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${webUiToken1}`,
+			},
+			body: JSON.stringify({
+				sig: first.sig,
+				monicaBaseUrl: "https://old.monicahq.com",
+				monicaApiKey: "old-key",
+				timezone: "America/New_York",
+			}),
+		});
+		expect(res1.status).toBe(200);
+
+		// Second setup (re-setup)
+		const second = await issueTokenForUser(app, "user-ressetup");
+		const webUiToken2 = await signToken("web-ui");
+		const res2 = await app.request(`/internal/setup-tokens/${second.tokenId}/consume`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${webUiToken2}`,
+			},
+			body: JSON.stringify({
+				sig: second.sig,
+				monicaBaseUrl: "https://new.monicahq.com",
+				monicaApiKey: "new-key",
+				timezone: "Europe/Berlin",
+				language: "de",
+			}),
+		});
+		expect(res2.status).toBe(200);
+		const body2 = await res2.json();
+		expect(body2.consumed).toBe(true);
+
+		// Verify only one user exists
+		const userRows = await db.execute(
+			sql`SELECT * FROM users WHERE telegram_user_id = 'user-ressetup'`,
+		);
+		expect(userRows.length).toBe(1);
+
+		// Verify preferences updated
+		const prefRows = await db.execute(
+			sql`SELECT * FROM user_preferences WHERE user_id = ${userRows[0].id}`,
+		);
+		expect(prefRows.length).toBe(1);
+		expect(prefRows[0].timezone).toBe("Europe/Berlin");
+		expect(prefRows[0].language).toBe("de");
+	});
+
+	it("still works with old-style consume (sig only, no onboarding)", async () => {
+		const app = createApp(testConfig, db);
+		const { tokenId, sig } = await issueTokenForUser(app, "user-old-style");
+
+		const webUiToken = await signToken("web-ui");
+		const res = await app.request(`/internal/setup-tokens/${tokenId}/consume`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${webUiToken}`,
+			},
+			body: JSON.stringify({ sig }),
+		});
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.consumed).toBe(true);
+	});
+});
+
 describe("POST /internal/setup-tokens/:tokenId/cancel", () => {
 	it("returns 401 without auth", async () => {
 		const app = createApp(testConfig, db);

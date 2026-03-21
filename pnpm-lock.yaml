@@ -587,6 +587,9 @@ importers:
       '@monica-companion/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@monica-companion/monica-api-lib':
+        specifier: workspace:*
+        version: link:../../packages/monica-api-lib
       '@monica-companion/observability':
         specifier: workspace:*
         version: link:../../packages/observability

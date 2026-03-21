@@ -16,10 +16,11 @@ const SmokeConfigSchema = z.object({
 	SCHEDULER_URL: z.string().default("http://localhost:3005"),
 	TELEGRAM_BRIDGE_URL: z.string().default("http://localhost:3001"),
 	MONICA_INTEGRATION_URL: z.string().default("http://localhost:3004"),
+	WEB_UI_URL: z.string().default("http://localhost:4321"),
 	CADDY_URL: z.string().default("http://localhost:80"),
 	POSTGRES_URL: z
 		.string()
-		.default("postgresql://monica:monica_dev@localhost:5432/monica_companion"),
+		.default("postgresql://monica:monica_dev@localhost:15432/monica_companion"),
 });
 
 export type SmokeConfig = z.infer<typeof SmokeConfigSchema>;
@@ -45,8 +46,9 @@ export function loadSmokeConfig(): SmokeConfig {
 				"  SCHEDULER_URL           http://localhost:3005",
 				"  TELEGRAM_BRIDGE_URL     http://localhost:3001",
 				"  MONICA_INTEGRATION_URL  http://localhost:3004",
+				"  WEB_UI_URL              http://localhost:4321",
 				"  CADDY_URL               http://localhost:80",
-				"  POSTGRES_URL            postgresql://monica:monica_dev@localhost:5432/monica_companion",
+				"  POSTGRES_URL            postgresql://monica:monica_dev@localhost:15432/monica_companion",
 				"",
 				z.prettifyError(result.error),
 			].join("\n"),

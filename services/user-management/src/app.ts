@@ -5,8 +5,13 @@ import {
 	getServiceCaller,
 	serviceAuth,
 } from "@monica-companion/auth";
+import { normalizeMonicaUrl } from "@monica-companion/monica-api-lib";
 import { createLogger, otelMiddleware } from "@monica-companion/observability";
-import { ConsumeSetupTokenRequest, IssueSetupTokenRequest } from "@monica-companion/types";
+import {
+	ConsumeSetupTokenRequest,
+	ConsumeSetupTokenWithOnboardingRequest,
+	IssueSetupTokenRequest,
+} from "@monica-companion/types";
 import { Hono } from "hono";
 import { z } from "zod/v4";
 import type { Config } from "./config";
@@ -24,6 +29,7 @@ import {
 } from "./setup-token/repository";
 import { disconnectUser } from "./user/disconnect";
 import {
+	createOrUpdateUserFromOnboarding,
 	findUserByTelegramId,
 	getDecryptedCredentials,
 	getUserPreferences,
@@ -218,12 +224,21 @@ export function createApp(config: Config, db: Database) {
 		} catch {
 			return c.json({ error: "Invalid request body" }, 400);
 		}
-		const parsed = ConsumeSetupTokenRequest.safeParse(body);
-		if (!parsed.success) {
-			return c.json({ error: "Invalid request body" }, 400);
+
+		// Try parsing as full onboarding request first, fall back to sig-only
+		const onboardingParsed = ConsumeSetupTokenWithOnboardingRequest.safeParse(body);
+		const hasOnboarding = onboardingParsed.success;
+
+		if (!hasOnboarding) {
+			// Fall back to sig-only (backward compat)
+			const basicParsed = ConsumeSetupTokenRequest.safeParse(body);
+			if (!basicParsed.success) {
+				return c.json({ error: "Invalid request body" }, 400);
+			}
 		}
 
-		const { sig } = parsed.data;
+		const sig = hasOnboarding ? onboardingParsed.data.sig : (body as { sig: string }).sig;
+
 		const cid = getCorrelationId(c);
 		const actorService = getServiceCaller(c);
 
@@ -254,6 +269,68 @@ export function createApp(config: Config, db: Database) {
 			return c.json({ error: "Invalid signature" }, 403);
 		}
 
+		// If onboarding data present, validate timezone and URL before consuming
+		if (hasOnboarding) {
+			const onboarding = onboardingParsed.data;
+
+			// Validate timezone server-side
+			const validTimezones = Intl.supportedValuesOf("timeZone");
+			if (!validTimezones.includes(onboarding.timezone)) {
+				return c.json({ error: "Invalid timezone" }, 400);
+			}
+
+			// Validate Monica URL: require HTTPS
+			try {
+				const parsed = new URL(onboarding.monicaBaseUrl);
+				if (parsed.protocol !== "https:") {
+					return c.json({ error: "Only HTTPS Monica URLs are allowed" }, 400);
+				}
+			} catch {
+				return c.json({ error: "Invalid Monica URL" }, 400);
+			}
+
+			// Wrap token consumption + user creation in a single transaction
+			const result = await db.transaction(async (tx) => {
+				const consumeResult = await consumeToken(
+					db,
+					{ tokenId, actorService, correlationId: cid },
+					tx,
+				);
+
+				if (!consumeResult.consumed) {
+					return consumeResult;
+				}
+
+				// Normalize the Monica URL (appends /api)
+				let normalizedUrl: string;
+				try {
+					normalizedUrl = normalizeMonicaUrl(onboarding.monicaBaseUrl);
+				} catch {
+					return { consumed: false, reason: "invalid_url" };
+				}
+
+				// connectorRoutingId = telegramUserId from consumed token
+				await createOrUpdateUserFromOnboarding(tx, {
+					telegramUserId: token.telegramUserId,
+					monicaBaseUrl: normalizedUrl,
+					monicaApiKey: onboarding.monicaApiKey,
+					language: onboarding.language,
+					confirmationMode: onboarding.confirmationMode,
+					timezone: onboarding.timezone,
+					reminderCadence: onboarding.reminderCadence,
+					reminderTime: onboarding.reminderTime,
+					connectorRoutingId: token.telegramUserId,
+					connectorType: "telegram",
+					masterKey: config.encryptionMasterKey,
+				});
+
+				return consumeResult;
+			});
+
+			return c.json(result);
+		}
+
+		// Sig-only consume (backward compat, no user creation)
 		const result = await consumeToken(db, {
 			tokenId,
 			actorService,

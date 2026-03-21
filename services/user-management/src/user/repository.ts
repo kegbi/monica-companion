@@ -7,6 +7,9 @@ import {
 import type { Database } from "../db/connection";
 import { credentialAccessAuditLog, userPreferences, users } from "../db/schema";
 
+/** A Drizzle transaction or the database itself. */
+export type DbOrTx = Database | Parameters<Parameters<Database["transaction"]>[0]>[0];
+
 export async function findUserById(db: Database, userId: string) {
 	const rows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
 	return rows[0] ?? null;
@@ -165,4 +168,86 @@ export async function createUser(
 	}
 
 	return user;
+}
+
+export interface OnboardingUserParams {
+	telegramUserId: string;
+	monicaBaseUrl: string;
+	monicaApiKey: string;
+	language: string;
+	confirmationMode: string;
+	timezone: string;
+	reminderCadence: string;
+	reminderTime: string;
+	connectorRoutingId: string;
+	connectorType?: string;
+	masterKey: Buffer;
+}
+
+/**
+ * Create or update a user from onboarding data.
+ * Upserts the users row (conflict on telegram_user_id) and
+ * upserts the user_preferences row (conflict on user_id).
+ *
+ * Accepts an optional transaction parameter so it can join
+ * an outer transaction (e.g., token consumption + user creation).
+ */
+export async function createOrUpdateUserFromOnboarding(
+	dbOrTx: DbOrTx,
+	params: OnboardingUserParams,
+): Promise<{ userId: string }> {
+	const encrypted = encryptCredential(params.monicaApiKey, params.masterKey);
+	const keyId = computeKeyId(params.masterKey);
+	const now = new Date();
+
+	// Upsert user row (conflict on telegram_user_id unique constraint)
+	const [user] = await dbOrTx
+		.insert(users)
+		.values({
+			telegramUserId: params.telegramUserId,
+			monicaBaseUrl: params.monicaBaseUrl,
+			monicaApiTokenEncrypted: encrypted,
+			encryptionKeyId: keyId,
+			updatedAt: now,
+		})
+		.onConflictDoUpdate({
+			target: users.telegramUserId,
+			set: {
+				monicaBaseUrl: params.monicaBaseUrl,
+				monicaApiTokenEncrypted: encrypted,
+				encryptionKeyId: keyId,
+				updatedAt: now,
+			},
+		})
+		.returning({ id: users.id });
+
+	// Upsert preferences row (conflict on user_id unique constraint)
+	await dbOrTx
+		.insert(userPreferences)
+		.values({
+			userId: user.id,
+			language: params.language,
+			confirmationMode: params.confirmationMode,
+			timezone: params.timezone,
+			reminderCadence: params.reminderCadence,
+			reminderTime: params.reminderTime,
+			connectorType: params.connectorType ?? "telegram",
+			connectorRoutingId: params.connectorRoutingId,
+			updatedAt: now,
+		})
+		.onConflictDoUpdate({
+			target: userPreferences.userId,
+			set: {
+				language: params.language,
+				confirmationMode: params.confirmationMode,
+				timezone: params.timezone,
+				reminderCadence: params.reminderCadence,
+				reminderTime: params.reminderTime,
+				connectorType: params.connectorType ?? "telegram",
+				connectorRoutingId: params.connectorRoutingId,
+				updatedAt: now,
+			},
+		});
+
+	return { userId: user.id };
 }

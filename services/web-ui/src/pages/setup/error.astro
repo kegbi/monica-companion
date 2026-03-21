@@ -1,0 +1,29 @@
+---
+const reasonParam = Astro.url.searchParams.get("reason") ?? "unknown";
+
+/** Allowlist of known reason codes to user-friendly messages.
+ *  Never render raw query params to prevent XSS. */
+const reasonMessages: Record<string, string> = {
+	expired: "This setup link has expired. Please return to Telegram to request a new setup link.",
+	already_consumed: "This setup link has already been used. Please return to Telegram to request a new setup link.",
+	validation_failed: "The information you provided could not be validated. Please try again.",
+	server_error: "An error occurred while completing your setup. Please try again later.",
+	invalid_url: "The Monica URL you provided is not valid. Please check and try again.",
+	not_found: "This setup link is not valid. Please return to Telegram to request a new setup link.",
+	unknown: "Something went wrong. Please return to Telegram and request a new setup link.",
+};
+
+const message = reasonMessages[reasonParam] ?? reasonMessages.unknown;
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Monica Companion — Setup Error</title>
+	</head>
+	<body>
+		<h1>Setup Error</h1>
+		<p>{message}</p>
+	</body>
+</html>

@@ -1,6 +1,7 @@
 import { and, eq, gt, sql } from "drizzle-orm";
 import type { Database } from "../db/connection";
 import { setupTokenAuditLog, setupTokens } from "../db/schema";
+import type { DbOrTx } from "../user/repository";
 
 export interface IssueTokenParams {
 	tokenId: string;
@@ -35,6 +36,7 @@ export interface AuditEventParams {
 export interface ConsumeResult {
 	consumed: boolean;
 	reason?: string;
+	telegramUserId?: string;
 }
 
 export interface CancelResult {
@@ -113,78 +115,96 @@ export async function findTokenById(db: Database, tokenId: string) {
 	return results[0] ?? null;
 }
 
-export async function consumeToken(
-	db: Database,
+/**
+ * Internal consume logic that operates on a given transaction or db instance.
+ * Extracted so it can be called within an outer transaction.
+ */
+async function consumeTokenInner(
+	executor: DbOrTx,
 	params: ConsumeTokenParams,
 ): Promise<ConsumeResult> {
-	return db.transaction(async (tx) => {
-		// Look up the token to determine the reason for failure if needed
-		const [token] = await tx
-			.select()
-			.from(setupTokens)
-			.where(eq(setupTokens.id, params.tokenId))
-			.limit(1);
+	// Look up the token to determine the reason for failure if needed
+	const [token] = await executor
+		.select()
+		.from(setupTokens)
+		.where(eq(setupTokens.id, params.tokenId))
+		.limit(1);
 
-		if (!token) {
-			return { consumed: false, reason: "not_found" };
-		}
+	if (!token) {
+		return { consumed: false, reason: "not_found" };
+	}
 
-		if (token.status === "consumed") {
-			await tx.insert(setupTokenAuditLog).values({
-				tokenId: params.tokenId,
-				event: "replay_rejected",
-				actorService: params.actorService,
-				ipAddress: params.ipAddress,
-				correlationId: params.correlationId,
-			});
-			return { consumed: false, reason: "already_consumed" };
-		}
-
-		if (token.status !== "active") {
-			return { consumed: false, reason: `token_${token.status}` };
-		}
-
-		if (token.expiresAt <= new Date()) {
-			await tx.insert(setupTokenAuditLog).values({
-				tokenId: params.tokenId,
-				event: "expired_rejected",
-				actorService: params.actorService,
-				ipAddress: params.ipAddress,
-				correlationId: params.correlationId,
-			});
-			return { consumed: false, reason: "expired" };
-		}
-
-		// Atomically consume the token
-		const updated = await tx
-			.update(setupTokens)
-			.set({
-				status: "consumed",
-				consumedAt: new Date(),
-			})
-			.where(
-				and(
-					eq(setupTokens.id, params.tokenId),
-					eq(setupTokens.status, "active"),
-					gt(setupTokens.expiresAt, sql`now()`),
-				),
-			)
-			.returning();
-
-		if (updated.length === 0) {
-			return { consumed: false, reason: "race_condition" };
-		}
-
-		await tx.insert(setupTokenAuditLog).values({
+	if (token.status === "consumed") {
+		await executor.insert(setupTokenAuditLog).values({
 			tokenId: params.tokenId,
-			event: "consumed",
+			event: "replay_rejected",
 			actorService: params.actorService,
 			ipAddress: params.ipAddress,
 			correlationId: params.correlationId,
 		});
+		return { consumed: false, reason: "already_consumed" };
+	}
 
-		return { consumed: true };
+	if (token.status !== "active") {
+		return { consumed: false, reason: `token_${token.status}` };
+	}
+
+	if (token.expiresAt <= new Date()) {
+		await executor.insert(setupTokenAuditLog).values({
+			tokenId: params.tokenId,
+			event: "expired_rejected",
+			actorService: params.actorService,
+			ipAddress: params.ipAddress,
+			correlationId: params.correlationId,
+		});
+		return { consumed: false, reason: "expired" };
+	}
+
+	// Atomically consume the token
+	const updated = await executor
+		.update(setupTokens)
+		.set({
+			status: "consumed",
+			consumedAt: new Date(),
+		})
+		.where(
+			and(
+				eq(setupTokens.id, params.tokenId),
+				eq(setupTokens.status, "active"),
+				gt(setupTokens.expiresAt, sql`now()`),
+			),
+		)
+		.returning();
+
+	if (updated.length === 0) {
+		return { consumed: false, reason: "race_condition" };
+	}
+
+	await executor.insert(setupTokenAuditLog).values({
+		tokenId: params.tokenId,
+		event: "consumed",
+		actorService: params.actorService,
+		ipAddress: params.ipAddress,
+		correlationId: params.correlationId,
 	});
+
+	return { consumed: true, telegramUserId: token.telegramUserId };
+}
+
+/**
+ * Consume a setup token. When called without a transaction, creates its own.
+ * When called with an outer transaction (tx parameter), joins that transaction
+ * so token consumption + user creation can be atomic.
+ */
+export async function consumeToken(
+	db: Database,
+	params: ConsumeTokenParams,
+	tx?: DbOrTx,
+): Promise<ConsumeResult> {
+	if (tx) {
+		return consumeTokenInner(tx, params);
+	}
+	return db.transaction(async (innerTx) => consumeTokenInner(innerTx, params));
 }
 
 export async function cancelToken(db: Database, params: CancelTokenParams): Promise<CancelResult> {

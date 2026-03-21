@@ -44,6 +44,26 @@ export const ConsumeSetupTokenRequest = z.object({
 });
 export type ConsumeSetupTokenRequest = z.infer<typeof ConsumeSetupTokenRequest>;
 
+export const OnboardingFields = z.object({
+	monicaBaseUrl: z.string().url(),
+	monicaApiKey: z.string().min(1),
+	language: z.string().min(2).max(10).default("en"),
+	confirmationMode: z.enum(["explicit", "auto"]).default("explicit"),
+	timezone: z.string().min(1),
+	reminderCadence: z.enum(["daily", "weekly", "none"]).default("daily"),
+	reminderTime: z
+		.string()
+		.regex(/^\d{2}:\d{2}$/)
+		.default("08:00"),
+});
+export type OnboardingFields = z.infer<typeof OnboardingFields>;
+
+export const ConsumeSetupTokenWithOnboardingRequest =
+	ConsumeSetupTokenRequest.merge(OnboardingFields);
+export type ConsumeSetupTokenWithOnboardingRequest = z.infer<
+	typeof ConsumeSetupTokenWithOnboardingRequest
+>;
+
 export const ConsumeSetupTokenResponse = z.object({
 	consumed: z.boolean(),
 	reason: z.string().optional(),

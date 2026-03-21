@@ -42,6 +42,20 @@ if (!tokenId || !sig) {
 			"Unable to validate your setup link at this time. Please try again later.";
 	}
 }
+
+/** Common languages for V1 */
+const languages = [
+	{ value: "en", label: "English" },
+	{ value: "fr", label: "French" },
+	{ value: "de", label: "German" },
+	{ value: "es", label: "Spanish" },
+	{ value: "pt", label: "Portuguese" },
+	{ value: "it", label: "Italian" },
+	{ value: "nl", label: "Dutch" },
+	{ value: "ru", label: "Russian" },
+	{ value: "zh", label: "Chinese" },
+	{ value: "ja", label: "Japanese" },
+];
 ---
 
 <html lang="en">
@@ -49,20 +63,96 @@ if (!tokenId || !sig) {
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Monica Companion — Setup</title>
+		<style>
+			body { font-family: system-ui, sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+			label { display: block; margin-top: 1rem; font-weight: 600; }
+			input, select { display: block; width: 100%; padding: 0.5rem; margin-top: 0.25rem; box-sizing: border-box; }
+			button { margin-top: 1.5rem; padding: 0.75rem 2rem; font-size: 1rem; cursor: pointer; }
+			.field-help { font-size: 0.85rem; color: #666; margin-top: 0.25rem; }
+			fieldset { border: 1px solid #ccc; padding: 1rem; margin-top: 1rem; }
+			legend { font-weight: 600; }
+		</style>
 	</head>
 	<body>
 		<h1>Monica Companion Setup</h1>
 		{isValid ? (
 			<div id="setup-form">
 				<p>Welcome! Complete the form below to finish setting up your Monica Companion.</p>
-				<form method="POST" action="/setup/submit">
+				<form method="POST" action="/setup/submit" id="onboarding-form">
 					<input type="hidden" name="csrf_token" value={csrfToken} />
 					<input type="hidden" name="tokenId" value={tokenId} />
 					<input type="hidden" name="sig" value={sig} />
-					<p>Setup step: {step}</p>
-					<p>
-						<em>Onboarding form fields will be added in a future phase.</em>
-					</p>
+
+					<fieldset>
+						<legend>Monica CRM Connection</legend>
+
+						<label for="monicaBaseUrl">Monica Base URL</label>
+						<input
+							type="url"
+							id="monicaBaseUrl"
+							name="monicaBaseUrl"
+							required
+							placeholder="https://app.monicahq.com"
+						/>
+						<p class="field-help">
+							Enter the base URL of your Monica instance (without /api).
+						</p>
+
+						<label for="monicaApiKey">Monica API Key</label>
+						<input
+							type="password"
+							id="monicaApiKey"
+							name="monicaApiKey"
+							required
+							minlength="1"
+							placeholder="Your Monica API token"
+						/>
+						<p class="field-help">
+							Find this in Monica under Settings &gt; API.
+						</p>
+					</fieldset>
+
+					<fieldset>
+						<legend>Preferences</legend>
+
+						<label for="language">Preferred Language</label>
+						<select id="language" name="language">
+							{languages.map(l => (
+								<option value={l.value} selected={l.value === "en"}>{l.label}</option>
+							))}
+						</select>
+
+						<label for="confirmationMode">Confirmation Mode</label>
+						<select id="confirmationMode" name="confirmationMode">
+							<option value="explicit" selected>Explicit (ask before changes)</option>
+							<option value="auto">Auto (apply changes immediately)</option>
+						</select>
+
+						<label for="timezone">Timezone</label>
+						<select id="timezone" name="timezone" required>
+							<option value="">Select your timezone...</option>
+						</select>
+					</fieldset>
+
+					<fieldset>
+						<legend>Reminders</legend>
+
+						<label for="reminderCadence">Reminder Frequency</label>
+						<select id="reminderCadence" name="reminderCadence">
+							<option value="daily" selected>Daily</option>
+							<option value="weekly">Weekly</option>
+							<option value="none">None</option>
+						</select>
+
+						<label for="reminderTime">Reminder Time</label>
+						<input
+							type="time"
+							id="reminderTime"
+							name="reminderTime"
+							value="08:00"
+						/>
+					</fieldset>
+
 					<button type="submit">Complete Setup</button>
 				</form>
 			</div>
@@ -71,5 +161,55 @@ if (!tokenId || !sig) {
 				<p>{errorMessage}</p>
 			</div>
 		)}
+
+		<script>
+			// Auto-detect timezone and populate timezone selector
+			(function() {
+				const select = document.getElementById("timezone");
+				if (!select) return;
+
+				const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+				const timezones = Intl.supportedValuesOf("timeZone");
+
+				for (const tz of timezones) {
+					const option = document.createElement("option");
+					option.value = tz;
+					option.textContent = tz.replace(/_/g, " ");
+					if (tz === detected) {
+						option.selected = true;
+					}
+					select.appendChild(option);
+				}
+			})();
+
+			// Client-side validation
+			const form = document.getElementById("onboarding-form");
+			if (form) {
+				form.addEventListener("submit", function(e) {
+					const urlInput = document.getElementById("monicaBaseUrl");
+					if (urlInput && urlInput.value) {
+						try {
+							const url = new URL(urlInput.value);
+							if (url.protocol !== "https:") {
+								e.preventDefault();
+								alert("Only HTTPS URLs are allowed for your Monica instance.");
+								return;
+							}
+						} catch {
+							e.preventDefault();
+							alert("Please enter a valid URL for your Monica instance.");
+							return;
+						}
+					}
+
+					const tzSelect = document.getElementById("timezone");
+					if (tzSelect && !tzSelect.value) {
+						e.preventDefault();
+						alert("Please select your timezone.");
+						return;
+					}
+				});
+			}
+		</script>
 	</body>
 </html>

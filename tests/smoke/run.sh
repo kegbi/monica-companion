@@ -49,8 +49,9 @@ export VOICE_TRANSCRIPTION_URL="${VOICE_TRANSCRIPTION_URL:-http://localhost:3003
 export TELEGRAM_BRIDGE_URL="${TELEGRAM_BRIDGE_URL:-http://localhost:3001}"
 export MONICA_INTEGRATION_URL="${MONICA_INTEGRATION_URL:-http://localhost:3004}"
 export SCHEDULER_URL="${SCHEDULER_URL:-http://localhost:3005}"
+export WEB_UI_URL="${WEB_UI_URL:-http://localhost:4321}"
 export CADDY_URL="${CADDY_URL:-http://localhost:80}"
-export POSTGRES_URL="${POSTGRES_URL:-postgresql://monica:monica_dev@localhost:5432/monica_companion}"
+export POSTGRES_URL="${POSTGRES_URL:-postgresql://monica:monica_dev@localhost:15432/monica_companion}"
 
 echo "================================"
 echo "  Stack Smoke Test Suite"

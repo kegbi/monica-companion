@@ -32,3 +32,7 @@ services:
   scheduler:
     ports:
       - "3005:3005"
+
+  web-ui:
+    ports:
+      - "4321:4321"

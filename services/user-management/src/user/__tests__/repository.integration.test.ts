@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createDb, type Database } from "../../db/connection";
 import {
+	createOrUpdateUserFromOnboarding,
 	createUser,
 	findUserById,
 	getDecryptedCredentials,
@@ -239,5 +240,116 @@ describe("getUserSchedule", () => {
 		expect(schedule?.timezone).toBe("Europe/Berlin");
 		expect(schedule?.connectorType).toBe("telegram");
 		expect(schedule?.connectorRoutingId).toBe("chat-456");
+	});
+});
+
+describe("createOrUpdateUserFromOnboarding", () => {
+	it("creates a new user with encrypted credentials and preferences", async () => {
+		const masterKey = generateMasterKey();
+		const result = await createOrUpdateUserFromOnboarding(db, {
+			telegramUserId: "tg-onboard-new",
+			monicaBaseUrl: "https://monica.example.com/api",
+			monicaApiKey: "my-api-key",
+			language: "en",
+			confirmationMode: "explicit",
+			timezone: "America/New_York",
+			reminderCadence: "daily",
+			reminderTime: "08:00",
+			connectorRoutingId: "tg-onboard-new",
+			masterKey,
+		});
+
+		expect(result.userId).toBeDefined();
+
+		// Verify user row
+		const user = await findUserById(db, result.userId);
+		expect(user).not.toBeNull();
+		expect(user?.telegramUserId).toBe("tg-onboard-new");
+		expect(user?.monicaBaseUrl).toBe("https://monica.example.com/api");
+		// Encrypted, not plaintext
+		expect(user?.monicaApiTokenEncrypted).not.toBe("my-api-key");
+
+		// Verify credentials can be decrypted
+		const creds = await getDecryptedCredentials(db, result.userId, masterKey, null);
+		expect(creds?.apiToken).toBe("my-api-key");
+
+		// Verify preferences
+		const prefs = await getUserPreferences(db, result.userId);
+		expect(prefs).not.toBeNull();
+		expect(prefs?.language).toBe("en");
+		expect(prefs?.confirmationMode).toBe("explicit");
+		expect(prefs?.timezone).toBe("America/New_York");
+		expect(prefs?.reminderCadence).toBe("daily");
+		expect(prefs?.reminderTime).toBe("08:00");
+		expect(prefs?.connectorType).toBe("telegram");
+		expect(prefs?.connectorRoutingId).toBe("tg-onboard-new");
+	});
+
+	it("updates existing user on re-setup (upsert)", async () => {
+		const masterKey = generateMasterKey();
+
+		// First onboarding
+		const first = await createOrUpdateUserFromOnboarding(db, {
+			telegramUserId: "tg-upsert-test",
+			monicaBaseUrl: "https://old-monica.example.com/api",
+			monicaApiKey: "old-key",
+			language: "en",
+			confirmationMode: "explicit",
+			timezone: "America/New_York",
+			reminderCadence: "daily",
+			reminderTime: "08:00",
+			connectorRoutingId: "tg-upsert-test",
+			masterKey,
+		});
+
+		// Second onboarding (re-setup)
+		const second = await createOrUpdateUserFromOnboarding(db, {
+			telegramUserId: "tg-upsert-test",
+			monicaBaseUrl: "https://new-monica.example.com/api",
+			monicaApiKey: "new-key",
+			language: "fr",
+			confirmationMode: "auto",
+			timezone: "Europe/Paris",
+			reminderCadence: "weekly",
+			reminderTime: "09:30",
+			connectorRoutingId: "tg-upsert-test",
+			masterKey,
+		});
+
+		// Same user ID (upsert, not duplicate)
+		expect(second.userId).toBe(first.userId);
+
+		// Verify updated credentials
+		const creds = await getDecryptedCredentials(db, second.userId, masterKey, null);
+		expect(creds?.baseUrl).toBe("https://new-monica.example.com/api");
+		expect(creds?.apiToken).toBe("new-key");
+
+		// Verify updated preferences
+		const prefs = await getUserPreferences(db, second.userId);
+		expect(prefs?.language).toBe("fr");
+		expect(prefs?.confirmationMode).toBe("auto");
+		expect(prefs?.timezone).toBe("Europe/Paris");
+		expect(prefs?.reminderCadence).toBe("weekly");
+		expect(prefs?.reminderTime).toBe("09:30");
+	});
+
+	it("uses custom connectorType when provided", async () => {
+		const masterKey = generateMasterKey();
+		const result = await createOrUpdateUserFromOnboarding(db, {
+			telegramUserId: "tg-connector-test",
+			monicaBaseUrl: "https://monica.example.com/api",
+			monicaApiKey: "key",
+			language: "en",
+			confirmationMode: "explicit",
+			timezone: "UTC",
+			reminderCadence: "none",
+			reminderTime: "08:00",
+			connectorRoutingId: "tg-connector-test",
+			connectorType: "telegram",
+			masterKey,
+		});
+
+		const prefs = await getUserPreferences(db, result.userId);
+		expect(prefs?.connectorType).toBe("telegram");
 	});
 });
