@@ -163,6 +163,8 @@ try {
 } catch {
 	// Caddy not available — use direct web-ui URL
 }
+// Origin header must match what the web-ui middleware expects
+const formOrigin = new URL(formBaseUrl).origin;
 
 describe("end-to-end onboarding flow", () => {
 	const sql = postgres(config.POSTGRES_URL, { max: 1 });
@@ -267,7 +269,7 @@ describe("end-to-end onboarding flow", () => {
 			method: "POST",
 			headers: {
 				"content-type": "application/x-www-form-urlencoded",
-				origin: "http://localhost",
+				origin: formOrigin,
 				cookie: csrfCookie,
 			},
 			body: formData.toString(),
@@ -327,7 +329,7 @@ describe("end-to-end onboarding flow", () => {
 			method: "POST",
 			headers: {
 				"content-type": "application/x-www-form-urlencoded",
-				origin: "http://localhost",
+				origin: formOrigin,
 				cookie: csrfCookie,
 			},
 			body: formData.toString(),
@@ -366,7 +368,7 @@ describe("CSRF protection on form submission", () => {
 			method: "POST",
 			headers: {
 				"content-type": "application/x-www-form-urlencoded",
-				origin: "http://localhost",
+				origin: formOrigin,
 			},
 			body: new URLSearchParams({ tokenId: "test", sig: "test", csrf_token: "fake" }).toString(),
 			redirect: "manual",
