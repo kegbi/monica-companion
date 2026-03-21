@@ -1,7 +1,11 @@
 import type { ServiceClient } from "@monica-companion/auth";
 import type { IdempotencyStore } from "@monica-companion/idempotency";
+import { createLogger } from "@monica-companion/observability";
 import type { ConfirmedCommandPayload } from "@monica-companion/types";
 import { trace } from "@opentelemetry/api";
+
+const logger = createLogger("scheduler:command-worker");
+
 import { mapCommandToMonicaRequest } from "../lib/command-mapper";
 
 const tracer = trace.getTracer("scheduler");
@@ -120,8 +124,14 @@ export async function processCommandJob(
 					userId: command.userId,
 					correlationId,
 				});
-			} catch {
-				// Delivery failure is non-critical; the command still succeeded
+			} catch (deliveryErr) {
+				const msg = deliveryErr instanceof Error ? deliveryErr.message : String(deliveryErr);
+				logger.warn("Failed to send success notification via delivery", {
+					executionId,
+					commandType: command.commandType,
+					correlationId,
+					error: msg,
+				});
 				span.setAttribute("scheduler.delivery_failed", true);
 			}
 

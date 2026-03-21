@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { createLogger } from "@monica-companion/observability";
 import type { BotContext } from "../context";
 import type { UserLookupFn } from "../middleware/user-resolver";
+
+const logger = createLogger("telegram-bridge:start-handler");
 
 export type IssueSetupTokenFn = (
 	telegramUserId: string,
@@ -39,7 +42,13 @@ export function createStartHandler(lookupUser: UserLookupFn, issueSetupToken: Is
 			await ctx.reply(
 				`Welcome to Monica Companion! To get started, please complete your setup using this link:\n\n${setupUrl}\n\nYour credentials will be collected securely through the web form — never share them in this chat. The link expires in 15 minutes.`,
 			);
-		} catch {
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			logger.error("Failed to handle /start command", {
+				correlationId,
+				telegramUserId: String(telegramUserId),
+				error: msg,
+			});
 			await ctx.reply("Sorry, I encountered an error. Please try again later.");
 		}
 	};

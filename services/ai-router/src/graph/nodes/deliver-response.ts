@@ -9,8 +9,12 @@
  * observable via the delivery service's own audit trail.
  */
 
+import { createLogger } from "@monica-companion/observability";
 import type { OutboundContent, OutboundMessageIntent } from "@monica-companion/types";
 import { trace } from "@opentelemetry/api";
+
+const logger = createLogger("ai-router:deliver-response");
+
 import type { DeliveryClient } from "../../lib/delivery-client.js";
 import type { UserManagementClient } from "../../lib/user-management-client.js";
 import type { ConversationAnnotation, GraphResponse } from "../state.js";
@@ -73,9 +77,15 @@ export function createDeliverResponseNode(deps: DeliverResponseDeps) {
 					};
 
 					await deps.deliveryClient.deliver(intent);
-				} catch {
-					// Best-effort delivery: failures don't block the graph response.
-					// Delivery audit trail in the delivery service tracks failures.
+				} catch (err) {
+					const msg = err instanceof Error ? err.message : String(err);
+					logger.error("Failed to deliver response to user", {
+						userId: state.userId,
+						correlationId: state.correlationId,
+						responseType: state.response?.type,
+						error: msg,
+					});
+					span.setAttribute("ai-router.delivery_failed", true);
 				}
 
 				return {};

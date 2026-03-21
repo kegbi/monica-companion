@@ -1,4 +1,7 @@
+import { createLogger } from "@monica-companion/observability";
 import type { BotContext } from "../context";
+
+const logger = createLogger("telegram-bridge:disconnect-handler");
 
 export type DisconnectFn = (
 	userId: string,
@@ -22,7 +25,13 @@ export function createDisconnectHandler(disconnect: DisconnectFn) {
 			await ctx.reply(
 				"Your account has been disconnected. Your Monica credentials have been deleted immediately. All your data will be purged within 30 days.",
 			);
-		} catch {
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			logger.error("Failed to disconnect user", {
+				correlationId: ctx.correlationId,
+				userId: ctx.userId,
+				error: msg,
+			});
 			await ctx.reply(
 				"Sorry, I encountered an error disconnecting your account. Please try again later.",
 			);

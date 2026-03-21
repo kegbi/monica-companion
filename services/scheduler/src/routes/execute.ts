@@ -1,11 +1,13 @@
 import { getCorrelationId, serviceAuth } from "@monica-companion/auth";
 import type { IdempotencyStore } from "@monica-companion/idempotency";
+import { createLogger } from "@monica-companion/observability";
 import { ConfirmedCommandPayloadSchema } from "@monica-companion/types";
 import { trace } from "@opentelemetry/api";
 import { Hono } from "hono";
 import type { Config } from "../config";
 
 const tracer = trace.getTracer("scheduler");
+const logger = createLogger("scheduler:execute");
 
 interface InsertChain {
 	values: (data: Record<string, unknown>) => {
@@ -42,8 +44,13 @@ export function executeRoutes(deps: ExecuteDeps) {
 
 			const parsed = ConfirmedCommandPayloadSchema.safeParse(body);
 			if (!parsed.success) {
+				logger.error("Command payload validation failed", {
+					correlationId: getCorrelationId(c),
+					issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+				});
+				span.setAttribute("scheduler.validation_error", true);
 				span.end();
-				return c.json({ error: "Invalid request body" }, 400);
+				return c.json({ error: "Invalid request body", details: parsed.error.issues }, 400);
 			}
 
 			const command = parsed.data;
@@ -92,6 +99,13 @@ export function executeRoutes(deps: ExecuteDeps) {
 			await commandQueue.add("execute-command", {
 				executionId,
 				command,
+				correlationId,
+			});
+
+			logger.info("Command queued for execution", {
+				executionId,
+				commandType: command.commandType,
+				pendingCommandId: command.pendingCommandId,
 				correlationId,
 			});
 

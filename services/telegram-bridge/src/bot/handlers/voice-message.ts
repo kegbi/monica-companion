@@ -1,5 +1,8 @@
+import { createLogger } from "@monica-companion/observability";
 import type { InboundEvent } from "@monica-companion/types";
 import type { BotContext } from "../context";
+
+const logger = createLogger("telegram-bridge:voice-handler");
 
 export type DownloadFileFn = (fileId: string) => Promise<{ buffer: ArrayBuffer }>;
 
@@ -42,6 +45,11 @@ export function createVoiceMessageHandler(
 			);
 
 			if (!transcriptionResult.success || !transcriptionResult.text) {
+				logger.warn("Voice transcription failed", {
+					correlationId: ctx.correlationId,
+					userId: ctx.userId,
+					error: transcriptionResult.error,
+				});
 				await ctx.reply(
 					"Sorry, I could not transcribe your voice message. Please try again or send text instead.",
 				);
@@ -60,7 +68,13 @@ export function createVoiceMessageHandler(
 			};
 
 			await forwardEvent(event);
-		} catch {
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			logger.error("Failed to process voice message", {
+				correlationId: ctx.correlationId,
+				userId: ctx.userId,
+				error: msg,
+			});
 			await ctx.reply(
 				"Sorry, I encountered an error processing your voice message. Please try again.",
 			);

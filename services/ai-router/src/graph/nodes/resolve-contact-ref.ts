@@ -15,6 +15,10 @@
  */
 
 import type { ServiceClient } from "@monica-companion/auth";
+import { createLogger } from "@monica-companion/observability";
+
+const logger = createLogger("ai-router:resolve-contact-ref");
+
 import type {
 	ContactMatchCandidate,
 	ContactResolutionResult,
@@ -145,11 +149,12 @@ export function createResolveContactRefNode(deps: ResolveContactRefDeps) {
 							userId,
 							correlationId,
 						);
-					} catch {
-						// M2 fix: on fetch failure, return {} (no state changes)
-						// to preserve the LLM's original payload as graceful degradation
-						console.warn("[resolve-contact-ref] failed to fetch contact summaries", {
+					} catch (err) {
+						const errMsg = err instanceof Error ? err.message : String(err);
+						logger.error("Failed to fetch contact summaries from monica-integration", {
+							userId,
 							correlationId,
+							error: errMsg,
 						});
 						span.setAttribute("ai-router.resolution_outcome", "fetch_error");
 						return {};

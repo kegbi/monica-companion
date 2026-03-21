@@ -48,10 +48,12 @@ export const ActionOutcomeSchema = z.discriminatedUnion("type", [
 	z.object({
 		type: z.literal("confirmed"),
 		pendingCommandId: z.string(),
+		schedulerError: z.string().optional(),
 	}),
 	z.object({
 		type: z.literal("auto_confirmed"),
 		pendingCommandId: z.string(),
+		schedulerError: z.string().optional(),
 	}),
 	z.object({ type: z.literal("cancelled") }),
 	z.object({ type: z.literal("edit_draft") }),

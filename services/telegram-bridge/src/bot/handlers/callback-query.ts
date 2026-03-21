@@ -1,6 +1,9 @@
+import { createLogger } from "@monica-companion/observability";
 import type { InboundEvent } from "@monica-companion/types";
 import { decodeCallbackData } from "../callback-data";
 import type { BotContext } from "../context";
+
+const logger = createLogger("telegram-bridge:callback-handler");
 
 export type ForwardEventFn = (event: InboundEvent) => Promise<void>;
 
@@ -19,8 +22,20 @@ export function createCallbackQueryHandler(forwardEvent: ForwardEventFn) {
 
 			const decoded = decodeCallbackData(data);
 			if (!decoded) {
+				logger.warn("Failed to decode callback data", {
+					correlationId: ctx.correlationId,
+					userId: ctx.userId,
+				});
 				return;
 			}
+
+			logger.info("Processing callback action", {
+				correlationId: ctx.correlationId,
+				userId: ctx.userId,
+				action: decoded.action,
+				pendingCommandId: decoded.pendingCommandId,
+				version: decoded.version,
+			});
 
 			await ctx.api.sendChatAction(ctx.chat!.id, "typing");
 
@@ -34,7 +49,13 @@ export function createCallbackQueryHandler(forwardEvent: ForwardEventFn) {
 			};
 
 			await forwardEvent(event);
-		} catch {
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			logger.error("Failed to process callback query", {
+				correlationId: ctx.correlationId,
+				userId: ctx.userId,
+				error: msg,
+			});
 			await ctx.reply("Sorry, I encountered an error processing your selection. Please try again.");
 		}
 	};

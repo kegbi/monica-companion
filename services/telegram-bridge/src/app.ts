@@ -1,5 +1,5 @@
 import { correlationId, serviceAuth } from "@monica-companion/auth";
-import { otelMiddleware } from "@monica-companion/observability";
+import { createLogger, otelMiddleware } from "@monica-companion/observability";
 import { OutboundMessageIntentSchema } from "@monica-companion/types";
 import { Bot } from "grammy";
 import { Hono } from "hono";
@@ -119,7 +119,15 @@ export function createApp(config: Config, redis?: Redis): AppResult {
 		try {
 			await renderOutbound(bot.api, parsed.data);
 			return c.json({ ok: true });
-		} catch {
+		} catch (err) {
+			const logger = createLogger("telegram-bridge:send");
+			const msg = err instanceof Error ? err.message : String(err);
+			logger.error("Failed to send outbound message", {
+				correlationId: parsed.data.correlationId,
+				userId: parsed.data.userId,
+				connectorType: parsed.data.connectorType,
+				error: msg,
+			});
 			return c.json({ error: "Failed to send message" }, 500);
 		}
 	});

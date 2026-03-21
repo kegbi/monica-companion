@@ -10,7 +10,11 @@
  * Error-resilient: catches DB errors so the user still gets their response.
  */
 
+import { createLogger } from "@monica-companion/observability";
 import { trace } from "@opentelemetry/api";
+
+const logger = createLogger("ai-router:persist-turn");
+
 import type { Database } from "../../db/connection.js";
 import type { InsertTurnParams } from "../../db/turn-repository.js";
 import type { ConversationAnnotation } from "../state.js";
@@ -86,8 +90,14 @@ export function createPersistTurnNode(deps: PersistTurnDeps) {
 							correlationId: state.correlationId,
 						});
 					}
-				} catch (_error) {
-					// Best-effort persistence: DB errors should not block user response.
+				} catch (err) {
+					const msg = err instanceof Error ? err.message : String(err);
+					logger.error("Failed to persist conversation turn", {
+						userId: state.userId,
+						correlationId: state.correlationId,
+						error: msg,
+					});
+					span.setAttribute("ai-router.persist_turn_failed", true);
 				}
 
 				return {};

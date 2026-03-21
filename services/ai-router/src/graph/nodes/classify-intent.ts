@@ -15,7 +15,11 @@
  */
 
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { createLogger } from "@monica-companion/observability";
 import { trace } from "@opentelemetry/api";
+
+const logger = createLogger("ai-router:classify-intent");
+
 import type { IntentClassificationResult } from "../intent-schemas.js";
 import type { ConversationAnnotation } from "../state.js";
 import { buildSystemPrompt } from "../system-prompt.js";
@@ -85,9 +89,14 @@ export function createClassifyIntentNode(classifier: Classifier) {
 					const result = await classifier.invoke(messages);
 					span.setAttribute("ai-router.intent", result.intent);
 					return { intentClassification: result };
-				} catch (_error) {
-					// On LLM failure, return a safe fallback. Do not log the raw error
-					// as it may contain API keys or PII from the request.
+				} catch (err) {
+					const errorMsg = err instanceof Error ? err.message : String(err);
+					logger.error("LLM intent classification failed, returning out_of_scope fallback", {
+						correlationId: state.correlationId,
+						eventType: event.type,
+						error: errorMsg,
+					});
+					span.setAttribute("ai-router.llm_error", true);
 					const fallbackResult: IntentClassificationResult = {
 						intent: "out_of_scope",
 						detectedLanguage: "en",

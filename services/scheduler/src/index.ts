@@ -102,8 +102,12 @@ async function main() {
 					connectorRoutingId: schedule.connectorRoutingId,
 				};
 			}
-		} catch {
-			// Fall through to default
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			logger.warn("Failed to resolve connector routing for dead-letter notification", {
+				userId: command.userId,
+				error: msg,
+			});
 		}
 
 		// Last resort: cannot resolve routing, dead-letter notification will fail

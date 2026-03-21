@@ -94,12 +94,24 @@ function formatActionOutcome(outcome: ActionOutcome, userFacingText: string): Gr
 			};
 
 		case "confirmed":
+			if (outcome.schedulerError) {
+				return {
+					type: "error",
+					text: "Your command was confirmed but could not be executed. Please try again.",
+				};
+			}
 			return {
 				type: "text",
 				text: userFacingText,
 			};
 
 		case "auto_confirmed":
+			if (outcome.schedulerError) {
+				return {
+					type: "error",
+					text: "Your command was confirmed but could not be executed. Please try again.",
+				};
+			}
 			return {
 				type: "text",
 				text: userFacingText,

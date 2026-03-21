@@ -11,6 +11,7 @@
  * - callback_action edit → transitions to draft
  */
 
+import { createLogger } from "@monica-companion/observability";
 import {
 	type ConfirmedCommandPayload,
 	type MutatingCommandPayload,
@@ -20,6 +21,7 @@ import {
 import { trace } from "@opentelemetry/api";
 
 const tracer = trace.getTracer("ai-router");
+const logger = createLogger("ai-router:execute-action");
 
 import type { Database } from "../../db/connection.js";
 import type { SchedulerClient } from "../../lib/scheduler-client.js";
@@ -203,8 +205,7 @@ async function handleMutatingCommand(state: State, deps: ExecuteActionDeps): Pro
 	if (!intentClassification.needsClarification) {
 		const validated = MutatingCommandPayloadSchema.safeParse(payload);
 		if (!validated.success) {
-			// LOW-1 from review: log structured warning (no PII)
-			console.warn("[execute-action] payload validation failed for complete mutating command", {
+			logger.warn("Payload validation failed for complete mutating command", {
 				commandType: intentClassification.commandType,
 				correlationId,
 			});
@@ -300,8 +301,16 @@ async function checkAutoConfirm(
 	try {
 		const prefs = await deps.userManagementClient.getPreferences(userId, correlationId);
 		return prefs.confirmationMode === "auto";
-	} catch {
-		// If we can't fetch preferences, fall back to explicit confirmation
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		logger.warn(
+			"Failed to fetch user preferences for auto-confirm check, falling back to explicit",
+			{
+				userId,
+				correlationId,
+				error: msg,
+			},
+		);
 		return false;
 	}
 }
@@ -333,9 +342,18 @@ async function autoConfirm(
 
 	try {
 		await deps.schedulerClient.execute(payload);
-	} catch {
-		// Scheduler failure: the command is confirmed but not queued.
-		// This is still an auto_confirmed outcome — scheduler retries will handle it.
+		logger.info("Auto-confirmed command sent to scheduler", {
+			pendingCommandId: confirmedRow.id,
+			commandType: confirmedRow.commandType,
+		});
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		logger.error("Scheduler rejected auto-confirmed command — command will NOT execute", {
+			pendingCommandId: confirmedRow.id,
+			commandType: confirmedRow.commandType,
+			correlationId: confirmedRow.correlationId,
+			error: msg,
+		});
 	}
 
 	return {
@@ -464,8 +482,25 @@ async function handleConfirm(deps: ExecuteActionDeps, command: PendingCommandRow
 
 	try {
 		await deps.schedulerClient.execute(payload);
-	} catch {
-		// Scheduler failure logged elsewhere; command is still confirmed
+		logger.info("Confirmed command sent to scheduler", {
+			pendingCommandId: confirmedRow.id,
+			commandType: confirmedRow.commandType,
+		});
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		logger.error("Scheduler rejected confirmed command — command will NOT execute", {
+			pendingCommandId: confirmedRow.id,
+			commandType: confirmedRow.commandType,
+			correlationId: confirmedRow.correlationId,
+			error: msg,
+		});
+		return {
+			actionOutcome: {
+				type: "confirmed",
+				pendingCommandId: confirmedRow.id,
+				schedulerError: msg,
+			} as ActionOutcome,
+		};
 	}
 
 	return {

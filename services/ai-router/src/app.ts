@@ -4,7 +4,7 @@ import {
 	type GuardrailMetrics,
 	guardrailMiddleware,
 } from "@monica-companion/guardrails";
-import { otelMiddleware } from "@monica-companion/observability";
+import { createLogger, otelMiddleware } from "@monica-companion/observability";
 import { redactString } from "@monica-companion/redaction";
 import { InboundEventSchema } from "@monica-companion/types";
 import { trace } from "@opentelemetry/api";
@@ -119,6 +119,8 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 			service: "ai-router",
 		}),
 	);
+	const processLogger = createLogger("ai-router:process");
+
 	internal.post("/process", async (c) => {
 		let body: unknown;
 		try {
@@ -129,6 +131,9 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 
 		const parsed = InboundEventSchema.safeParse(body);
 		if (!parsed.success) {
+			processLogger.warn("Inbound event validation failed", {
+				issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+			});
 			return c.json({ error: "Invalid event payload" }, 400);
 		}
 
@@ -151,13 +156,13 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 				activeSpan.setAttribute("graph.total_duration_ms", durationMs);
 			}
 
-			console.info(
-				JSON.stringify({
-					msg: "graph invocation complete",
-					correlationId: event.correlationId,
-					durationMs,
-				}),
-			);
+			processLogger.info("Graph invocation complete", {
+				correlationId: event.correlationId,
+				userId: event.userId,
+				eventType: event.type,
+				durationMs,
+				responseType: result.response?.type,
+			});
 
 			if (!result.response) {
 				return c.json({ type: "error", text: "No response generated" }, 500);
@@ -165,10 +170,13 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 
 			return c.json(result.response);
 		} catch (err) {
-			console.error(
-				`[ai-router] Graph invocation failed correlationId=${event.correlationId}`,
-				err instanceof Error ? err.message : "unknown error",
-			);
+			const errMsg = err instanceof Error ? err.message : "unknown error";
+			processLogger.error("Graph invocation failed", {
+				correlationId: event.correlationId,
+				userId: event.userId,
+				eventType: event.type,
+				error: errMsg,
+			});
 			return c.json({ type: "error", text: "Failed to process event" }, 500);
 		}
 	});
