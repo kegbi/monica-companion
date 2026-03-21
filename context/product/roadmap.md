@@ -262,11 +262,11 @@ _Fix fundamental issues with kinship matching and disambiguation UX discovered d
   - [x] If the pool reaches 0 after clarification, fall back to a "no match" flow (offer to create a new contact or re-phrase).
   - [x] Cap clarification rounds at 3 to prevent infinite loops — after 3 rounds, present whatever candidates remain (even if > 5) or give up gracefully.
 
-- [ ] **Confirm-Then-Resolve Conversation Flow**
-  - [ ] Restructure the graph so that for mutating commands with an unresolved contact reference, the system first confirms the ACTION (command type + payload, e.g., "Add note: 'Went to park today'?") with Yes/Edit/Cancel buttons.
-  - [ ] Only after the user confirms the action, proceed to contact resolution. This prevents wasted disambiguation effort when the user wants to edit or cancel the action itself.
-  - [ ] When the contact resolves unambiguously (single high-confidence match), execute immediately after action confirmation — no extra "which contact?" step.
-  - [ ] When the contact is ambiguous, enter the progressive narrowing flow (clarification or buttons depending on candidate count).
+- [x] **Confirm-Then-Resolve Conversation Flow**
+  - [x] Restructure the graph so that for mutating commands with an unresolved contact reference, the system first confirms the ACTION (command type + payload, e.g., "Add note: 'Went to park today'?") with Yes/Edit/Cancel buttons.
+  - [x] Only after the user confirms the action, proceed to contact resolution. This prevents wasted disambiguation effort when the user wants to edit or cancel the action itself.
+  - [x] When the contact resolves unambiguously (single high-confidence match), execute immediately after action confirmation — no extra "which contact?" step.
+  - [x] When the contact is ambiguous, enter the progressive narrowing flow (clarification or buttons depending on candidate count).
 
 - [ ] **Disambiguation Label & Callback Fixes (done)**
   - [x] Fix select callback re-triggering contact resolution — skip `resolveContactRef` for `callback_action` events.
