@@ -55,10 +55,16 @@ function buildDisambiguationLabel(
 	summaries: ContactResolutionSummary[],
 ): string {
 	const summary = summaries.find((s) => s.contactId === candidate.contactId);
-	const labels = summary?.relationshipLabels ?? [];
-	if (labels.length > 0) {
-		return `${candidate.displayName} -- ${labels[0]}`;
+
+	// Prefer aliases (nickname, first/last name variants) over relationship labels
+	// for disambiguation — they're more recognizable to the user.
+	const aliases = summary?.aliases ?? [];
+	const nickname = aliases.find((a) => a.toLowerCase() !== candidate.displayName.toLowerCase());
+
+	if (nickname) {
+		return `${candidate.displayName} (${nickname})`;
 	}
+
 	return candidate.displayName;
 }
 
@@ -170,6 +176,12 @@ export function createResolveContactRefNode(deps: ResolveContactRefDeps) {
 
 				switch (resolution.outcome) {
 					case "resolved": {
+						logger.info("Contact resolved", {
+							correlationId,
+							contactRef,
+							contactId: resolution.resolved!.contactId,
+							displayName: resolution.resolved!.displayName,
+						});
 						updatedClassification = {
 							...intentClassification,
 							needsClarification: false,
@@ -185,6 +197,12 @@ export function createResolveContactRefNode(deps: ResolveContactRefDeps) {
 							label: buildDisambiguationLabel(c, summaries),
 							value: String(c.contactId),
 						}));
+						logger.info("Contact resolution ambiguous, presenting disambiguation", {
+							correlationId,
+							contactRef,
+							candidateCount: resolution.candidates.length,
+							options: options.map((o) => ({ label: o.label, value: o.value })),
+						});
 						updatedClassification = {
 							...intentClassification,
 							needsClarification: true,
@@ -194,7 +212,10 @@ export function createResolveContactRefNode(deps: ResolveContactRefDeps) {
 						break;
 					}
 					case "no_match": {
-						// M3 fix: preserve the LLM's original userFacingText
+						logger.info("Contact resolution found no match", {
+							correlationId,
+							contactRef,
+						});
 						updatedClassification = {
 							...intentClassification,
 							needsClarification: true,
