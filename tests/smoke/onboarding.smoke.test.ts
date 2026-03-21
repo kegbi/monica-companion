@@ -269,7 +269,7 @@ describe("end-to-end onboarding flow", () => {
 			method: "POST",
 			headers: {
 				"content-type": "application/x-www-form-urlencoded",
-				origin: formOrigin,
+				origin: "http://localhost",
 				cookie: csrfCookie,
 			},
 			body: formData.toString(),
@@ -329,7 +329,7 @@ describe("end-to-end onboarding flow", () => {
 			method: "POST",
 			headers: {
 				"content-type": "application/x-www-form-urlencoded",
-				origin: formOrigin,
+				origin: "http://localhost",
 				cookie: csrfCookie,
 			},
 			body: formData.toString(),
@@ -368,7 +368,7 @@ describe("CSRF protection on form submission", () => {
 			method: "POST",
 			headers: {
 				"content-type": "application/x-www-form-urlencoded",
-				origin: formOrigin,
+				origin: "http://localhost",
 			},
 			body: new URLSearchParams({ tokenId: "test", sig: "test", csrf_token: "fake" }).toString(),
 			redirect: "manual",
