@@ -35,7 +35,7 @@ Six dedicated agents are defined in `.claude/agents/`. Each runs with clean cont
 | Plan Reviewer | `plan-reviewer` | Reviews plan for KISS/SOLID/DRY/security/boundaries |
 | Implementer | `implementer` | Writes code and tests following approved plan |
 | Code Reviewer | `code-reviewer` | Reviews code, runs biome + vitest, enforces rules |
-| Smoke Tester | `smoke-tester` | Runs Docker Compose smoke tests on live stack |
+| Smoke Tester | `smoke-tester` | Replicates all CI pipelines locally + Docker Compose smoke tests |
 | Committer | `committer` | Creates git commits and updates roadmap |
 
 ## Pipeline
@@ -161,13 +161,16 @@ Spawn the **`code-reviewer`** agent. Construct a prompt containing:
 
 ---
 
-### Step 5: Smoke Testing
+### Step 5: Smoke Testing (CI Pipeline Replication + Docker Compose)
 
-Spawn the **`smoke-tester`** agent. Construct a prompt containing:
+Spawn the **`smoke-tester`** agent. This agent replicates **all** GitHub Actions CI pipelines locally before running Docker Compose smoke tests. The CI pipeline replication is a hard requirement for PASS — not just the Docker Compose smoke tests.
+
+Construct a prompt containing:
 
 - Path to impl summary: `.claude-work/{task-id}/impl-summary.md`
 - Path to plan: `.claude-work/{task-id}/plan.md`
 - Paths to `docker-compose.yml` and `docker/caddy/Caddyfile` (if exists)
+- Path to `.github/workflows/ci.yml` (CI pipeline to replicate)
 - If re-test: path to previous smoke report
 - Output path: `.claude-work/{task-id}/smoke-report.md` (or `smoke-report-{attempt}.md`)
 

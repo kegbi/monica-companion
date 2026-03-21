@@ -58,12 +58,32 @@ EOF
 )"
 ```
 
-### 5. Update Roadmap
+### 5. Commit Pipeline Docs
+Stage and commit all pipeline documents from the task work directory (`.claude-work/{task-id}/`):
+- `plan.md`
+- `plan-review.md` (and any `plan-review-{N}.md` retries)
+- `impl-summary.md`
+- `code-review.md` (and any `code-review-{N}.md` retries)
+- `smoke-report.md` (and any `smoke-report-{N}.md` retries)
+- `state.json`
+- Any other files in the task work directory
+
+```bash
+git add .claude-work/{task-id}/
+git commit -m "$(cat <<'EOF'
+docs: add pipeline artifacts for {task group name}
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+EOF
+)"
+```
+
+### 6. Update Roadmap
 Edit `context/product/roadmap.md`:
 - Mark completed sub-items as `[x]`
 - If ALL sub-items under a parent group are now `[x]`, also mark the parent as `[x]`
 
-### 6. Commit Roadmap Update
+### 7. Commit Roadmap Update
 ```bash
 git add context/product/roadmap.md
 git commit -m "$(cat <<'EOF'
@@ -74,14 +94,14 @@ EOF
 )"
 ```
 
-### 7. Verify
+### 8. Verify
 ```bash
 git status   # should be clean
 git log --oneline -5   # verify both commits
 ```
 
-### 8. Report
-End your response with both commit hashes.
+### 9. Report
+End your response with all commit hashes.
 
 ## Important
 
