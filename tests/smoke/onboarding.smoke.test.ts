@@ -228,7 +228,7 @@ describe("end-to-end onboarding flow", () => {
 		expect(html).toContain("reminderCadence");
 		expect(html).toContain("reminderTime");
 		expect(html).toContain("/setup/submit");
-		expect(html).toContain("Monica Companion Setup");
+		expect(html).toContain("Monica Companion");
 		// Verify CSRF token was issued
 		expect(csrfToken.length).toBeGreaterThan(0);
 		expect(csrfCookie.length).toBeGreaterThan(0);

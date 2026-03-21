@@ -99,6 +99,8 @@ jobs:
           SERVICE_NAME=scheduler npx tsx services/scheduler/src/index.ts &
           SERVICE_NAME=telegram-bridge npx tsx services/telegram-bridge/src/index.ts &
           SERVICE_NAME=monica-integration npx tsx services/monica-integration/src/index.ts &
+          cd services/web-ui && npx astro dev --port 4321 --host 0.0.0.0 &
+          cd "$GITHUB_WORKSPACE"
 
           # Wait for health
           services=("http://localhost:3007" "http://localhost:3006" "http://localhost:3002" "http://localhost:3003" "http://localhost:3005" "http://localhost:3001" "http://localhost:3004")
@@ -118,6 +120,22 @@ jobs:
               exit 1
             fi
           done
+
+          # Wait for web-ui (Astro dev server, no /health endpoint)
+          echo "Waiting for http://localhost:4321 ..."
+          retries=30
+          while [ $retries -gt 0 ]; do
+            if curl -sf "http://localhost:4321/setup/success" > /dev/null 2>&1; then
+              echo "  OK: http://localhost:4321"
+              break
+            fi
+            sleep 2
+            retries=$((retries - 1))
+          done
+          if [ $retries -eq 0 ]; then
+            echo "FAIL: web-ui not reachable after 60s"
+            exit 1
+          fi
         env:
           DATABASE_URL: postgresql://monica:monica_dev@localhost:5432/monica_companion
           REDIS_URL: redis://localhost:6379
