@@ -249,11 +249,11 @@ _Close the remaining gaps that block the end-to-end user journey: a new user mus
 
 _Fix fundamental issues with kinship matching and disambiguation UX discovered during live testing. Monica's relationship model stores bidirectional links between contacts in the address book — not "my relationship to this person" — so the current kinship resolution produces wrong or noisy results. The conversation flow also needs restructuring: confirm the action first, then resolve the contact._
 
-- [ ] **Bidirectional Kinship Matching**
-  - [ ] For asymmetric relationship types (parent/child, grandparent/grandchild, uncle/nephew, godparent/godchild, stepparent/stepchild, boss/subordinate, mentor/protege), match both the direct label AND its inverse. Example: "mom" currently maps to "parent" only — contacts that HAVE a parent listed. It must also match "child" — contacts that ARE parents (have children listed). Both directions are signal; neither is conclusive alone.
-  - [ ] Update the KINSHIP_MAP in `ai-router/src/contact-resolution/matcher.ts` to carry both the direct and inverse Monica label for each kinship term. Symmetric relationships (spouse, sibling, friend, colleague) stay unchanged.
-  - [ ] Adjust scoring: both directions produce the same score (0.9) since either is a valid but uncertain signal. The disambiguation flow handles narrowing.
-  - [ ] Add unit tests with real-world relationship topologies (parent on contact A pointing to contact B does NOT mean A is a parent — it means B is A's parent).
+- [x] **Bidirectional Kinship Matching**
+  - [x] For asymmetric relationship types (parent/child, grandparent/grandchild, uncle/nephew, godparent/godchild, stepparent/stepchild, boss/subordinate, mentor/protege), match both the direct label AND its inverse. Example: "mom" currently maps to "parent" only — contacts that HAVE a parent listed. It must also match "child" — contacts that ARE parents (have children listed). Both directions are signal; neither is conclusive alone.
+  - [x] Update the KINSHIP_MAP in `ai-router/src/contact-resolution/matcher.ts` to carry both the direct and inverse Monica label for each kinship term. Symmetric relationships (spouse, sibling, friend, colleague) stay unchanged.
+  - [x] Adjust scoring: both directions produce the same score (0.9) since either is a valid but uncertain signal. The disambiguation flow handles narrowing.
+  - [x] Add unit tests with real-world relationship topologies (parent on contact A pointing to contact B does NOT mean A is a parent — it means B is A's parent).
 
 - [ ] **Progressive Contact Narrowing**
   - [ ] When contact resolution produces more than 5 ambiguous candidates, do NOT render them all as inline keyboard buttons. Instead, generate a clarifying question asking for the contact's name, surname, or other identifying detail ("What's your mom's name?").
