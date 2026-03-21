@@ -46,35 +46,84 @@ export interface ResolveContactRefDeps {
 }
 
 /**
+ * Strip the parenthetical portion of a display name.
+ * Monica formats complete_name as "John Doe (Johnny)" when a nickname is set.
+ * "John Doe (Johnny)" → "John Doe"
+ */
+function stripParenthetical(displayName: string): string {
+	return displayName.replace(/\s*\(.*?\)\s*$/, "").trim();
+}
+
+const SHORT_MONTHS = [
+	"Jan",
+	"Feb",
+	"Mar",
+	"Apr",
+	"May",
+	"Jun",
+	"Jul",
+	"Aug",
+	"Sep",
+	"Oct",
+	"Nov",
+	"Dec",
+];
+
+/**
+ * Format an ImportantDate birthdate for display on a disambiguation button.
+ * Returns "b. 15 Mar 1965" or "b. 15 Mar" when year is unknown.
+ */
+function formatBirthdate(
+	importantDates: { label: string; date: string; isYearUnknown: boolean }[],
+): string | null {
+	const bd = importantDates.find((d) => d.label === "birthdate");
+	if (!bd) return null;
+
+	const parts = bd.date.split("-");
+	if (parts.length < 3) return null;
+
+	const month = Number.parseInt(parts[1], 10);
+	const day = Number.parseInt(parts[2], 10);
+	if (Number.isNaN(month) || Number.isNaN(day) || month < 1 || month > 12) return null;
+
+	const monthName = SHORT_MONTHS[month - 1];
+	return bd.isYearUnknown ? `b. ${day} ${monthName}` : `b. ${day} ${monthName} ${parts[0]}`;
+}
+
+/**
  * Build a disambiguation option label from a candidate.
- * Format: "DisplayName -- relationshipLabel" when labels exist,
- * or just "DisplayName" when no labels.
+ * Format: "BaseName (nickname), b. DD Mon YYYY"
+ *
+ * Shows the full name, an informative nickname if available, and birthdate
+ * when present. Relationship labels are omitted because they are often
+ * confusing or redundant in button context (e.g. "date" looks like a calendar date).
+ *
+ * Uses the stripped display name (without Monica's built-in nickname parenthetical)
+ * as the base to avoid double parentheticals like "Elena Yuryevna (Mama) (parent)".
  */
 function buildDisambiguationLabel(
 	candidate: ContactMatchCandidate,
 	summaries: ContactResolutionSummary[],
 ): string {
 	const summary = summaries.find((s) => s.contactId === candidate.contactId);
-	const displayLower = candidate.displayName.toLowerCase();
+	const baseName = stripParenthetical(candidate.displayName);
+	const baseLower = baseName.toLowerCase();
 
-	// Prefer aliases that add new info (not already a substring of displayName).
-	// e.g. "Mama" for "Elena Yuryevna" is useful, but "Sherry" for "Sherry Miller" is not.
+	// Add nickname if it provides new info (not already a substring of the base name).
 	const aliases = summary?.aliases ?? [];
 	const nickname = aliases.find(
-		(a) => !displayLower.includes(a.toLowerCase()) && a.toLowerCase() !== displayLower,
+		(a) => !baseLower.includes(a.toLowerCase()) && a.toLowerCase() !== baseLower,
 	);
 
-	if (nickname) {
-		return `${candidate.displayName} (${nickname})`;
+	let label = nickname ? `${baseName} (${nickname})` : baseName;
+
+	// Append birthdate when available
+	const dob = formatBirthdate(summary?.importantDates ?? []);
+	if (dob) {
+		label = `${label}, ${dob}`;
 	}
 
-	// Fall back to relationship labels if no useful alias exists
-	const labels = summary?.relationshipLabels ?? [];
-	if (labels.length > 0) {
-		return `${candidate.displayName} (${labels[0]})`;
-	}
-
-	return candidate.displayName;
+	return label;
 }
 
 /**
@@ -138,16 +187,17 @@ export function createResolveContactRefNode(deps: ResolveContactRefDeps) {
 			try {
 				const { intentClassification, userId, correlationId } = state;
 
-				// Skip conditions: no classification, no contactRef, non-applicable intents.
-				// Note: clarification_response is NOT skipped — when the user provides
-				// a follow-up that includes a contactRef, it must still be resolved
-				// (e.g. retried voice message classified as clarification for an existing draft).
+				// Skip conditions: no classification, no contactRef, non-applicable intents,
+				// or callback_action events (select/confirm/cancel/edit callbacks already
+				// carry the contactId or don't need resolution — re-running resolution
+				// on the LLM's synthetic callback message causes spurious re-disambiguation).
 				if (
 					!intentClassification ||
 					!intentClassification.contactRef ||
 					intentClassification.intent === "greeting" ||
 					intentClassification.intent === "out_of_scope" ||
-					intentClassification.commandType === "create_contact"
+					intentClassification.commandType === "create_contact" ||
+					state.inboundEvent.type === "callback_action"
 				) {
 					span.setAttribute("ai-router.resolution_outcome", "skipped");
 					return {};

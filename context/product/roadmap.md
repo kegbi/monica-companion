@@ -242,3 +242,39 @@ _Close the remaining gaps that block the end-to-end user journey: a new user mus
   - [x] When resolution returns `ambiguous`, generate a disambiguation prompt with real contact data (names, relationship labels) as inline keyboard buttons.
   - [x] When resolution returns `no_match`, prompt the user to clarify or offer to create a new contact.
   - [x] Ensure the contact summary is loaded once per graph invocation and cached in state to avoid redundant calls.
+
+---
+
+### Phase 9: Contact Resolution & Conversation Flow Improvements
+
+_Fix fundamental issues with kinship matching and disambiguation UX discovered during live testing. Monica's relationship model stores bidirectional links between contacts in the address book — not "my relationship to this person" — so the current kinship resolution produces wrong or noisy results. The conversation flow also needs restructuring: confirm the action first, then resolve the contact._
+
+- [ ] **Bidirectional Kinship Matching**
+  - [ ] For asymmetric relationship types (parent/child, grandparent/grandchild, uncle/nephew, godparent/godchild, stepparent/stepchild, boss/subordinate, mentor/protege), match both the direct label AND its inverse. Example: "mom" currently maps to "parent" only — contacts that HAVE a parent listed. It must also match "child" — contacts that ARE parents (have children listed). Both directions are signal; neither is conclusive alone.
+  - [ ] Update the KINSHIP_MAP in `ai-router/src/contact-resolution/matcher.ts` to carry both the direct and inverse Monica label for each kinship term. Symmetric relationships (spouse, sibling, friend, colleague) stay unchanged.
+  - [ ] Adjust scoring: both directions produce the same score (0.9) since either is a valid but uncertain signal. The disambiguation flow handles narrowing.
+  - [ ] Add unit tests with real-world relationship topologies (parent on contact A pointing to contact B does NOT mean A is a parent — it means B is A's parent).
+
+- [ ] **Progressive Contact Narrowing**
+  - [ ] When contact resolution produces more than 5 ambiguous candidates, do NOT render them all as inline keyboard buttons. Instead, generate a clarifying question asking for the contact's name, surname, or other identifying detail ("What's your mom's name?").
+  - [ ] When the user responds with additional info, re-run the matcher against the same cached contact summaries using the combined original query + clarification as a compound query (e.g., kinship "mom" + name "Elena" narrows the pool).
+  - [ ] Repeat clarification rounds until the candidate pool is ≤ 5, then present buttons.
+  - [ ] If the pool reaches 0 after clarification, fall back to a "no match" flow (offer to create a new contact or re-phrase).
+  - [ ] Cap clarification rounds at 3 to prevent infinite loops — after 3 rounds, present whatever candidates remain (even if > 5) or give up gracefully.
+
+- [ ] **Confirm-Then-Resolve Conversation Flow**
+  - [ ] Restructure the graph so that for mutating commands with an unresolved contact reference, the system first confirms the ACTION (command type + payload, e.g., "Add note: 'Went to park today'?") with Yes/Edit/Cancel buttons.
+  - [ ] Only after the user confirms the action, proceed to contact resolution. This prevents wasted disambiguation effort when the user wants to edit or cancel the action itself.
+  - [ ] When the contact resolves unambiguously (single high-confidence match), execute immediately after action confirmation — no extra "which contact?" step.
+  - [ ] When the contact is ambiguous, enter the progressive narrowing flow (clarification or buttons depending on candidate count).
+
+- [ ] **Disambiguation Label & Callback Fixes (done)**
+  - [x] Fix select callback re-triggering contact resolution — skip `resolveContactRef` for `callback_action` events.
+  - [x] Fix double-parenthetical labels — strip Monica's built-in nickname parenthetical from `complete_name` before appending suffix.
+  - [x] Remove confusing relationship labels from disambiguation buttons. Show: full name, nickname (if informative), and birthdate (if available). Format: `Elena Yuryevna (Mama), b. 15 Mar 1965`.
+
+- [ ] **LLM Integration Tests for Multi-Turn Contact Flow**
+  - [ ] Add LLM integration test: "add note to mom about going to park" → LLM classifies as `create_note` with `contactRef: "mom"` and extracts note body.
+  - [ ] Add graph-level test: full round-trip for kinship disambiguation — initial message → action confirmation → clarification question ("What's your mom's name?") → user answers → buttons presented → user selects → command executed.
+  - [ ] Add graph-level test: confirm-then-resolve flow where user cancels at action confirmation step (contact resolution never runs).
+  - [ ] Add graph-level test: unambiguous contact with kinship term (only one "parent" candidate) → action confirmation → auto-resolve → execute.

@@ -163,8 +163,8 @@ describe("resolveContactRefNode", () => {
 		expect(update.intentClassification?.needsClarification).toBe(true);
 		expect(update.intentClassification?.clarificationReason).toBe("ambiguous_contact");
 		expect(update.intentClassification?.disambiguationOptions).toEqual([
-			{ label: "Sherry Miller (friend)", value: "10" },
-			{ label: "Sherry Johnson (colleague)", value: "20" },
+			{ label: "Sherry Miller", value: "10" },
+			{ label: "Sherry Johnson", value: "20" },
 		]);
 	});
 
@@ -455,20 +455,112 @@ describe("resolveContactRefNode", () => {
 		expect(update.intentClassification?.needsClarification).toBe(false);
 	});
 
-	// --- Disambiguation label format ---
+	// --- callback_action skip (Bug: select callback re-triggers disambiguation) ---
 
-	it("uses just display name when contact has no relationship labels", async () => {
+	it("skips resolution for callback_action events to prevent re-disambiguation", async () => {
 		const summaries: ContactResolutionSummary[] = [
 			makeSummary({
 				contactId: 10,
-				displayName: "Sherry Miller",
-				aliases: ["Sherry", "Miller"],
-				relationshipLabels: [],
+				displayName: "Elena Yuryevna",
+				aliases: ["Elena", "Yuryevna"],
+				relationshipLabels: ["parent"],
 			}),
 			makeSummary({
 				contactId: 20,
-				displayName: "Sherry Johnson",
-				aliases: ["Sherry", "Johnson"],
+				displayName: "Maria Petrova",
+				aliases: ["Maria", "Petrova"],
+				relationshipLabels: ["parent"],
+			}),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		// LLM classified the select callback as clarification_response with a contactRef.
+		// resolveContactRef should NOT run for callback_action events.
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Got it — thanks for the selection.",
+			commandType: "create_note",
+			contactRef: "mom",
+			commandPayload: { body: "Went to artillery park" },
+			confidence: 0.9,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(
+			makeState(classification, {
+				inboundEvent: {
+					type: "callback_action" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "tg:cb:999",
+					correlationId: "corr-123",
+					action: "select",
+					data: "10:0",
+				},
+			}),
+		);
+
+		// Should skip — no state changes, no fetch
+		expect(update).toEqual({});
+		expect(mockFetchContactSummaries).not.toHaveBeenCalled();
+	});
+
+	// --- Disambiguation label format ---
+
+	it("strips parenthetical from displayName before appending relationship label to avoid double parens", async () => {
+		// Monica formats complete_name as "Elena Yuryevna (Mama)" when nickname is set.
+		// buildDisambiguationLabel must not produce "Elena Yuryevna (Mama) (parent)".
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({
+				contactId: 10,
+				displayName: "Elena Yuryevna (Mama)",
+				aliases: ["Mama", "Elena", "Yuryevna"],
+				relationshipLabels: ["parent"],
+			}),
+			makeSummary({
+				contactId: 20,
+				displayName: "Maria Petrova (Мария)",
+				aliases: ["Мария", "Maria", "Petrova"],
+				relationshipLabels: ["parent"],
+			}),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Adding a note to mom.",
+			commandType: "create_note",
+			contactRef: "mom",
+			commandPayload: { body: "went to the park" },
+			confidence: 0.85,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		// Should produce clean single-parenthetical labels, not "Elena Yuryevna (Mama) (parent)".
+		// Alias "Mama"/"Мария" is useful (not in stripped base name), so it takes priority.
+		expect(update.intentClassification?.disambiguationOptions).toEqual([
+			{ label: "Elena Yuryevna (Mama)", value: "10" },
+			{ label: "Maria Petrova (Мария)", value: "20" },
+		]);
+	});
+
+	it("strips parenthetical and uses base name when alias is not useful and no DOB", async () => {
+		// When complete_name has nickname in parens but no useful alias exists
+		// and no birthdate, just show the stripped base name.
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({
+				contactId: 10,
+				displayName: "Elena Yuryevna (Elena)",
+				aliases: ["Elena", "Yuryevna"],
+				relationshipLabels: ["parent"],
+			}),
+			makeSummary({
+				contactId: 20,
+				displayName: "Elena Petrova (Elena)",
+				aliases: ["Elena", "Petrova"],
 				relationshipLabels: ["colleague"],
 			}),
 		];
@@ -477,9 +569,9 @@ describe("resolveContactRefNode", () => {
 		const classification: IntentClassificationResult = {
 			intent: "mutating_command",
 			detectedLanguage: "en",
-			userFacingText: "Adding a note to Sherry.",
+			userFacingText: "Adding a note to Elena.",
 			commandType: "create_note",
-			contactRef: "Sherry",
+			contactRef: "Elena",
 			commandPayload: { body: "coffee" },
 			confidence: 0.85,
 		};
@@ -488,8 +580,47 @@ describe("resolveContactRefNode", () => {
 		const update = await node(makeState(classification));
 
 		expect(update.intentClassification?.disambiguationOptions).toEqual([
-			{ label: "Sherry Miller", value: "10" },
-			{ label: "Sherry Johnson (colleague)", value: "20" },
+			{ label: "Elena Yuryevna", value: "10" },
+			{ label: "Elena Petrova", value: "20" },
+		]);
+	});
+
+	it("appends birthdate to disambiguation label when available", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({
+				contactId: 10,
+				displayName: "Elena Yuryevna (Mama)",
+				aliases: ["Mama", "Elena", "Yuryevna"],
+				relationshipLabels: ["parent"],
+				importantDates: [{ label: "birthdate", date: "1965-03-15", isYearUnknown: false }],
+			}),
+			makeSummary({
+				contactId: 20,
+				displayName: "Maria Petrova (Мама)",
+				aliases: ["Мама", "Maria", "Petrova"],
+				relationshipLabels: ["parent"],
+				importantDates: [{ label: "birthdate", date: "0000-06-20", isYearUnknown: true }],
+			}),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		// "mom" matches both via kinship normalization → "parent" relationship
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Adding a note to mom.",
+			commandType: "create_note",
+			contactRef: "mom",
+			commandPayload: { body: "coffee" },
+			confidence: 0.85,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		expect(update.intentClassification?.disambiguationOptions).toEqual([
+			{ label: "Elena Yuryevna (Mama), b. 15 Mar 1965", value: "10" },
+			{ label: "Maria Petrova (Мама), b. 20 Jun", value: "20" },
 		]);
 	});
 });
