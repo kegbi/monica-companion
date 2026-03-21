@@ -187,14 +187,16 @@ Update state: increment `smokeAttempts`.
 
 ### Step 6: Commit
 
-Spawn the **`committer`** agent. Construct a prompt containing:
+1. **Before spawning the committer**, update state: `"phase": "completed"`, `"status": "completed"`, set `"completedAt"`. This ensures the committer commits the final state.
+
+2. Spawn the **`committer`** agent. Construct a prompt containing:
 
 - Work directory: `.claude-work/{task-id}/`
 - Task group name for the roadmap update
 - Paths to all report files (plan, review, impl-summary, code-review, smoke-report)
 - Instruction to commit pipeline artifacts: the committer MUST stage and commit all `.claude-work/{task-id}/` files (plan.md, plan-review.md, impl-summary.md, code-review.md, smoke-report.md, state.json) alongside the implementation code and roadmap update. These artifacts are the audit trail for the task and must be preserved in git history.
 
-Update state: `"phase": "completed"`, `"status": "completed"`, set `"completedAt"`.
+3. **After the committer returns**, push to the remote: `git push`.
 
 ---
 
