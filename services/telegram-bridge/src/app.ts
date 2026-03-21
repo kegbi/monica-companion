@@ -64,6 +64,8 @@ export function createApp(config: Config, redis?: Redis) {
 			voiceTranscriptionClient.transcribe(metadata, buffer, userId),
 		disconnect: (userId, correlationId) =>
 			userManagementClient.disconnectUser(userId, correlationId),
+		issueSetupToken: (telegramUserId, correlationId) =>
+			userManagementClient.issueSetupToken(telegramUserId, correlationId),
 	});
 
 	// Create update dedup (uses Redis if available)

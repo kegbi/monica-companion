@@ -1,5 +1,5 @@
 import { createServiceClient, type ServiceClient } from "@monica-companion/auth";
-import type { ConnectorUserLookupResponse } from "@monica-companion/types";
+import type { ConnectorUserLookupResponse, IssueSetupTokenResponse } from "@monica-companion/types";
 
 export interface UserManagementClientOptions {
 	baseUrl: string;
@@ -17,6 +17,7 @@ export interface UserManagementClient extends ServiceClient {
 		userId: string,
 		correlationId?: string,
 	): Promise<{ disconnected: boolean; purgeScheduledAt: string }>;
+	issueSetupToken(telegramUserId: string, correlationId?: string): Promise<IssueSetupTokenResponse>;
 }
 
 export function createUserManagementClient(
@@ -58,6 +59,23 @@ export function createUserManagementClient(
 			});
 			if (!res.ok) {
 				throw new Error(`Disconnect failed with status ${res.status}`);
+			}
+			return res.json();
+		},
+		async issueSetupToken(
+			telegramUserId: string,
+			correlationId?: string,
+		): Promise<IssueSetupTokenResponse> {
+			const signal = AbortSignal.timeout(options.timeoutMs ?? 5000);
+			const res = await base.fetch("/internal/setup-tokens", {
+				method: "POST",
+				correlationId,
+				signal,
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ telegramUserId, step: "onboarding" }),
+			});
+			if (!res.ok) {
+				throw new Error(`Issue setup token failed with status ${res.status}`);
 			}
 			return res.json();
 		},

@@ -253,6 +253,30 @@ describe("user-management /internal/setup-tokens", () => {
 		});
 		expect(status).toBe(400);
 	});
+
+	it("reissue for same telegramUserId returns a different tokenId (supersede)", async () => {
+		const telegramUserId = `smoke-reissue-${Date.now()}`;
+		const reqBody = { telegramUserId, step: "onboarding" };
+
+		const first = await authedRequest(url, "user-management", {
+			method: "POST",
+			issuer: "telegram-bridge",
+			body: reqBody,
+		});
+		expect(first.status).toBe(201);
+
+		const second = await authedRequest(url, "user-management", {
+			method: "POST",
+			issuer: "telegram-bridge",
+			body: reqBody,
+		});
+		expect(second.status).toBe(201);
+
+		// The second token must have a different tokenId (previous was superseded)
+		expect(second.body.tokenId).not.toBe(first.body.tokenId);
+		expect(second.body).toHaveProperty("setupUrl");
+		expect(second.body).toHaveProperty("expiresAt");
+	});
 });
 
 // ---------------------------------------------------------------------------
