@@ -33,7 +33,7 @@ export function createApp(config: Config, redis: Redis, whisperClient: WhisperCl
 		"/transcribe",
 		guardrailMiddleware({
 			redis,
-			modelType: "whisper",
+			modelType: config.whisperModel,
 			rateLimit: config.guardrails.rateLimitPerUser,
 			rateWindowSeconds: config.guardrails.rateWindowSeconds,
 			maxConcurrency: config.guardrails.concurrencyPerUser,

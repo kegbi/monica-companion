@@ -2,6 +2,23 @@ import { type AuthConfig, loadAuthConfig } from "@monica-companion/auth";
 import { type GuardrailConfig, loadGuardrailConfig } from "@monica-companion/guardrails";
 import { z } from "zod/v4";
 
+/** Per-minute USD pricing for supported transcription models (source: OpenAI pricing, Mar 2026) */
+export const TRANSCRIPTION_MODEL_PRICING: Record<string, number> = {
+	"whisper-1": 0.006,
+	"gpt-4o-transcribe": 0.006,
+	"gpt-4o-mini-transcribe": 0.003,
+};
+
+function getModelCostPerMinute(model: string): number {
+	const cost = TRANSCRIPTION_MODEL_PRICING[model];
+	if (cost === undefined) {
+		throw new Error(
+			`Unknown transcription model "${model}": no pricing defined. Add it to TRANSCRIPTION_MODEL_PRICING in config.ts.`,
+		);
+	}
+	return cost;
+}
+
 const voiceTranscriptionConfigSchema = z.object({
 	OPENAI_API_KEY: z.string().min(1),
 	WHISPER_MODEL: z.string().min(1).default("gpt-4o-transcribe"),
@@ -12,7 +29,6 @@ const voiceTranscriptionConfigSchema = z.object({
 		.positive()
 		.default(25 * 1024 * 1024),
 	FETCH_URL_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
-	WHISPER_COST_PER_MINUTE_USD: z.coerce.number().positive().default(0.048),
 	INBOUND_ALLOWED_CALLERS: z.string().optional(),
 });
 
@@ -53,7 +69,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 		whisperTimeoutMs: parsed.WHISPER_TIMEOUT_MS,
 		whisperMaxFileSizeBytes: parsed.WHISPER_MAX_FILE_SIZE_BYTES,
 		fetchUrlTimeoutMs: parsed.FETCH_URL_TIMEOUT_MS,
-		whisperCostPerMinuteUsd: parsed.WHISPER_COST_PER_MINUTE_USD,
+		whisperCostPerMinuteUsd: getModelCostPerMinute(parsed.WHISPER_MODEL),
 		redisUrl: guardrails.redisUrl,
 		guardrails,
 		inboundAllowedCallers: parseAllowedCallers(parsed.INBOUND_ALLOWED_CALLERS),

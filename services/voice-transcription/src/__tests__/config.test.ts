@@ -38,27 +38,27 @@ describe("loadConfig", () => {
 		expect(config.fetchUrlTimeoutMs).toBe(5000);
 	});
 
-	it("allows falling back to whisper-1 model via env override", () => {
-		const config = loadConfig({
-			...baseEnv,
-			WHISPER_MODEL: "whisper-1",
-			WHISPER_COST_PER_MINUTE_USD: "0.006",
-		});
+	it("derives cost from model pricing map for default model", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.whisperCostPerMinuteUsd).toBe(0.006);
+	});
+
+	it("derives cost from model pricing map for whisper-1", () => {
+		const config = loadConfig({ ...baseEnv, WHISPER_MODEL: "whisper-1" });
 		expect(config.whisperModel).toBe("whisper-1");
 		expect(config.whisperCostPerMinuteUsd).toBe(0.006);
 	});
 
-	it("loads whisper cost per minute with default", () => {
-		const config = loadConfig(baseEnv);
-		expect(config.whisperCostPerMinuteUsd).toBe(0.048);
+	it("derives cost from model pricing map for gpt-4o-mini-transcribe", () => {
+		const config = loadConfig({ ...baseEnv, WHISPER_MODEL: "gpt-4o-mini-transcribe" });
+		expect(config.whisperModel).toBe("gpt-4o-mini-transcribe");
+		expect(config.whisperCostPerMinuteUsd).toBe(0.003);
 	});
 
-	it("allows overriding whisper cost per minute", () => {
-		const config = loadConfig({
-			...baseEnv,
-			WHISPER_COST_PER_MINUTE_USD: "0.012",
-		});
-		expect(config.whisperCostPerMinuteUsd).toBe(0.012);
+	it("throws for unknown model not in pricing map", () => {
+		expect(() => loadConfig({ ...baseEnv, WHISPER_MODEL: "unknown-model" })).toThrow(
+			/no pricing defined/,
+		);
 	});
 
 	it("loads guardrail config", () => {
