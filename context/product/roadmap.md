@@ -234,11 +234,11 @@ _Close the remaining gaps that block the end-to-end user journey: a new user mus
   - [x] Add client-side validation: Monica URL must be HTTPS and well-formed, timezone must be a valid IANA identifier, API key must be non-empty.
   - [x] Add a success page or redirect after consumption that instructs the user to return to Telegram.
 
-- [ ] **Contact Resolution Integration into LangGraph Pipeline**
-  - [ ] Wire the existing contact resolver (`ai-router/src/contact-resolution/`) into the LangGraph `executeAction` node so that `contactRef` strings from the LLM are resolved against real Monica contact data via `monica-integration`.
-  - [ ] When the LLM produces a `contactRef` for a mutating command, call `monica-integration` `/internal/contacts/resolution-summaries` and run the deterministic matcher before creating the pending command.
-  - [ ] Use real contact resolution results to populate disambiguation options instead of relying on LLM-generated options.
-  - [ ] When resolution returns `resolved` (single high-confidence match), auto-fill `contactId` in the command payload.
-  - [ ] When resolution returns `ambiguous`, generate a disambiguation prompt with real contact data (names, relationship labels) as inline keyboard buttons.
-  - [ ] When resolution returns `no_match`, prompt the user to clarify or offer to create a new contact.
-  - [ ] Ensure the contact summary is loaded once per graph invocation and cached in state to avoid redundant calls.
+- [x] **Contact Resolution Integration into LangGraph Pipeline**
+  - [x] Wire the existing contact resolver (`ai-router/src/contact-resolution/`) into the LangGraph `executeAction` node so that `contactRef` strings from the LLM are resolved against real Monica contact data via `monica-integration`.
+  - [x] When the LLM produces a `contactRef` for a mutating command, call `monica-integration` `/internal/contacts/resolution-summaries` and run the deterministic matcher before creating the pending command.
+  - [x] Use real contact resolution results to populate disambiguation options instead of relying on LLM-generated options.
+  - [x] When resolution returns `resolved` (single high-confidence match), auto-fill `contactId` in the command payload.
+  - [x] When resolution returns `ambiguous`, generate a disambiguation prompt with real contact data (names, relationship labels) as inline keyboard buttons.
+  - [x] When resolution returns `no_match`, prompt the user to clarify or offer to create a new contact.
+  - [x] Ensure the contact summary is loaded once per graph invocation and cached in state to avoid redundant calls.
