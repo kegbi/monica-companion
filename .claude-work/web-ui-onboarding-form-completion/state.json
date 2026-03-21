@@ -1,0 +1,11 @@
+{
+	"taskId": "web-ui-onboarding-form-completion",
+	"taskGroup": "Web-UI Onboarding Form Completion",
+	"phase": "committing",
+	"planAttempts": 1,
+	"codeAttempts": 1,
+	"smokeAttempts": 1,
+	"status": "in-progress",
+	"mode": "auto",
+	"startedAt": "2026-03-21T01:00:00.000Z"
+}
