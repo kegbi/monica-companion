@@ -1,29 +1,16 @@
 /**
- * Barrel export for all benchmark fixtures.
+ * Barrel export for benchmark fixtures.
  *
  * ALL DATA IN FIXTURE FILES IS SYNTHETIC.
+ *
+ * Intent classification fixtures have been migrated to YAML datasets
+ * in promptfoo/datasets/ and are no longer maintained as TypeScript.
+ * Only contact-resolution fixtures remain here.
  */
 import type { BenchmarkCase } from "@monica-companion/types";
-import { clarificationCases } from "./clarification-turns.js";
 import { contactResolutionCases } from "./contact-resolution.js";
-import { greetingCases } from "./greeting-turns.js";
-import { outOfScopeCases } from "./out-of-scope-turns.js";
-import { readIntentCases } from "./read-intents.js";
-import { writeIntentCases } from "./write-intents.js";
 
-export { clarificationCases } from "./clarification-turns.js";
 export { contactResolutionCases } from "./contact-resolution.js";
-export { greetingCases } from "./greeting-turns.js";
-export { outOfScopeCases } from "./out-of-scope-turns.js";
-export { readIntentCases } from "./read-intents.js";
-export { writeIntentCases } from "./write-intents.js";
 
-/** All benchmark cases combined. */
-export const allBenchmarkCases: BenchmarkCase[] = [
-	...contactResolutionCases,
-	...writeIntentCases,
-	...readIntentCases,
-	...clarificationCases,
-	...outOfScopeCases,
-	...greetingCases,
-];
+/** All benchmark cases combined (contact-resolution only). */
+export const allBenchmarkCases: BenchmarkCase[] = [...contactResolutionCases];

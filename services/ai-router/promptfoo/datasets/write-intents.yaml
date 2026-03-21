@@ -1,0 +1,1533 @@
+# ALL DATA IN THIS FILE IS SYNTHETIC. No real user data, API keys,
+# credentials, or PII is used. Names, dates, and relationships are
+# fabricated for testing purposes only.
+#
+# Write intent benchmark fixtures: 100 cases total
+# - create_note: 25 cases (wi-001 to wi-025)
+# - create_contact: 15 cases (wi-026 to wi-040)
+# - create_activity: 20 cases (wi-041 to wi-060)
+# - update_contact_birthday: 10 cases (wi-061 to wi-070)
+# - update_contact_phone: 10 cases (wi-071 to wi-080)
+# - update_contact_email: 10 cases (wi-081 to wi-090)
+# - update_contact_address: 10 cases (wi-091 to wi-100)
+
+# ========================================================================
+# create_note: 25 cases (wi-001 to wi-025)
+# ========================================================================
+- description: "Add a note to a contact by relationship label"
+  vars:
+    utterance: "Add a note to Mom about her garden project"
+  metadata:
+    id: "wi-001"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Record a gift idea as a note"
+  vars:
+    utterance: "Add gift idea for Mom: new gardening tools"
+  metadata:
+    id: "wi-002"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Record a conversation note"
+  vars:
+    utterance: "Note: Mom mentioned she wants to visit in June"
+  metadata:
+    id: "wi-003"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Voice-style note about a contact preference"
+  vars:
+    utterance: "um hey remember that sarah likes dark chocolate not milk chocolate"
+  metadata:
+    id: "wi-004"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Save a note about a medical appointment"
+  vars:
+    utterance: "Write a note that David has a dentist appointment next Tuesday"
+  metadata:
+    id: "wi-005"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Voice-style note with filler words"
+  vars:
+    utterance: "uh can you like write down that emma is allergic to peanuts"
+  metadata:
+    id: "wi-006"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Note about a work project"
+  vars:
+    utterance: "Make a note that Carlos is leading the Q2 marketing campaign"
+  metadata:
+    id: "wi-007"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Note in Spanish"
+  vars:
+    utterance: "Anota que Carlos prefiere el cafe sin azucar"
+  metadata:
+    id: "wi-008"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Voice-style note about travel plans"
+  vars:
+    utterance: "so yuki told me shes going to osaka in april make a note of that"
+  metadata:
+    id: "wi-009"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+- description: "Note about dietary preferences"
+  vars:
+    utterance: "Remember that Alex is now vegetarian"
+  metadata:
+    id: "wi-010"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Compound command - note plus activity (primary: note)"
+  vars:
+    utterance: "Write a note about the concert and log that I went with Emma"
+  metadata:
+    id: "wi-011"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Note in French"
+  vars:
+    utterance: "Note que Emma aime les films francais"
+  metadata:
+    id: "wi-012"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Voice-style note with run-on sentence"
+  vars:
+    utterance: "hey just wanted to jot down that my husband said he wants a new bike for his birthday"
+  metadata:
+    id: "wi-013"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband')"
+
+- description: "Note about a pet"
+  vars:
+    utterance: "Add a note that Sarah Miller got a new puppy named Biscuit"
+  metadata:
+    id: "wi-014"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Voice-style ambiguous Sarah note"
+  vars:
+    utterance: "um make a note that sarah from work is transferring to the london office"
+  metadata:
+    id: "wi-015"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Note about a hobby"
+  vars:
+    utterance: "Note that Alex Torres started learning guitar"
+  metadata:
+    id: "wi-016"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Note in German"
+  vars:
+    utterance: "Notiz fuer Emma: sie hat eine neue Wohnung in Berlin"
+  metadata:
+    id: "wi-017"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Note with misspelling"
+  vars:
+    utterance: "Add a noet to Calros about the budget review"
+  metadata:
+    id: "wi-018"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('calros')"
+
+- description: "Voice-style verbose note"
+  vars:
+    utterance: "okay so i need you to write something down about mom she said that she is thinking about retiring from her job at the hospital next year around march"
+  metadata:
+    id: "wi-019"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Note in Portuguese"
+  vars:
+    utterance: "Anota que Carlos vai viajar para o Brasil em julho"
+  metadata:
+    id: "wi-020"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Voice-style note about job change"
+  vars:
+    utterance: "hey write down that david chen just got promoted to senior manager"
+  metadata:
+    id: "wi-021"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Note using relationship reference (spouse)"
+  vars:
+    utterance: "Save a note that my husband wants to try the new Italian restaurant"
+  metadata:
+    id: "wi-022"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband')"
+
+- description: "Note in Japanese (romanized)"
+  vars:
+    utterance: "Yuki no memo: kanojo wa rainen kekkon suru yotei desu"
+  metadata:
+    id: "wi-023"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+- description: "Voice-style note with abbreviation"
+  vars:
+    utterance: "note for alex j hes moving to nyc in sept"
+  metadata:
+    id: "wi-024"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Note about a recommendation"
+  vars:
+    utterance: "Add a note that Yuki recommended the book Atomic Habits"
+  metadata:
+    id: "wi-025"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+# ========================================================================
+# create_contact: 15 cases (wi-026 to wi-040)
+# ========================================================================
+- description: "Create a new contact by full name"
+  vars:
+    utterance: "Create a contact named Sarah Miller"
+  metadata:
+    id: "wi-026"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Add a new person to contacts"
+  vars:
+    utterance: "Add a new person named James Wong to my contacts"
+  metadata:
+    id: "wi-027"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('james')"
+
+- description: "Voice-style create contact"
+  vars:
+    utterance: "hey can you add a new contact for lisa martinez shes my new neighbor"
+  metadata:
+    id: "wi-028"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('lisa')"
+
+- description: "Create contact in Spanish"
+  vars:
+    utterance: "Crear un contacto nuevo llamado Pedro Sanchez"
+  metadata:
+    id: "wi-029"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('pedro')"
+
+- description: "Create contact with relationship context"
+  vars:
+    utterance: "Create a contact for my dentist Dr. Rachel Kim"
+  metadata:
+    id: "wi-030"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('rachel')"
+
+- description: "Voice-style create contact with filler"
+  vars:
+    utterance: "um yeah i need to add uh mike thompson hes a guy from the gym"
+  metadata:
+    id: "wi-031"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mike')"
+
+- description: "Create contact with first name only"
+  vars:
+    utterance: "Add Priya as a new contact"
+  metadata:
+    id: "wi-032"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('priya')"
+
+- description: "Create contact in French"
+  vars:
+    utterance: "Ajouter un nouveau contact Jean-Pierre Dupont"
+  metadata:
+    id: "wi-033"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('jean')"
+
+- description: "Compound command - create contact and add note (primary: create contact)"
+  vars:
+    utterance: "Create a contact for Natalie Brooks and note that she works at Acme Corp"
+  metadata:
+    id: "wi-034"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('natalie')"
+
+- description: "Voice-style create contact with spoken context"
+  vars:
+    utterance: "i met someone new today her name is aisha patel she works in accounting"
+  metadata:
+    id: "wi-035"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('aisha')"
+
+- description: "Create contact in German"
+  vars:
+    utterance: "Neuen Kontakt anlegen fuer Hans Mueller"
+  metadata:
+    id: "wi-036"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('hans')"
+
+- description: "Create contact with informal phrasing"
+  vars:
+    utterance: "I need to save a new contact for Ben Taylor"
+  metadata:
+    id: "wi-037"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('ben')"
+
+- description: "Voice-style create contact with name spelling"
+  vars:
+    utterance: "add a contact for olivia thats o l i v i a last name nguyen n g u y e n"
+  metadata:
+    id: "wi-038"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('olivia')"
+
+- description: "Create contact in Russian (romanized)"
+  vars:
+    utterance: "Dobav novyj kontakt Dmitrij Petrov"
+  metadata:
+    id: "wi-039"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('dmitrij')"
+
+- description: "Create contact with polite phrasing"
+  vars:
+    utterance: "Could you please add a new contact for my coworker Fatima Al-Hassan?"
+  metadata:
+    id: "wi-040"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_contact'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('fatima')"
+
+# ========================================================================
+# create_activity: 20 cases (wi-041 to wi-060)
+# ========================================================================
+- description: "Log a phone call activity"
+  vars:
+    utterance: "Log that I called Sarah yesterday"
+  metadata:
+    id: "wi-041"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Log a meeting activity"
+  vars:
+    utterance: "I had lunch with David today"
+  metadata:
+    id: "wi-042"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Voice-style activity log"
+  vars:
+    utterance: "hey so i just got off a video call with carlos about the project timeline"
+  metadata:
+    id: "wi-043"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Log coffee meetup"
+  vars:
+    utterance: "Record that I had coffee with Emma this morning"
+  metadata:
+    id: "wi-044"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Activity in Spanish"
+  vars:
+    utterance: "Registrar que almorcee con Carlos hoy"
+  metadata:
+    id: "wi-045"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Voice-style activity with filler words"
+  vars:
+    utterance: "uh i just um met up with yuki at the park you know like an hour ago"
+  metadata:
+    id: "wi-046"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+- description: "Log a dinner activity"
+  vars:
+    utterance: "We had dinner with Mom and Alex last night"
+  metadata:
+    id: "wi-047"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Log a birthday party activity"
+  vars:
+    utterance: "Log that I attended Sarah Chen's birthday party on Saturday"
+  metadata:
+    id: "wi-048"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Voice-style activity with relationship reference"
+  vars:
+    utterance: "my brother and i went hiking this weekend please log that"
+  metadata:
+    id: "wi-049"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('brother')"
+
+- description: "Log a work meeting"
+  vars:
+    utterance: "Had a one-on-one with David Chen about performance reviews"
+  metadata:
+    id: "wi-050"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Activity in French"
+  vars:
+    utterance: "J'ai pris un cafe avec Emma ce matin"
+  metadata:
+    id: "wi-051"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Compound command - activity plus note (primary: activity)"
+  vars:
+    utterance: "Log that I met with Alex Torres and make a note he mentioned a new job"
+  metadata:
+    id: "wi-052"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Voice-style activity log about texting"
+  vars:
+    utterance: "i texted with sarah miller earlier today about weekend plans"
+  metadata:
+    id: "wi-053"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Log a gym session together"
+  vars:
+    utterance: "Went to the gym with Alex this afternoon"
+  metadata:
+    id: "wi-054"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Activity in Portuguese"
+  vars:
+    utterance: "Registra que eu encontrei com Carlos no escritorio ontem"
+  metadata:
+    id: "wi-055"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Voice-style activity with ambiguous David"
+  vars:
+    utterance: "so david and i watched the game together last night the david from work"
+  metadata:
+    id: "wi-056"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Log a virtual event attendance"
+  vars:
+    utterance: "Attended a webinar with Yuki on AI trends"
+  metadata:
+    id: "wi-057"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+- description: "Log a walk activity"
+  vars:
+    utterance: "Went for a walk with my spouse in the evening"
+  metadata:
+    id: "wi-058"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('spouse')"
+
+- description: "Voice-style activity log with spoken date"
+  vars:
+    utterance: "i had brunch with emma on march fifteenth at that cafe downtown"
+  metadata:
+    id: "wi-059"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Activity in Japanese (romanized)"
+  vars:
+    utterance: "Yuki to issho ni ranchi wo tabemashita"
+  metadata:
+    id: "wi-060"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_activity'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+# ========================================================================
+# update_contact_birthday: 10 cases (wi-061 to wi-070)
+# ========================================================================
+- description: "Update a birthday for a specific contact"
+  vars:
+    utterance: "Update Alex's birthday to April 12"
+  metadata:
+    id: "wi-061"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Set birthday with full date"
+  vars:
+    utterance: "Set Emma's birthday to December 3rd 1990"
+  metadata:
+    id: "wi-062"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Voice-style birthday update with spoken date"
+  vars:
+    utterance: "hey carlos birthday is on the twenty second of january nineteen eighty five"
+  metadata:
+    id: "wi-063"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Birthday update using relationship label"
+  vars:
+    utterance: "My sister's birthday is on March 5th"
+  metadata:
+    id: "wi-064"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sister')"
+
+- description: "Birthday update in Spanish"
+  vars:
+    utterance: "El cumpleanos de Carlos es el quince de agosto"
+  metadata:
+    id: "wi-065"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Voice-style birthday with day-month format"
+  vars:
+    utterance: "um yukis birthday is may tenth but im not sure about the year"
+  metadata:
+    id: "wi-066"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+- description: "Correct a birthday"
+  vars:
+    utterance: "Fix Sarah Miller's birthday, it should be April 15th not the 12th"
+  metadata:
+    id: "wi-067"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Birthday update with ambiguous David"
+  vars:
+    utterance: "David Park's birthday is June 14"
+  metadata:
+    id: "wi-068"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Birthday update for Mom"
+  vars:
+    utterance: "Change Mom's birthday to July 22nd"
+  metadata:
+    id: "wi-069"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Voice-style birthday update with filler"
+  vars:
+    utterance: "uh so alex torres told me his birthday is actually november third not the fifth"
+  metadata:
+    id: "wi-070"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+# ========================================================================
+# update_contact_phone: 10 cases (wi-071 to wi-080)
+# ========================================================================
+- description: "Update a phone number"
+  vars:
+    utterance: "Update Sarah's phone number to 555-0199"
+  metadata:
+    id: "wi-071"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Voice-style phone update with spoken digits"
+  vars:
+    utterance: "emmas new number is five five five zero one two three"
+  metadata:
+    id: "wi-072"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Change phone number with full format"
+  vars:
+    utterance: "Change Carlos's phone to +1-555-0145"
+  metadata:
+    id: "wi-073"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Phone update for Mom"
+  vars:
+    utterance: "Mom has a new phone number: 555-0188"
+  metadata:
+    id: "wi-074"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Voice-style phone update with context"
+  vars:
+    utterance: "hey alex just got a new phone his number is five five five zero three four five"
+  metadata:
+    id: "wi-075"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Phone update in French"
+  vars:
+    utterance: "Le nouveau numero de telephone d'Emma est 06 12 34 56 78"
+  metadata:
+    id: "wi-076"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Compound command - phone and email update (primary: phone)"
+  vars:
+    utterance: "Update David Chen's phone to 555-0167 and his email too"
+  metadata:
+    id: "wi-077"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Phone update with cell specification"
+  vars:
+    utterance: "Save Yuki's cell phone number as 555-0234"
+  metadata:
+    id: "wi-078"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+- description: "Voice-style phone with relationship reference"
+  vars:
+    utterance: "my husbands new work phone is five five five zero nine eight seven"
+  metadata:
+    id: "wi-079"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband')"
+
+- description: "Phone update with ambiguous Sarah"
+  vars:
+    utterance: "Sarah Chen's new number is 555-0278"
+  metadata:
+    id: "wi-080"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+# ========================================================================
+# update_contact_email: 10 cases (wi-081 to wi-090)
+# ========================================================================
+- description: "Update email address"
+  vars:
+    utterance: "Update Emma's email to emma.watson@example.com"
+  metadata:
+    id: "wi-081"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_email'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Voice-style email update with spoken address"
+  vars:
+    utterance: "carlos new email is carlos dot rivera at gmail dot com"
+  metadata:
+    id: "wi-082"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_email'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Change email with formal phrasing"
+  vars:
+    utterance: "Please change David Chen's email address to dchen@techcorp.com"
+  metadata:
+    id: "wi-083"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_email'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Email update for sibling"
+  vars:
+    utterance: "My brother's new email is alexj@example.org"
+  metadata:
+    id: "wi-084"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_email'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('brother')"
+
+- description: "Email update in Spanish"
+  vars:
+    utterance: "El correo nuevo de Carlos es carlos@empresa.es"
+  metadata:
+    id: "wi-085"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_email'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Voice-style email update with filler"
+  vars:
+    utterance: "uh yukis email changed its now yuki underscore tanaka at yahoo dot com"
+  metadata:
+    id: "wi-086"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_email'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+- description: "Set work email address"
+  vars:
+    utterance: "Set Sarah Miller's work email to smiller@designco.com"
+  metadata:
+    id: "wi-087"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_email'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Email update with ambiguous Alex"
+  vars:
+    utterance: "Alex Torres email is atorres@startup.io"
+  metadata:
+    id: "wi-088"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_email'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Email update for Mom"
+  vars:
+    utterance: "Mom's email is now mary.johnson@mail.com"
+  metadata:
+    id: "wi-089"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_email'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Compound command - email and phone update (primary: email)"
+  vars:
+    utterance: "Update David Park's email to dpark@home.net and also his phone number"
+  metadata:
+    id: "wi-090"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_email'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+# ========================================================================
+# update_contact_address: 10 cases (wi-091 to wi-100)
+# ========================================================================
+- description: "Update home address"
+  vars:
+    utterance: "Update Emma's address to 123 Oak Street, Portland, OR 97201"
+  metadata:
+    id: "wi-091"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_address'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Voice-style address update"
+  vars:
+    utterance: "sarah millers new address is four fifty six maple avenue apartment three b chicago"
+  metadata:
+    id: "wi-092"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_address'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Change address with formal phrasing"
+  vars:
+    utterance: "Please change Carlos's address to 789 Pine Road, Austin, TX 73301"
+  metadata:
+    id: "wi-093"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_address'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Address update for Mom"
+  vars:
+    utterance: "Mom moved to 321 Elm Drive, Seattle, WA 98101"
+  metadata:
+    id: "wi-094"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_address'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Voice-style address with spoken numbers"
+  vars:
+    utterance: "alexs new place is seven eight nine broadway unit twelve new york city"
+  metadata:
+    id: "wi-095"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_address'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Address update in German"
+  vars:
+    utterance: "Emmas neue Adresse ist Hauptstrasse 42, Berlin"
+  metadata:
+    id: "wi-096"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_address'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Address update with relationship reference"
+  vars:
+    utterance: "My husband moved to 555 Cedar Lane, Denver, CO 80201"
+  metadata:
+    id: "wi-097"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_address'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband')"
+
+- description: "Address update with ambiguous David"
+  vars:
+    utterance: "David Chen's new address is 100 Market Street, San Francisco, CA 94105"
+  metadata:
+    id: "wi-098"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_address'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Voice-style address with run-on"
+  vars:
+    utterance: "so yuki just moved her new address is one two three sakura street apartment five tokyo"
+  metadata:
+    id: "wi-099"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_address'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+- description: "Compound command - address and note (primary: address)"
+  vars:
+    utterance: "Update Alex Torres's address to 200 Sunset Blvd LA and note he bought a condo"
+  metadata:
+    id: "wi-100"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'update_contact_address'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"

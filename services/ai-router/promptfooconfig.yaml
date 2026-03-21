@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+#
+# Monica Companion Intent Classification Quality Gates
+#
+# This configuration runs 200 intent classification test cases against
+# the custom provider wrapping createIntentClassifier(). Per-category
+# thresholds are enforced by promptfoo/check-thresholds.ts.
+#
+# Usage:
+#   npx promptfoo eval --no-cache --output promptfoo/results.json
+
+description: "Monica Companion Intent Classification Quality Gates"
+
+providers:
+  - id: file://promptfoo/provider.ts
+
+prompts:
+  - "{{utterance}}"
+
+tests:
+  - file://promptfoo/datasets/write-intents.yaml
+  - file://promptfoo/datasets/read-intents.yaml
+  - file://promptfoo/datasets/clarification.yaml
+  - file://promptfoo/datasets/guardrails.yaml

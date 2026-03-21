@@ -1,0 +1,319 @@
+# ALL DATA IN THIS FILE IS SYNTHETIC. No real user data, API keys,
+# credentials, or PII is used.
+#
+# Clarification turn benchmark fixtures: 25 cases total
+# - Disambiguation questions (cl-001 to cl-005)
+# - Disambiguation answers (cl-006 to cl-010)
+# - Confirmations (cl-011 to cl-015)
+# - Negations (cl-016 to cl-019)
+# - Edits / corrections (cl-020 to cl-022)
+# - Provide missing info (cl-023 to cl-025)
+
+# ========================================================================
+# Disambiguation questions (cl-001 to cl-005)
+# ========================================================================
+- description: "Disambiguation question - which Sherry"
+  vars:
+    utterance: "Which Sherry?"
+  metadata:
+    id: "cl-001"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+- description: "Disambiguation question - which Alex"
+  vars:
+    utterance: "Which Alex do you mean?"
+  metadata:
+    id: "cl-002"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+- description: "Voice-style disambiguation - which David"
+  vars:
+    utterance: "wait which david are you talking about"
+  metadata:
+    id: "cl-003"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+- description: "Disambiguation question in Spanish"
+  vars:
+    utterance: "A cual Sherry te refieres?"
+  metadata:
+    id: "cl-004"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+- description: "Disambiguation question - asking for options"
+  vars:
+    utterance: "I have two Alexes, which one?"
+  metadata:
+    id: "cl-005"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+# ========================================================================
+# Disambiguation answers (cl-006 to cl-010)
+# ========================================================================
+- description: "Disambiguation answer - the one from work"
+  vars:
+    utterance: "The one from work"
+  metadata:
+    id: "cl-006"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('work')"
+
+- description: "Disambiguation answer - the friend"
+  vars:
+    utterance: "The friend one, not the colleague"
+  metadata:
+    id: "cl-007"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('friend')"
+
+- description: "Voice-style disambiguation answer with full name"
+  vars:
+    utterance: "i mean alex torres not alex kim"
+  metadata:
+    id: "cl-008"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex torres')"
+
+- description: "Disambiguation answer with last name"
+  vars:
+    utterance: "Chen, David Chen"
+  metadata:
+    id: "cl-009"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david chen')"
+
+- description: "Disambiguation answer - my husband"
+  vars:
+    utterance: "My husband David"
+  metadata:
+    id: "cl-010"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && (JSON.parse(output).contactRef.toLowerCase().includes('husband') || JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+
+# ========================================================================
+# Confirmations (cl-011 to cl-015)
+# ========================================================================
+- description: "Simple confirmation - yes"
+  vars:
+    utterance: "Yes, that's right"
+  metadata:
+    id: "cl-011"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+- description: "Voice-style confirmation"
+  vars:
+    utterance: "yeah thats the one go ahead"
+  metadata:
+    id: "cl-012"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+- description: "Confirmation - correct"
+  vars:
+    utterance: "Correct, please proceed"
+  metadata:
+    id: "cl-013"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+- description: "Confirmation in French"
+  vars:
+    utterance: "Oui, c'est ca"
+  metadata:
+    id: "cl-014"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+- description: "Confirmation with emphasis"
+  vars:
+    utterance: "Absolutely, that is exactly what I meant"
+  metadata:
+    id: "cl-015"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+# ========================================================================
+# Negations (cl-016 to cl-019)
+# ========================================================================
+- description: "Simple negation"
+  vars:
+    utterance: "No, not that one"
+  metadata:
+    id: "cl-016"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+- description: "Voice-style negation with correction"
+  vars:
+    utterance: "no no no the other one not that alex"
+  metadata:
+    id: "cl-017"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+- description: "Negation with cancellation"
+  vars:
+    utterance: "Never mind, cancel that"
+  metadata:
+    id: "cl-018"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+- description: "Negation in German"
+  vars:
+    utterance: "Nein, das ist falsch"
+  metadata:
+    id: "cl-019"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+# ========================================================================
+# Edits / corrections (cl-020 to cl-022)
+# ========================================================================
+- description: "Edit - change the name"
+  vars:
+    utterance: "Actually, I meant David Park not David Chen"
+  metadata:
+    id: "cl-020"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david park')"
+
+- description: "Voice-style edit with correction"
+  vars:
+    utterance: "wait i said the wrong person i meant sherry chen not sherry miller"
+  metadata:
+    id: "cl-021"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sherry chen')"
+
+- description: "Edit with partial correction"
+  vars:
+    utterance: "Change that to Alex Kim instead"
+  metadata:
+    id: "cl-022"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex kim')"
+
+# ========================================================================
+# Provide missing info (cl-023 to cl-025)
+# ========================================================================
+- description: "Provide missing date info"
+  vars:
+    utterance: "The date is March 15th"
+  metadata:
+    id: "cl-023"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+- description: "Voice-style provide missing phone number"
+  vars:
+    utterance: "oh the number is five five five zero one four two"
+  metadata:
+    id: "cl-024"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+
+- description: "Provide missing email in Portuguese"
+  vars:
+    utterance: "O email e carlos@exemplo.com.br"
+  metadata:
+    id: "cl-025"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"

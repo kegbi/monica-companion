@@ -1,0 +1,917 @@
+# ALL DATA IN THIS FILE IS SYNTHETIC. No real user data, API keys,
+# credentials, or PII is used. Names, dates, and relationships are
+# fabricated for testing purposes only.
+#
+# Read intent benchmark fixtures: 60 cases total
+# - query_birthday: 25 cases (ri-001 to ri-025)
+# - query_phone: 20 cases (ri-026 to ri-045)
+# - query_last_note: 15 cases (ri-046 to ri-060)
+
+# ========================================================================
+# query_birthday: 25 cases (ri-001 to ri-025)
+# ========================================================================
+- description: "Ask for a contact's birthday"
+  vars:
+    utterance: "What's Sarah's birthday?"
+  metadata:
+    id: "ri-001"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Ask for birthday using relationship label"
+  vars:
+    utterance: "When is my brother's birthday?"
+  metadata:
+    id: "ri-002"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('brother')"
+
+- description: "Voice-style birthday query"
+  vars:
+    utterance: "hey when is emmas birthday again"
+  metadata:
+    id: "ri-003"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Birthday query for Mom"
+  vars:
+    utterance: "When is Mom's birthday?"
+  metadata:
+    id: "ri-004"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Birthday query in Spanish"
+  vars:
+    utterance: "Cuando es el cumpleanos de Carlos?"
+  metadata:
+    id: "ri-005"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Voice-style birthday with filler words"
+  vars:
+    utterance: "um do you know like when is yukis birthday"
+  metadata:
+    id: "ri-006"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+- description: "Birthday query with full name for disambiguation"
+  vars:
+    utterance: "What is David Chen's birthday?"
+  metadata:
+    id: "ri-007"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Birthday query with 'born' phrasing"
+  vars:
+    utterance: "When was Alex born?"
+  metadata:
+    id: "ri-008"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Voice-style birthday query with run-on"
+  vars:
+    utterance: "can you tell me what day sarah millers birthday is on"
+  metadata:
+    id: "ri-009"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Birthday query in French"
+  vars:
+    utterance: "C'est quand l'anniversaire d'Emma?"
+  metadata:
+    id: "ri-010"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Birthday query using spouse relationship"
+  vars:
+    utterance: "When is my husband's birthday?"
+  metadata:
+    id: "ri-011"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband')"
+
+- description: "Birthday query with ambiguous Sarah - full name"
+  vars:
+    utterance: "When is Sarah Chen's birthday?"
+  metadata:
+    id: "ri-012"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Voice-style birthday query for Alex Torres"
+  vars:
+    utterance: "hey whens alex torres birthday"
+  metadata:
+    id: "ri-013"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Birthday query in Portuguese"
+  vars:
+    utterance: "Quando e o aniversario do Carlos?"
+  metadata:
+    id: "ri-014"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Birthday query with 'date of birth' phrasing"
+  vars:
+    utterance: "What is David Park's date of birth?"
+  metadata:
+    id: "ri-015"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Voice-style birthday query with 'remind me'"
+  vars:
+    utterance: "remind me when is moms birthday i keep forgetting"
+  metadata:
+    id: "ri-016"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Birthday query in German"
+  vars:
+    utterance: "Wann hat Emma Geburtstag?"
+  metadata:
+    id: "ri-017"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Birthday query with informal phrasing"
+  vars:
+    utterance: "Do you know Carlos's birthday?"
+  metadata:
+    id: "ri-018"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Voice-style birthday query for sibling"
+  vars:
+    utterance: "when is my brothers birthday i need to get him a gift"
+  metadata:
+    id: "ri-019"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('brother')"
+
+- description: "Birthday query in Japanese (romanized)"
+  vars:
+    utterance: "Yuki no tanjoubi wa itsu desu ka?"
+  metadata:
+    id: "ri-020"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+- description: "Birthday query with 'tell me' phrasing"
+  vars:
+    utterance: "Tell me when Alex Johnson's birthday is"
+  metadata:
+    id: "ri-021"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Voice-style birthday query concise"
+  vars:
+    utterance: "davids birthday"
+  metadata:
+    id: "ri-022"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Birthday query with upcoming context"
+  vars:
+    utterance: "Is Sarah Miller's birthday coming up soon?"
+  metadata:
+    id: "ri-023"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Birthday query in Arabic (romanized)"
+  vars:
+    utterance: "Mata eid milad Carlos?"
+  metadata:
+    id: "ri-024"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Birthday query with misspelling"
+  vars:
+    utterance: "Whens Emmas birtday?"
+  metadata:
+    id: "ri-025"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_birthday'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+# ========================================================================
+# query_phone: 20 cases (ri-026 to ri-045)
+# ========================================================================
+- description: "Ask for a contact's phone number"
+  vars:
+    utterance: "What's Alex's phone number?"
+  metadata:
+    id: "ri-026"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Voice-style phone query"
+  vars:
+    utterance: "hey whats sarahs phone number"
+  metadata:
+    id: "ri-027"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Phone query for Mom"
+  vars:
+    utterance: "What is Mom's phone number?"
+  metadata:
+    id: "ri-028"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Phone query in Spanish"
+  vars:
+    utterance: "Cual es el numero de telefono de Carlos?"
+  metadata:
+    id: "ri-029"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Voice-style phone query with filler"
+  vars:
+    utterance: "uh can you look up emmas number for me"
+  metadata:
+    id: "ri-030"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Phone query with disambiguation"
+  vars:
+    utterance: "What's David Chen's phone number?"
+  metadata:
+    id: "ri-031"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Phone query using relationship label"
+  vars:
+    utterance: "What's my husband's phone number?"
+  metadata:
+    id: "ri-032"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband')"
+
+- description: "Phone query in French"
+  vars:
+    utterance: "Quel est le numero de telephone d'Emma?"
+  metadata:
+    id: "ri-033"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Voice-style phone query concise"
+  vars:
+    utterance: "yukis phone number please"
+  metadata:
+    id: "ri-034"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+- description: "Phone query with 'cell' specification"
+  vars:
+    utterance: "Do you have Carlos's cell number?"
+  metadata:
+    id: "ri-035"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Phone query with ambiguous Alex"
+  vars:
+    utterance: "What is Alex Torres's number?"
+  metadata:
+    id: "ri-036"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Voice-style phone query for sibling"
+  vars:
+    utterance: "i need my brothers phone number can you find it"
+  metadata:
+    id: "ri-037"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('brother')"
+
+- description: "Phone query in German"
+  vars:
+    utterance: "Wie ist Emmas Telefonnummer?"
+  metadata:
+    id: "ri-038"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Phone query with 'look up' phrasing"
+  vars:
+    utterance: "Look up Sarah Chen's phone number for me"
+  metadata:
+    id: "ri-039"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Voice-style phone query with context"
+  vars:
+    utterance: "i need to call david park can you give me his number"
+  metadata:
+    id: "ri-040"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Phone query in Portuguese"
+  vars:
+    utterance: "Qual e o numero de telefone do Carlos?"
+  metadata:
+    id: "ri-041"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Phone query with 'contact info' phrasing"
+  vars:
+    utterance: "I need Yuki's contact number"
+  metadata:
+    id: "ri-042"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+- description: "Voice-style phone query with misspelling"
+  vars:
+    utterance: "give me sarahs fone number"
+  metadata:
+    id: "ri-043"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Phone query for parent"
+  vars:
+    utterance: "What is my mom's phone number?"
+  metadata:
+    id: "ri-044"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Phone query in Russian (romanized)"
+  vars:
+    utterance: "Kakoj nomer telefona u Emmy?"
+  metadata:
+    id: "ri-045"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_phone'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emmy')"
+
+# ========================================================================
+# query_last_note: 15 cases (ri-046 to ri-060)
+# ========================================================================
+- description: "Ask about the last note for a contact"
+  vars:
+    utterance: "What was the last note about Mom?"
+  metadata:
+    id: "ri-046"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Voice-style last note query"
+  vars:
+    utterance: "what did i last write about emma"
+  metadata:
+    id: "ri-047"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Last note query for colleague"
+  vars:
+    utterance: "Show me the latest note on David Chen"
+  metadata:
+    id: "ri-048"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"
+
+- description: "Last note query in Spanish"
+  vars:
+    utterance: "Cual fue la ultima nota sobre Carlos?"
+  metadata:
+    id: "ri-049"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Voice-style last note with filler"
+  vars:
+    utterance: "uh can you pull up the last note i made about sarah miller"
+  metadata:
+    id: "ri-050"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Last note query using relationship"
+  vars:
+    utterance: "What was my last note about my husband?"
+  metadata:
+    id: "ri-051"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband')"
+
+- description: "Last note query with 'recent' phrasing"
+  vars:
+    utterance: "What's the most recent note on Alex?"
+  metadata:
+    id: "ri-052"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Voice-style last note query for Yuki"
+  vars:
+    utterance: "show me what i wrote about yuki last time"
+  metadata:
+    id: "ri-053"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki')"
+
+- description: "Last note query in French"
+  vars:
+    utterance: "Quelle est la derniere note sur Emma?"
+  metadata:
+    id: "ri-054"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Last note query with ambiguous Sarah"
+  vars:
+    utterance: "What was the last note about Sarah Chen?"
+  metadata:
+    id: "ri-055"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah')"
+
+- description: "Last note query with 'check' phrasing"
+  vars:
+    utterance: "Can you check the last note I made for Carlos?"
+  metadata:
+    id: "ri-056"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos')"
+
+- description: "Voice-style last note query for Mom"
+  vars:
+    utterance: "whats the latest note on mom i need to remember what she said"
+  metadata:
+    id: "ri-057"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom')"
+
+- description: "Last note query for Alex Torres"
+  vars:
+    utterance: "Pull up my notes on Alex Torres"
+  metadata:
+    id: "ri-058"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex')"
+
+- description: "Last note query in German"
+  vars:
+    utterance: "Was war die letzte Notiz ueber Emma?"
+  metadata:
+    id: "ri-059"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma')"
+
+- description: "Voice-style last note with run-on sentence"
+  vars:
+    utterance: "i think i wrote something down about david park last week can you find it for me"
+  metadata:
+    id: "ri-060"
+    category: "read_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'read_query'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'query_last_note'"
+    - type: javascript
+      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david')"

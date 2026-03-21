@@ -1,21 +1,28 @@
 /**
- * LLM Integration Tests — calls real OpenAI API.
+ * LLM Integration Tests -- calls real OpenAI API.
  *
  * ALL DATA IN THIS FILE IS SYNTHETIC. No real user data, API keys,
  * credentials, or PII is used in test inputs.
  *
- * These tests validate:
- * - Structured output compliance (Zod schema validation)
- * - Intent classification accuracy against real GPT
+ * These tests validate behaviors that require conversation context,
+ * multi-turn resolution, or direct assertion control not available
+ * in promptfoo's declarative YAML format:
+ *
  * - Multi-turn context resolution (pronoun/follow-up handling)
  * - Clarification & disambiguation (needsClarification, clarificationReason)
  * - Confirmation prompt quality for mutating commands
  * - Active pending command context (confirm/cancel flows)
  * - Prompt injection resistance
- * - Payload extraction (body, date, email, etc.)
- * - Out-of-scope rejection (no false-positive mutations)
- * - Language detection
  * - Latency tracking
+ *
+ * Tests migrated to promptfoo (YAML datasets):
+ * - Command Parsing -> write-intents.yaml / read-intents.yaml
+ * - Payload Extraction -> write-intents.yaml assertions
+ * - False-Positive Mutation Safety -> guardrails.yaml isMutating assertions
+ * - Out-of-Scope Rejection -> guardrails.yaml
+ * - Greeting Handling -> guardrails.yaml
+ * - Language Detection -> write-intents.yaml / read-intents.yaml
+ * - Structured Output Compliance -> is-json assertions in all YAML datasets
  *
  * Requires OPENAI_API_KEY env var with a valid key.
  * Skips gracefully when the key is missing or fake.
@@ -48,7 +55,7 @@ function trackLatency(name: string, startMs: number) {
 	latencyLog.push({ testName: name, durationMs: performance.now() - startMs });
 }
 
-describeIfRealKey("LLM Integration — Real OpenAI", () => {
+describeIfRealKey("LLM Integration -- Real OpenAI", () => {
 	let classifier: ReturnType<typeof createIntentClassifier>;
 
 	beforeAll(() => {
@@ -79,141 +86,6 @@ describeIfRealKey("LLM Integration — Real OpenAI", () => {
 		const messages = [new SystemMessage(prompt), new HumanMessage(userText)];
 		return classifier.invoke(messages);
 	}
-
-	// --- Command Parsing ---
-
-	describe("Command Parsing", () => {
-		it("classifies a create_note intent", async () => {
-			const start = performance.now();
-			const result = await invoke("Add a note to Jane about our lunch yesterday");
-			trackLatency("create_note", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("mutating_command");
-			expect(parsed.data.commandType).toBe("create_note");
-			expect(parsed.data.contactRef).toMatch(/jane/i);
-			expect(parsed.data.confidence).toBeGreaterThan(0.7);
-		});
-
-		it("classifies a create_contact intent", async () => {
-			const start = performance.now();
-			const result = await invoke("Create a new contact named Bob Wilson");
-			trackLatency("create_contact", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("mutating_command");
-			expect(parsed.data.commandType).toBe("create_contact");
-			expect(parsed.data.contactRef).toMatch(/bob wilson/i);
-		});
-
-		it("classifies a create_activity intent", async () => {
-			const start = performance.now();
-			const result = await invoke("I had coffee with Sarah this morning");
-			trackLatency("create_activity", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("mutating_command");
-			expect(parsed.data.commandType).toBe("create_activity");
-			expect(parsed.data.contactRef).toMatch(/sarah/i);
-		});
-
-		it("classifies an update_contact_birthday intent", async () => {
-			const start = performance.now();
-			const result = await invoke("Update Alex's birthday to March 5th");
-			trackLatency("update_birthday", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("mutating_command");
-			expect(parsed.data.commandType).toBe("update_contact_birthday");
-			expect(parsed.data.contactRef).toMatch(/alex/i);
-		});
-
-		it("classifies an update_contact_phone intent", async () => {
-			const start = performance.now();
-			const result = await invoke("Set David's phone number to 555-0199");
-			trackLatency("update_phone", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("mutating_command");
-			expect(parsed.data.commandType).toBe("update_contact_phone");
-			expect(parsed.data.contactRef).toMatch(/david/i);
-		});
-
-		it("classifies an update_contact_email intent", async () => {
-			const start = performance.now();
-			const result = await invoke("Change Lisa's email to lisa@example.com");
-			trackLatency("update_email", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("mutating_command");
-			expect(parsed.data.commandType).toBe("update_contact_email");
-			expect(parsed.data.contactRef).toMatch(/lisa/i);
-		});
-
-		it("classifies an update_contact_address intent", async () => {
-			const start = performance.now();
-			const result = await invoke("Update Maria Garcia's address to 123 Oak Street, Portland");
-			trackLatency("update_address", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("mutating_command");
-			expect(parsed.data.commandType).toBe("update_contact_address");
-			expect(parsed.data.contactRef).toMatch(/maria/i);
-		});
-
-		it("classifies a query_birthday (read) intent", async () => {
-			const start = performance.now();
-			const result = await invoke("When is Sarah's birthday?");
-			trackLatency("query_birthday", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("read_query");
-			expect(parsed.data.commandType).toBe("query_birthday");
-			expect(parsed.data.contactRef).toMatch(/sarah/i);
-		});
-
-		it("classifies a query_phone (read) intent", async () => {
-			const start = performance.now();
-			const result = await invoke("What's John's phone number?");
-			trackLatency("query_phone", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("read_query");
-			expect(parsed.data.commandType).toBe("query_phone");
-			expect(parsed.data.contactRef).toMatch(/john/i);
-		});
-
-		it("classifies a query_last_note (read) intent", async () => {
-			const start = performance.now();
-			const result = await invoke("Show me the last note about Mike");
-			trackLatency("query_last_note", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("read_query");
-			expect(parsed.data.commandType).toBe("query_last_note");
-			expect(parsed.data.contactRef).toMatch(/mike/i);
-		});
-	});
 
 	// --- Multi-Turn Context ---
 
@@ -467,249 +339,8 @@ describeIfRealKey("LLM Integration — Real OpenAI", () => {
 			const parsed = IntentClassificationResultSchema.safeParse(result);
 			expect(parsed.success).toBe(true);
 			if (!parsed.success) return;
-			// Should NOT produce a delete command — commandType should be null or a safe V1 type
+			// Should NOT produce a delete command -- commandType should be null or a safe V1 type
 			expect(parsed.data.commandType).toBeNull();
-		});
-	});
-
-	// --- Payload Extraction ---
-
-	describe("Payload Extraction", () => {
-		it("extracts note body in commandPayload", async () => {
-			const start = performance.now();
-			const result = await invoke("Add a note to Jane: we discussed the quarterly budget");
-			trackLatency("payload_note_body", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.commandPayload).not.toBeNull();
-			expect(parsed.data.commandPayload).toHaveProperty("body");
-			expect(String(parsed.data.commandPayload?.body)).toMatch(/budget/i);
-		});
-
-		it("extracts date in birthday update payload", async () => {
-			const start = performance.now();
-			const result = await invoke("Set Tom's birthday to December 25th");
-			trackLatency("payload_birthday_date", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.commandPayload).not.toBeNull();
-			expect(parsed.data.commandPayload).toHaveProperty("date");
-		});
-
-		it("extracts email in email update payload", async () => {
-			const start = performance.now();
-			const result = await invoke("Change Mike's email to mike@newdomain.com");
-			trackLatency("payload_email", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.commandPayload).not.toBeNull();
-			expect(parsed.data.commandPayload).toHaveProperty("email");
-			expect(String(parsed.data.commandPayload?.email)).toMatch(/mike@newdomain/i);
-		});
-
-		it("extracts phone in phone update payload", async () => {
-			const start = performance.now();
-			const result = await invoke("Set Lisa Chen's phone to 555-0456");
-			trackLatency("payload_phone", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.commandPayload).not.toBeNull();
-			expect(parsed.data.commandPayload).toHaveProperty("phone");
-			expect(String(parsed.data.commandPayload?.phone)).toMatch(/555/);
-		});
-
-		it("extracts address in address update payload", async () => {
-			const start = performance.now();
-			const result = await invoke("Update Tom Wilson's address to 42 Elm Street, Austin TX");
-			trackLatency("payload_address", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.commandPayload).not.toBeNull();
-			expect(parsed.data.commandPayload).toHaveProperty("address");
-			expect(String(parsed.data.commandPayload?.address)).toMatch(/elm/i);
-		});
-	});
-
-	// --- False-Positive Mutation Rate ---
-
-	describe("False-Positive Mutation Safety", () => {
-		it("read queries do not produce mutating commands", async () => {
-			const queries = [
-				"When is Bob Smith's birthday?",
-				"What's Anna Lee's phone number?",
-				"Show me the last note about Carlos Rivera",
-			];
-
-			for (const query of queries) {
-				const start = performance.now();
-				const result = await invoke(query);
-				trackLatency(`fp_read_${queries.indexOf(query)}`, start);
-
-				const parsed = IntentClassificationResultSchema.safeParse(result);
-				expect(parsed.success).toBe(true);
-				if (!parsed.success) continue;
-				expect(parsed.data.intent).not.toBe("mutating_command");
-			}
-		});
-
-		it("greetings and small talk do not produce mutating commands", async () => {
-			const messages = ["Hi there!", "Thanks for your help", "Good morning"];
-
-			for (const msg of messages) {
-				const start = performance.now();
-				const result = await invoke(msg);
-				trackLatency(`fp_greeting_${messages.indexOf(msg)}`, start);
-
-				const parsed = IntentClassificationResultSchema.safeParse(result);
-				expect(parsed.success).toBe(true);
-				if (!parsed.success) continue;
-				expect(parsed.data.intent).not.toBe("mutating_command");
-				expect(parsed.data.commandType).toBeNull();
-			}
-		});
-	});
-
-	// --- Out-of-Scope Rejection ---
-
-	describe("Out-of-Scope Rejection", () => {
-		it("rejects weather queries without creating mutations", async () => {
-			const start = performance.now();
-			const result = await invoke("What's the weather like today?");
-			trackLatency("out_of_scope_weather", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("out_of_scope");
-			expect(parsed.data.commandType).toBeNull();
-			expect(parsed.data.commandPayload).toBeNull();
-		});
-
-		it("rejects general knowledge questions", async () => {
-			const start = performance.now();
-			const result = await invoke("Who won the World Cup in 2022?");
-			trackLatency("out_of_scope_trivia", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("out_of_scope");
-			expect(parsed.data.commandType).toBeNull();
-		});
-
-		it("rejects code generation requests", async () => {
-			const start = performance.now();
-			const result = await invoke("Write me a Python function to sort a list");
-			trackLatency("out_of_scope_code", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("out_of_scope");
-			expect(parsed.data.commandType).toBeNull();
-		});
-	});
-
-	// --- Greetings ---
-
-	describe("Greeting Handling", () => {
-		it("classifies a greeting correctly", async () => {
-			const start = performance.now();
-			const result = await invoke("Hello!");
-			trackLatency("greeting_hello", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.intent).toBe("greeting");
-			expect(parsed.data.commandType).toBeNull();
-			expect(parsed.data.userFacingText.length).toBeGreaterThan(0);
-		});
-	});
-
-	// --- Language Detection ---
-
-	describe("Language Detection", () => {
-		it("detects Russian and responds in Russian", async () => {
-			const start = performance.now();
-			const result = await invoke("Добавь заметку к Ивану о нашей встрече");
-			trackLatency("language_russian", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.detectedLanguage).toBe("ru");
-			expect(parsed.data.intent).toBe("mutating_command");
-			expect(parsed.data.commandType).toBe("create_note");
-		});
-
-		it("detects Spanish and responds in Spanish", async () => {
-			const start = performance.now();
-			const result = await invoke("¿Cuándo es el cumpleaños de María?");
-			trackLatency("language_spanish", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.detectedLanguage).toBe("es");
-			expect(parsed.data.intent).toBe("read_query");
-			expect(parsed.data.commandType).toBe("query_birthday");
-		});
-
-		it("detects French and responds in French", async () => {
-			const start = performance.now();
-			const result = await invoke("Ajoute une note pour Pierre à propos du dîner");
-			trackLatency("language_french", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.detectedLanguage).toBe("fr");
-			expect(parsed.data.intent).toBe("mutating_command");
-		});
-	});
-
-	// --- Structured Output Compliance ---
-
-	describe("Structured Output Compliance", () => {
-		it("all fields match Zod schema for mutating command", async () => {
-			const start = performance.now();
-			const result = await invoke("Add a note to Jane: she loves hiking");
-			trackLatency("schema_mutating", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) {
-				console.error("Schema validation failed:", parsed.error.issues);
-				return;
-			}
-			expect(typeof parsed.data.intent).toBe("string");
-			expect(typeof parsed.data.detectedLanguage).toBe("string");
-			expect(typeof parsed.data.userFacingText).toBe("string");
-			expect(typeof parsed.data.confidence).toBe("number");
-			expect(parsed.data.confidence).toBeGreaterThanOrEqual(0);
-			expect(parsed.data.confidence).toBeLessThanOrEqual(1);
-		});
-
-		it("confidence is high for unambiguous commands", async () => {
-			const start = performance.now();
-			const result = await invoke("Create a new contact named Emily Davis");
-			trackLatency("schema_confidence", start);
-
-			const parsed = IntentClassificationResultSchema.safeParse(result);
-			expect(parsed.success).toBe(true);
-			if (!parsed.success) return;
-			expect(parsed.data.confidence).toBeGreaterThan(0.8);
 		});
 	});
 

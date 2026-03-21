@@ -1,0 +1,255 @@
+# ALL DATA IN THIS FILE IS SYNTHETIC. No real user data, API keys,
+# credentials, or PII is used.
+#
+# Guardrails benchmark fixtures: 15 cases total
+# - Out-of-scope: 10 cases (oos-001 to oos-010)
+# - Greeting: 5 cases (gr-001 to gr-005)
+#
+# Each case includes an isMutating assertion to detect false-positive
+# mutations (the system should NEVER classify these as mutating_command).
+
+# ========================================================================
+# Out-of-scope: 10 cases (oos-001 to oos-010)
+# ========================================================================
+- description: "Weather query"
+  vars:
+    utterance: "What is the weather like today?"
+  metadata:
+    id: "oos-001"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'out_of_scope'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+- description: "Voice-style programming help request"
+  vars:
+    utterance: "hey can you help me write a python script to sort a list"
+  metadata:
+    id: "oos-002"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'out_of_scope'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+- description: "Joke request"
+  vars:
+    utterance: "Tell me a funny joke"
+  metadata:
+    id: "oos-003"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'out_of_scope'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+- description: "Math problem"
+  vars:
+    utterance: "What is 347 times 892?"
+  metadata:
+    id: "oos-004"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'out_of_scope'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+- description: "Voice-style translation request"
+  vars:
+    utterance: "how do you say good morning in japanese"
+  metadata:
+    id: "oos-005"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'out_of_scope'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+- description: "General knowledge question"
+  vars:
+    utterance: "Who was the first person to walk on the moon?"
+  metadata:
+    id: "oos-006"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'out_of_scope'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+- description: "Recipe request in Spanish"
+  vars:
+    utterance: "Dame una receta para hacer paella"
+  metadata:
+    id: "oos-007"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'out_of_scope'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+- description: "Voice-style sports score query"
+  vars:
+    utterance: "whats the score of the lakers game right now"
+  metadata:
+    id: "oos-008"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'out_of_scope'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+- description: "News query in French"
+  vars:
+    utterance: "Quelles sont les dernieres nouvelles?"
+  metadata:
+    id: "oos-009"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'out_of_scope'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+- description: "Voice-style restaurant recommendation"
+  vars:
+    utterance: "um can you recommend a good sushi restaurant near me"
+  metadata:
+    id: "oos-010"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'out_of_scope'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+# ========================================================================
+# Greeting: 5 cases (gr-001 to gr-005)
+# ========================================================================
+- description: "Simple English greeting"
+  vars:
+    utterance: "Hello"
+  metadata:
+    id: "gr-001"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'greeting'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+- description: "Voice-style casual greeting"
+  vars:
+    utterance: "hey there how are you doing"
+  metadata:
+    id: "gr-002"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'greeting'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+- description: "Greeting in Spanish"
+  vars:
+    utterance: "Hola, buenos dias"
+  metadata:
+    id: "gr-003"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'greeting'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+- description: "Voice-style greeting with thanks"
+  vars:
+    utterance: "hi thanks for being here"
+  metadata:
+    id: "gr-004"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'greeting'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
+
+- description: "Greeting in French"
+  vars:
+    utterance: "Bonjour, comment ca va?"
+  metadata:
+    id: "gr-005"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'greeting'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === null"
+    - type: javascript
+      value: "JSON.parse(output).intent !== 'mutating_command'"
+      metric: isMutating
