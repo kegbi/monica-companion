@@ -2,9 +2,49 @@ import { describe, expect, it } from "vitest";
 import {
 	ConversationStateSchema,
 	GraphResponseSchema,
+	NarrowingContextSchema,
 	PendingCommandRefSchema,
 	TurnSummarySchema,
 } from "../state.js";
+
+describe("NarrowingContextSchema", () => {
+	it("accepts valid narrowing context", () => {
+		const result = NarrowingContextSchema.safeParse({
+			originalContactRef: "mom",
+			clarifications: ["Elena"],
+			round: 1,
+			narrowingCandidateIds: [10, 20, 30],
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts empty clarifications and round 0", () => {
+		const result = NarrowingContextSchema.safeParse({
+			originalContactRef: "my brother",
+			clarifications: [],
+			round: 0,
+			narrowingCandidateIds: [1, 2, 3, 4, 5, 6],
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects negative round", () => {
+		const result = NarrowingContextSchema.safeParse({
+			originalContactRef: "mom",
+			clarifications: [],
+			round: -1,
+			narrowingCandidateIds: [10],
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects missing required fields", () => {
+		const result = NarrowingContextSchema.safeParse({
+			originalContactRef: "mom",
+		});
+		expect(result.success).toBe(false);
+	});
+});
 
 describe("TurnSummarySchema", () => {
 	it("accepts valid turn summary", () => {
@@ -228,6 +268,33 @@ describe("ConversationStateSchema", () => {
 		if (result.success) {
 			expect(result.data.contactSummariesCache).toBeNull();
 		}
+	});
+
+	it("defaults narrowingContext to null", () => {
+		const result = ConversationStateSchema.safeParse({
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			correlationId: "corr-456",
+			inboundEvent: validInboundEvent,
+		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.narrowingContext).toBeNull();
+		}
+	});
+
+	it("accepts valid narrowingContext in state", () => {
+		const result = ConversationStateSchema.safeParse({
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			correlationId: "corr-456",
+			inboundEvent: validInboundEvent,
+			narrowingContext: {
+				originalContactRef: "mom",
+				clarifications: ["Elena"],
+				round: 1,
+				narrowingCandidateIds: [10, 20],
+			},
+		});
+		expect(result.success).toBe(true);
 	});
 
 	it("does not accept the old resolvedContact field", () => {

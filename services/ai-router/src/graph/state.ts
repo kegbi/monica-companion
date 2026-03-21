@@ -19,6 +19,17 @@ import {
 	IntentClassificationResultSchema,
 } from "./intent-schemas.js";
 
+// --- Narrowing context schema ---
+
+export const NarrowingContextSchema = z.object({
+	originalContactRef: z.string(),
+	clarifications: z.array(z.string()),
+	/** 0-indexed. Incremented after each clarification round. Narrowing continues while round < MAX_NARROWING_ROUNDS. */
+	round: z.number().int().min(0),
+	narrowingCandidateIds: z.array(z.number().int()),
+});
+export type NarrowingContext = z.infer<typeof NarrowingContextSchema>;
+
 // --- Supporting Zod schemas ---
 
 export const TurnSummarySchema = z.object({
@@ -97,6 +108,8 @@ export const ConversationStateSchema = z.object({
 	intentClassification: IntentClassificationResultSchema.nullable().default(null),
 	/** Action outcome from executeAction node */
 	actionOutcome: ActionOutcomeSchema.nullable().default(null),
+	/** Progressive narrowing state for contact disambiguation */
+	narrowingContext: NarrowingContextSchema.nullable().default(null),
 	/** The final output of the graph */
 	response: GraphResponseSchema.nullable().default(null),
 });
@@ -134,6 +147,10 @@ export const ConversationAnnotation = Annotation.Root({
 		default: () => null,
 	}),
 	actionOutcome: Annotation<ActionOutcome | null>({
+		reducer: (_prev, next) => next,
+		default: () => null,
+	}),
+	narrowingContext: Annotation<NarrowingContext | null>({
 		reducer: (_prev, next) => next,
 		default: () => null,
 	}),

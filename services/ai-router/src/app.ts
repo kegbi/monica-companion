@@ -19,11 +19,13 @@ import { createDeliveryClient } from "./lib/delivery-client.js";
 import { createSchedulerClient } from "./lib/scheduler-client.js";
 import { createUserManagementClient } from "./lib/user-management-client.js";
 import {
+	clearNarrowingContext,
 	createPendingCommand,
 	getActivePendingCommandForUser,
 	getPendingCommand,
 	transitionStatus,
 	updateDraftPayload,
+	updateNarrowingContext,
 } from "./pending-command/repository.js";
 import { retentionRoutes } from "./retention/routes.js";
 import { userPurgeRoutes } from "./retention/user-purge-routes.js";
@@ -81,6 +83,8 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 		transitionStatus,
 		getPendingCommand,
 		updateDraftPayload,
+		updateNarrowingContext,
+		clearNarrowingContext,
 		schedulerClient,
 		deliveryClient,
 		userManagementClient,

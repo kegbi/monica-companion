@@ -9,6 +9,15 @@ vi.mock("@opentelemetry/api", () => ({
 	},
 }));
 
+vi.mock("@monica-companion/observability", () => ({
+	createLogger: () => ({
+		info: () => {},
+		warn: () => {},
+		error: () => {},
+		debug: () => {},
+	}),
+}));
+
 import type { IntentClassificationResult } from "../../intent-schemas.js";
 import type { PendingCommandRef } from "../../state.js";
 import { createExecuteActionNode, type ExecuteActionDeps } from "../execute-action.js";
@@ -34,6 +43,7 @@ function makeState(
 		userPreferences: null,
 		intentClassification,
 		actionOutcome: null,
+		narrowingContext: null,
 		response: null,
 		...overrides,
 	};
@@ -43,6 +53,8 @@ const mockCreatePendingCommand = vi.fn();
 const mockTransitionStatus = vi.fn();
 const mockGetPendingCommand = vi.fn();
 const mockUpdateDraftPayload = vi.fn();
+const mockUpdateNarrowingContext = vi.fn();
+const mockClearNarrowingContext = vi.fn();
 const mockSchedulerExecute = vi.fn();
 const mockGetPreferences = vi.fn();
 
@@ -55,6 +67,8 @@ function makeDeps(overrides: Partial<ExecuteActionDeps> = {}): ExecuteActionDeps
 		transitionStatus: mockTransitionStatus,
 		getPendingCommand: mockGetPendingCommand,
 		updateDraftPayload: mockUpdateDraftPayload,
+		updateNarrowingContext: mockUpdateNarrowingContext,
+		clearNarrowingContext: mockClearNarrowingContext,
 		buildConfirmedPayload: (record: any) => ({
 			pendingCommandId: record.id,
 			userId: record.userId,
@@ -1438,5 +1452,199 @@ describe("executeActionNode", () => {
 		expect(update.activePendingCommand?.status).toBe("draft");
 		// Should not transition to pending_confirmation
 		expect(mockTransitionStatus).not.toHaveBeenCalled();
+	});
+
+	// --- Narrowing context persistence ---
+
+	it("persists narrowingContext after createPendingCommand when state.narrowingContext is non-null", async () => {
+		const clarificationClassification: IntentClassificationResult = {
+			...mutatingClassification,
+			needsClarification: true,
+			clarificationReason: "ambiguous_contact",
+			confidence: 0.5,
+		};
+
+		const createdRow = {
+			id: "cmd-nc-1",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "test" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		mockCreatePendingCommand.mockResolvedValue(createdRow);
+		mockUpdateNarrowingContext.mockResolvedValue({ ...createdRow, version: 2 });
+
+		const narrowingContext = {
+			originalContactRef: "mom",
+			clarifications: [],
+			round: 0,
+			narrowingCandidateIds: [1, 2, 3, 4, 5, 6],
+		};
+
+		const node = createExecuteActionNode(makeDeps());
+		const update = await node(makeState(clarificationClassification, { narrowingContext }));
+
+		expect(update.actionOutcome?.type).toBe("edit_draft");
+		expect(mockUpdateNarrowingContext).toHaveBeenCalledWith(
+			expect.anything(),
+			"cmd-nc-1",
+			1,
+			narrowingContext,
+		);
+	});
+
+	it("persists narrowingContext after updateDraftPayload during clarification_response with active draft", async () => {
+		const clarificationResponse: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Elena",
+			commandType: "create_note",
+			contactRef: "Elena",
+			commandPayload: { contactId: 1, body: "test" },
+			confidence: 0.8,
+			needsClarification: true,
+		};
+
+		const activePendingCommand: PendingCommandRef = {
+			pendingCommandId: "cmd-nc-2",
+			version: 1,
+			status: "draft",
+			commandType: "create_note",
+		};
+
+		const updatedRow = {
+			id: "cmd-nc-2",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", contactId: 1, body: "test" },
+			status: "draft",
+			version: 2,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		mockUpdateDraftPayload.mockResolvedValue(updatedRow);
+		mockUpdateNarrowingContext.mockResolvedValue({ ...updatedRow, version: 3 });
+
+		const narrowingContext = {
+			originalContactRef: "mom",
+			clarifications: ["Elena"],
+			round: 1,
+			narrowingCandidateIds: [1, 3],
+		};
+
+		const node = createExecuteActionNode(makeDeps());
+		const update = await node(
+			makeState(clarificationResponse, { activePendingCommand, narrowingContext }),
+		);
+
+		expect(mockUpdateNarrowingContext).toHaveBeenCalledWith(
+			expect.anything(),
+			"cmd-nc-2",
+			2,
+			narrowingContext,
+		);
+	});
+
+	it("clears narrowingContext before transitioning to pending_confirmation", async () => {
+		const createdRow = {
+			id: "cmd-nc-3",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", contactId: 42, body: "test" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		mockCreatePendingCommand.mockResolvedValue(createdRow);
+		mockClearNarrowingContext.mockResolvedValue({ ...createdRow, narrowingContext: null });
+		mockTransitionStatus.mockResolvedValue({
+			...createdRow,
+			status: "pending_confirmation",
+			version: 2,
+		});
+
+		const narrowingContext = {
+			originalContactRef: "mom",
+			clarifications: [],
+			round: 0,
+			narrowingCandidateIds: [42],
+		};
+
+		const node = createExecuteActionNode(makeDeps());
+		// Not needsClarification, so it should transition to pending_confirmation
+		const update = await node(makeState(mutatingClassification, { narrowingContext }));
+
+		expect(mockClearNarrowingContext).toHaveBeenCalledWith(expect.anything(), "cmd-nc-3");
+	});
+
+	it("persists narrowingContext independently during clarification_response even when LLM produces no commandPayload (MEDIUM-1 fix)", async () => {
+		// MEDIUM-1 from re-review: handleClarificationResponse returns passthrough
+		// when commandType/commandPayload are null. Narrowing context must persist
+		// independently BEFORE the existing handler logic.
+		const clarificationResponse: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Elena",
+			commandType: null,
+			contactRef: null,
+			commandPayload: null,
+			confidence: 0.8,
+		};
+
+		const activePendingCommand: PendingCommandRef = {
+			pendingCommandId: "cmd-nc-4",
+			version: 1,
+			status: "draft",
+			commandType: "create_note",
+		};
+
+		mockUpdateNarrowingContext.mockResolvedValue({
+			id: "cmd-nc-4",
+			version: 2,
+		});
+
+		const narrowingContext = {
+			originalContactRef: "mom",
+			clarifications: ["Elena"],
+			round: 1,
+			narrowingCandidateIds: [1, 3],
+		};
+
+		const node = createExecuteActionNode(makeDeps());
+		await node(makeState(clarificationResponse, { activePendingCommand, narrowingContext }));
+
+		// Should persist narrowingContext even though handleClarificationResponse
+		// would return passthrough (no commandType/commandPayload)
+		expect(mockUpdateNarrowingContext).toHaveBeenCalledWith(
+			expect.anything(),
+			"cmd-nc-4",
+			1,
+			narrowingContext,
+		);
 	});
 });

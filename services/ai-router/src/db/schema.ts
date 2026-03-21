@@ -63,6 +63,14 @@ export const pendingCommands = pgTable(
 		executedAt: timestamp("executed_at", { withTimezone: true }),
 		terminalAt: timestamp("terminal_at", { withTimezone: true }),
 		executionResult: jsonb("execution_result"),
+		/**
+		 * Progressive narrowing state for contact disambiguation.
+		 * Stores the narrowing context (candidate IDs, clarification terms, round)
+		 * as a dedicated JSONB column to avoid violating the strict MutatingCommandPayload
+		 * discriminated union in the payload column.
+		 * Nullable -- only present during active narrowing.
+		 */
+		narrowingContext: jsonb("narrowing_context"),
 	},
 	(table) => [
 		index("idx_pending_commands_user_status").on(table.userId, table.status),

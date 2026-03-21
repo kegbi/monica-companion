@@ -72,6 +72,13 @@ export interface ConversationGraphConfig {
 		newPayload: MutatingCommandPayload,
 		ttlMinutes: number,
 	) => Promise<PendingCommandRow | null>;
+	updateNarrowingContext: (
+		db: Database,
+		id: string,
+		expectedVersion: number,
+		narrowingContext: Record<string, unknown>,
+	) => Promise<PendingCommandRow | null>;
+	clearNarrowingContext: (db: Database, id: string) => Promise<PendingCommandRow | null>;
 	schedulerClient: SchedulerClient;
 	deliveryClient: DeliveryClient;
 	userManagementClient: UserManagementClient;
@@ -101,6 +108,8 @@ export function createConversationGraph(config: ConversationGraphConfig) {
 		transitionStatus: config.transitionStatus,
 		getPendingCommand: config.getPendingCommand,
 		updateDraftPayload: config.updateDraftPayload,
+		updateNarrowingContext: config.updateNarrowingContext,
+		clearNarrowingContext: config.clearNarrowingContext,
 		buildConfirmedPayload,
 		schedulerClient: config.schedulerClient,
 		userManagementClient: config.userManagementClient,

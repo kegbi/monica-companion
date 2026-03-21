@@ -161,6 +161,61 @@ export async function updateDraftPayload(
 }
 
 /**
+ * Update the narrowing context on a draft pending command.
+ * Also bumps the version and updatedAt.
+ *
+ * Returns the updated row, or null if the version/status didn't match.
+ * Only works on commands in 'draft' status.
+ */
+export async function updateNarrowingContext(
+	db: Database,
+	id: string,
+	expectedVersion: number,
+	narrowingContext: Record<string, unknown>,
+): Promise<PendingCommandRow | null> {
+	const now = new Date();
+
+	const rows = await db
+		.update(pendingCommands)
+		.set({
+			narrowingContext,
+			version: sql`${pendingCommands.version} + 1`,
+			updatedAt: now,
+		})
+		.where(
+			and(
+				eq(pendingCommands.id, id),
+				eq(pendingCommands.version, expectedVersion),
+				eq(pendingCommands.status, "draft"),
+			),
+		)
+		.returning();
+
+	return rows[0] ?? null;
+}
+
+/**
+ * Clear the narrowing context on a pending command.
+ * Idempotent: sets the column to null regardless of current value.
+ *
+ * Returns the updated row, or null if the command was not found.
+ */
+export async function clearNarrowingContext(
+	db: Database,
+	id: string,
+): Promise<PendingCommandRow | null> {
+	const rows = await db
+		.update(pendingCommands)
+		.set({
+			narrowingContext: null,
+		})
+		.where(eq(pendingCommands.id, id))
+		.returning();
+
+	return rows[0] ?? null;
+}
+
+/**
  * Expire all stale pending commands that have passed their TTL.
  * Only transitions active (non-terminal) commands.
  * Returns the number of expired commands.

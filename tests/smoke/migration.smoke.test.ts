@@ -57,6 +57,18 @@ describe("database auto-migration", () => {
 		expect(names).toContain("idx_conversation_turns_created_at");
 	});
 
+	it("pending_commands has narrowing_context column (progressive narrowing migration)", async () => {
+		const columns = await sql`
+			SELECT column_name, data_type, is_nullable
+			FROM information_schema.columns
+			WHERE table_name = 'pending_commands'
+			AND column_name = 'narrowing_context'
+		`;
+		expect(columns).toHaveLength(1);
+		expect(columns[0].data_type).toBe("jsonb");
+		expect(columns[0].is_nullable).toBe("YES");
+	});
+
 	afterAll(async () => {
 		await sql.end();
 	});

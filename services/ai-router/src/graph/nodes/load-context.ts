@@ -9,7 +9,13 @@
 import { trace } from "@opentelemetry/api";
 import type { Database } from "../../db/connection.js";
 import type { PendingCommandRow } from "../../pending-command/repository.js";
-import type { ConversationAnnotation, PendingCommandRef, TurnSummary } from "../state.js";
+import type {
+	ConversationAnnotation,
+	NarrowingContext,
+	PendingCommandRef,
+	TurnSummary,
+} from "../state.js";
+import { NarrowingContextSchema } from "../state.js";
 
 const tracer = trace.getTracer("ai-router");
 
@@ -47,9 +53,22 @@ export function createLoadContextNode(deps: LoadContextDeps) {
 						}
 					: null;
 
+				// Extract narrowing context from active pending command
+				let narrowingContext: NarrowingContext | null = null;
+				if (activeCommand) {
+					const rawNarrowing = (activeCommand as Record<string, unknown>).narrowingContext;
+					if (rawNarrowing) {
+						const parsed = NarrowingContextSchema.safeParse(rawNarrowing);
+						if (parsed.success) {
+							narrowingContext = parsed.data;
+						}
+					}
+				}
+
 				return {
 					recentTurns,
 					activePendingCommand,
+					narrowingContext,
 				};
 			} finally {
 				span.end();

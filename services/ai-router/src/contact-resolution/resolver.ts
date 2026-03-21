@@ -15,6 +15,12 @@ export const MINIMUM_MATCH_THRESHOLD = 0.6;
 /** Maximum number of disambiguation candidates to return. */
 export const MAX_DISAMBIGUATION_CANDIDATES = 5;
 
+/** Threshold for switching from buttons to narrowing questions. */
+export const NARROWING_BUTTON_THRESHOLD = 5;
+
+/** Maximum number of clarification rounds before forcing button selection. */
+export const MAX_NARROWING_ROUNDS = 3;
+
 /**
  * Resolve a natural-language contact reference to a ContactResolutionResult.
  *

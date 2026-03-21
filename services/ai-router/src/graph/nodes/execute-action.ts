@@ -58,6 +58,13 @@ export interface ExecuteActionDeps {
 		newPayload: MutatingCommandPayload,
 		ttlMinutes: number,
 	) => Promise<PendingCommandRow | null>;
+	updateNarrowingContext: (
+		db: Database,
+		id: string,
+		expectedVersion: number,
+		narrowingContext: Record<string, unknown>,
+	) => Promise<PendingCommandRow | null>;
+	clearNarrowingContext: (db: Database, id: string) => Promise<PendingCommandRow | null>;
 	buildConfirmedPayload: (record: PendingCommandRow) => ConfirmedCommandPayload;
 	schedulerClient: Pick<SchedulerClient, "execute">;
 	userManagementClient: Pick<UserManagementClient, "getPreferences">;
@@ -223,6 +230,16 @@ async function handleMutatingCommand(state: State, deps: ExecuteActionDeps): Pro
 		ttlMinutes: deps.pendingCommandTtlMinutes,
 	});
 
+	// Persist narrowing context if present
+	if (state.narrowingContext) {
+		await deps.updateNarrowingContext(
+			deps.db,
+			created.id,
+			created.version,
+			state.narrowingContext as unknown as Record<string, unknown>,
+		);
+	}
+
 	// If clarification needed, stay in draft
 	if (intentClassification.needsClarification) {
 		return {
@@ -236,20 +253,45 @@ async function handleMutatingCommand(state: State, deps: ExecuteActionDeps): Pro
 		};
 	}
 
+	// Clear narrowing context before transition to pending_confirmation
+	if (state.narrowingContext) {
+		await deps.clearNarrowingContext(deps.db, created.id);
+	}
+
 	return transitionToConfirmationAndCheckAutoConfirm(state, deps, created);
 }
 
 async function handleClarificationResponse(state: State, deps: ExecuteActionDeps): Promise<Update> {
 	const { intentClassification, activePendingCommand } = state;
 
-	// Fall through to passthrough if no active draft or no commandPayload from LLM
-	if (
+	// MEDIUM-1 fix: Persist narrowing context independently BEFORE the existing handler logic.
+	// During narrowing, short replies like "Elena" may not produce commandType/commandPayload
+	// from the LLM, which would cause the passthrough guard below to fire.
+	// We must persist the narrowing context regardless, but ONLY on the passthrough path
+	// to avoid version conflicts with updateDraftPayload.
+	const wouldPassthrough =
 		!activePendingCommand ||
 		activePendingCommand.status !== "draft" ||
 		!intentClassification ||
 		!intentClassification.commandType ||
-		!intentClassification.commandPayload
+		!intentClassification.commandPayload;
+
+	if (
+		wouldPassthrough &&
+		state.narrowingContext &&
+		activePendingCommand &&
+		activePendingCommand.status === "draft"
 	) {
+		await deps.updateNarrowingContext(
+			deps.db,
+			activePendingCommand.pendingCommandId,
+			activePendingCommand.version,
+			state.narrowingContext as unknown as Record<string, unknown>,
+		);
+	}
+
+	// Fall through to passthrough if no active draft or no commandPayload from LLM
+	if (wouldPassthrough) {
 		return { actionOutcome: { type: "passthrough" } as ActionOutcome };
 	}
 
@@ -269,6 +311,16 @@ async function handleClarificationResponse(state: State, deps: ExecuteActionDeps
 	// Race condition: draft was modified concurrently
 	if (!updatedRow) {
 		return { actionOutcome: { type: "passthrough" } as ActionOutcome };
+	}
+
+	// Persist narrowing context after draft payload update (non-passthrough path)
+	if (state.narrowingContext) {
+		await deps.updateNarrowingContext(
+			deps.db,
+			updatedRow.id,
+			updatedRow.version,
+			state.narrowingContext as unknown as Record<string, unknown>,
+		);
 	}
 
 	// If clarification is still incomplete, stay in draft
@@ -303,6 +355,11 @@ async function handleClarificationResponse(state: State, deps: ExecuteActionDeps
 				commandType: updatedRow.commandType,
 			},
 		};
+	}
+
+	// Clear narrowing context before transitioning to pending_confirmation
+	if (state.narrowingContext) {
+		await deps.clearNarrowingContext(deps.db, updatedRow.id);
 	}
 
 	// Clarification resolved: transition to pending_confirmation

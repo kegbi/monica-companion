@@ -1,0 +1,1 @@
+ALTER TABLE "pending_commands" ADD COLUMN "narrowing_context" jsonb;

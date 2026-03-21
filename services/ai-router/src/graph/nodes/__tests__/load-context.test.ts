@@ -37,6 +37,8 @@ function makeState(overrides: Record<string, unknown> = {}) {
 		userPreferences: null,
 		response: null,
 		intentClassification: null,
+		narrowingContext: null,
+		actionOutcome: null,
 		...overrides,
 	};
 }
@@ -139,6 +141,96 @@ describe("createLoadContextNode", () => {
 
 		const update = await node(makeState());
 		expect(update.activePendingCommand).toBeNull();
+	});
+
+	it("loads narrowingContext from active pending command when valid", async () => {
+		const narrowingContext = {
+			originalContactRef: "mom",
+			clarifications: ["Elena"],
+			round: 1,
+			narrowingCandidateIds: [10, 20],
+		};
+
+		const mockCommand = {
+			id: "cmd-123",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { body: "lunch" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "telegram:msg:100",
+			correlationId: "corr-0",
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			narrowingContext,
+		};
+
+		const getRecentTurns = vi.fn().mockResolvedValue([]);
+		const getActivePendingCommandForUser = vi.fn().mockResolvedValue(mockCommand);
+
+		const node = createLoadContextNode({
+			db: {} as any,
+			maxTurns: 10,
+			getRecentTurns,
+			getActivePendingCommandForUser,
+		});
+
+		const update = await node(makeState());
+		expect(update.narrowingContext).toEqual(narrowingContext);
+	});
+
+	it("sets narrowingContext to null when active command has no narrowingContext", async () => {
+		const mockCommand = {
+			id: "cmd-123",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { body: "lunch" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "telegram:msg:100",
+			correlationId: "corr-0",
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			narrowingContext: null,
+		};
+
+		const getRecentTurns = vi.fn().mockResolvedValue([]);
+		const getActivePendingCommandForUser = vi.fn().mockResolvedValue(mockCommand);
+
+		const node = createLoadContextNode({
+			db: {} as any,
+			maxTurns: 10,
+			getRecentTurns,
+			getActivePendingCommandForUser,
+		});
+
+		const update = await node(makeState());
+		expect(update.narrowingContext).toBeNull();
+	});
+
+	it("sets narrowingContext to null when there is no active pending command", async () => {
+		const getRecentTurns = vi.fn().mockResolvedValue([]);
+		const getActivePendingCommandForUser = vi.fn().mockResolvedValue(null);
+
+		const node = createLoadContextNode({
+			db: {} as any,
+			maxTurns: 10,
+			getRecentTurns,
+			getActivePendingCommandForUser,
+		});
+
+		const update = await node(makeState());
+		expect(update.narrowingContext).toBeNull();
 	});
 
 	it("passes maxTurns to getRecentTurns", async () => {

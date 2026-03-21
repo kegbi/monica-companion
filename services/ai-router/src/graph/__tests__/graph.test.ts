@@ -9,6 +9,15 @@ vi.mock("@opentelemetry/api", () => ({
 	},
 }));
 
+vi.mock("@monica-companion/observability", () => ({
+	createLogger: () => ({
+		info: () => {},
+		warn: () => {},
+		error: () => {},
+		debug: () => {},
+	}),
+}));
+
 vi.mock("../../contact-resolution/client.js", () => ({
 	fetchContactSummaries: vi.fn(),
 }));
@@ -60,6 +69,8 @@ const mockCreatePendingCommand = vi.fn();
 const mockTransitionStatus = vi.fn();
 const mockGetPendingCommand = vi.fn();
 const mockUpdateDraftPayload = vi.fn();
+const mockUpdateNarrowingContext = vi.fn().mockResolvedValue({});
+const mockClearNarrowingContext = vi.fn().mockResolvedValue({});
 const mockSchedulerExecute = vi.fn().mockResolvedValue({ executionId: "exec-1", status: "queued" });
 const mockDeliveryDeliver = vi.fn().mockResolvedValue({ deliveryId: "del-1", status: "delivered" });
 const mockGetDeliveryRouting = vi
@@ -86,6 +97,8 @@ function makeConfig() {
 		transitionStatus: mockTransitionStatus,
 		getPendingCommand: mockGetPendingCommand,
 		updateDraftPayload: mockUpdateDraftPayload,
+		updateNarrowingContext: mockUpdateNarrowingContext,
+		clearNarrowingContext: mockClearNarrowingContext,
 		schedulerClient: { execute: mockSchedulerExecute },
 		deliveryClient: { deliver: mockDeliveryDeliver },
 		userManagementClient: {
@@ -119,6 +132,8 @@ describe("createConversationGraph", () => {
 		mockTransitionStatus.mockReset();
 		mockGetPendingCommand.mockReset();
 		mockUpdateDraftPayload.mockReset();
+		mockUpdateNarrowingContext.mockReset().mockResolvedValue({});
+		mockClearNarrowingContext.mockReset().mockResolvedValue({});
 		mockSchedulerExecute.mockReset().mockResolvedValue({ executionId: "exec-1", status: "queued" });
 		mockDeliveryDeliver.mockReset().mockResolvedValue({ deliveryId: "del-1", status: "delivered" });
 		mockGetDeliveryRouting
@@ -900,5 +915,312 @@ describe("createConversationGraph", () => {
 
 		expect(mockSchedulerExecute).toHaveBeenCalled();
 		expect(result3.response?.type).toBe("text");
+	});
+
+	// --- Progressive contact narrowing integration tests ---
+
+	it("9a: narrowing initiation - 8 candidates triggers text clarification", async () => {
+		// 8 contacts matching "mom" via kinship
+		const summaries = Array.from({ length: 8 }, (_, i) => ({
+			contactId: i + 1,
+			displayName: `Parent Contact ${i + 1}`,
+			aliases: [`Alias${i + 1}`],
+			relationshipLabels: ["parent"],
+			importantDates: [],
+			lastInteractionAt: null,
+		}));
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const narrowingInitResult: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "I'll add a note to mom.",
+			commandType: "create_note",
+			contactRef: "mom",
+			commandPayload: { body: "went to park" },
+			confidence: 0.85,
+			needsClarification: true, // resolveContactRef will override
+		};
+		mockInvoke.mockResolvedValueOnce(narrowingInitResult);
+
+		const createdRow = {
+			id: "cmd-narrow",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "went to park" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "telegram:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		mockCreatePendingCommand.mockResolvedValue(createdRow);
+		mockUpdateNarrowingContext.mockResolvedValue({ ...createdRow, version: 2 });
+
+		const graph = createConversationGraph(makeConfig());
+		const result = await graph.invoke(makeState());
+
+		// Should produce a text response (not disambiguation_prompt) asking for name
+		expect(result.response?.type).toBe("text");
+		expect(result.response?.text).toContain("8 contacts");
+		// Should have narrowing context set
+		expect(result.narrowingContext).not.toBeNull();
+		expect(result.narrowingContext?.round).toBe(0);
+		expect(result.narrowingContext?.narrowingCandidateIds).toHaveLength(8);
+	});
+
+	it("9b: narrowing continuation - clarification narrows to 2 -> buttons", async () => {
+		// Pool of 8, user says "Elena" which matches 2
+		const summaries = [
+			{
+				contactId: 1,
+				displayName: "Elena Yuryevna",
+				aliases: ["Elena", "Yuryevna"],
+				relationshipLabels: ["parent"],
+				importantDates: [],
+				lastInteractionAt: null,
+			},
+			{
+				contactId: 2,
+				displayName: "Maria Petrova",
+				aliases: ["Maria", "Petrova"],
+				relationshipLabels: ["parent"],
+				importantDates: [],
+				lastInteractionAt: null,
+			},
+			{
+				contactId: 3,
+				displayName: "Elena Smirnova",
+				aliases: ["Elena", "Smirnova"],
+				relationshipLabels: ["parent"],
+				importantDates: [],
+				lastInteractionAt: null,
+			},
+			...Array.from({ length: 5 }, (_, i) => ({
+				contactId: i + 4,
+				displayName: `Other Contact ${i + 4}`,
+				aliases: [`Other${i + 4}`],
+				relationshipLabels: ["parent"],
+				importantDates: [],
+				lastInteractionAt: null,
+			})),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const clarificationResult: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Elena",
+			commandType: "create_note",
+			contactRef: "Elena",
+			commandPayload: { body: "went to park" },
+			confidence: 0.8,
+			needsClarification: true,
+		};
+		mockInvoke.mockResolvedValueOnce(clarificationResult);
+
+		// Active draft command with narrowing context
+		const draftRow = {
+			id: "cmd-narrow-2",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "went to park" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "telegram:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			narrowingContext: {
+				originalContactRef: "mom",
+				clarifications: [],
+				round: 0,
+				narrowingCandidateIds: [1, 2, 3, 4, 5, 6, 7, 8],
+			},
+		};
+		mockGetActivePendingCommandForUser.mockResolvedValue(draftRow);
+		mockUpdateDraftPayload.mockResolvedValue({ ...draftRow, version: 2 });
+		mockUpdateNarrowingContext.mockResolvedValue({ ...draftRow, version: 3 });
+
+		const graph = createConversationGraph(makeConfig());
+		const result = await graph.invoke(
+			makeState({
+				inboundEvent: {
+					type: "text_message" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "telegram:msg:457",
+					correlationId: "corr-123",
+					text: "Elena",
+				},
+			}),
+		);
+
+		// Should show disambiguation buttons for the 2 Elena contacts
+		expect(result.response?.type).toBe("disambiguation_prompt");
+		expect(result.response?.options).toBeDefined();
+		expect(result.response?.options?.length).toBe(2);
+		// Narrowing context should be cleared
+		expect(result.narrowingContext).toBeNull();
+	});
+
+	it("9c: pool reaches 0 -> no-match fallback", async () => {
+		const summaries = [
+			{
+				contactId: 1,
+				displayName: "Elena Yuryevna",
+				aliases: ["Elena", "Yuryevna"],
+				relationshipLabels: ["parent"],
+				importantDates: [],
+				lastInteractionAt: null,
+			},
+			{
+				contactId: 2,
+				displayName: "Maria Petrova",
+				aliases: ["Maria", "Petrova"],
+				relationshipLabels: ["parent"],
+				importantDates: [],
+				lastInteractionAt: null,
+			},
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const clarificationResult: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Xavier",
+			commandType: "create_note",
+			contactRef: "Xavier",
+			commandPayload: { body: "test" },
+			confidence: 0.8,
+			needsClarification: true,
+		};
+		mockInvoke.mockResolvedValueOnce(clarificationResult);
+
+		const draftRow = {
+			id: "cmd-narrow-3",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "test" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "telegram:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			narrowingContext: {
+				originalContactRef: "mom",
+				clarifications: [],
+				round: 0,
+				narrowingCandidateIds: [1, 2],
+			},
+		};
+		mockGetActivePendingCommandForUser.mockResolvedValue(draftRow);
+		mockUpdateNarrowingContext.mockResolvedValue({ ...draftRow, version: 2 });
+
+		const graph = createConversationGraph(makeConfig());
+		const result = await graph.invoke(
+			makeState({
+				inboundEvent: {
+					type: "text_message" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "telegram:msg:457",
+					correlationId: "corr-123",
+					text: "Xavier",
+				},
+			}),
+		);
+
+		// Should produce text response (no-match fallback)
+		expect(result.response?.type).toBe("text");
+		expect(result.narrowingContext).toBeNull();
+	});
+
+	it("9d: 3-round cap -> forced buttons", async () => {
+		// All 8 contacts match "Elena"
+		const summaries = Array.from({ length: 8 }, (_, i) => ({
+			contactId: i + 1,
+			displayName: `Elena Contact${i + 1}`,
+			aliases: ["Elena", `Contact${i + 1}`],
+			relationshipLabels: ["parent"],
+			importantDates: [],
+			lastInteractionAt: null,
+		}));
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const clarificationResult: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Elena",
+			commandType: "create_note",
+			contactRef: "Elena",
+			commandPayload: { body: "test" },
+			confidence: 0.8,
+			needsClarification: true,
+		};
+		mockInvoke.mockResolvedValueOnce(clarificationResult);
+
+		// Round 2 -> next round (2+1=3) hits the cap
+		const draftRow = {
+			id: "cmd-narrow-4",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "test" },
+			status: "draft",
+			version: 1,
+			sourceMessageRef: "telegram:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			narrowingContext: {
+				originalContactRef: "mom",
+				clarifications: ["term1", "term2"],
+				round: 2,
+				narrowingCandidateIds: [1, 2, 3, 4, 5, 6, 7, 8],
+			},
+		};
+		mockGetActivePendingCommandForUser.mockResolvedValue(draftRow);
+		mockUpdateDraftPayload.mockResolvedValue({ ...draftRow, version: 2 });
+		mockUpdateNarrowingContext.mockResolvedValue({ ...draftRow, version: 3 });
+
+		const graph = createConversationGraph(makeConfig());
+		const result = await graph.invoke(
+			makeState({
+				inboundEvent: {
+					type: "text_message" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "telegram:msg:457",
+					correlationId: "corr-123",
+					text: "Elena",
+				},
+			}),
+		);
+
+		// Should force buttons (disambiguation_prompt) with at most 5 options
+		expect(result.response?.type).toBe("disambiguation_prompt");
+		expect(result.response?.options).toBeDefined();
+		expect(result.response?.options?.length).toBeLessThanOrEqual(5);
+		// Narrowing context should be cleared
+		expect(result.narrowingContext).toBeNull();
 	});
 });

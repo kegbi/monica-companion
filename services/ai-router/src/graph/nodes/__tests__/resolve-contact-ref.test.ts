@@ -33,6 +33,15 @@ vi.mock("@opentelemetry/api", () => ({
 	},
 }));
 
+vi.mock("@monica-companion/observability", () => ({
+	createLogger: () => ({
+		info: () => {},
+		warn: () => {},
+		error: () => {},
+		debug: () => {},
+	}),
+}));
+
 vi.mock("../../../contact-resolution/client.js", () => ({
 	fetchContactSummaries: vi.fn(),
 }));
@@ -65,6 +74,7 @@ function makeState(
 		userPreferences: null,
 		intentClassification,
 		actionOutcome: null,
+		narrowingContext: null,
 		response: null,
 		...overrides,
 	};
@@ -583,6 +593,421 @@ describe("resolveContactRefNode", () => {
 			{ label: "Elena Yuryevna", value: "10" },
 			{ label: "Elena Petrova", value: "20" },
 		]);
+	});
+
+	// --- Progressive narrowing: 5a - Initial narrowing detection ---
+
+	it("triggers narrowing when ambiguous candidates exceed threshold (>5)", async () => {
+		// Create 8 contacts all matching "mom" via kinship
+		const summaries: ContactResolutionSummary[] = Array.from({ length: 8 }, (_, i) =>
+			makeSummary({
+				contactId: i + 1,
+				displayName: `Contact ${i + 1}`,
+				aliases: [`Alias${i + 1}`],
+				relationshipLabels: ["parent"],
+			}),
+		);
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Adding a note to mom.",
+			commandType: "create_note",
+			contactRef: "mom",
+			commandPayload: { body: "test" },
+			confidence: 0.85,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		// Should trigger narrowing: text clarification, no buttons
+		expect(update.intentClassification?.needsClarification).toBe(true);
+		expect(update.intentClassification?.disambiguationOptions).toBeUndefined();
+		expect(update.intentClassification?.userFacingText).toContain("8 contacts");
+		expect(update.intentClassification?.userFacingText).toContain("mom");
+		expect(update.narrowingContext).not.toBeNull();
+		expect(update.narrowingContext?.round).toBe(0);
+		expect(update.narrowingContext?.narrowingCandidateIds).toHaveLength(8);
+		expect(update.narrowingContext?.originalContactRef).toBe("mom");
+	});
+
+	it("does NOT trigger narrowing when ambiguous candidates are within threshold (<=5)", async () => {
+		const summaries: ContactResolutionSummary[] = Array.from({ length: 4 }, (_, i) =>
+			makeSummary({
+				contactId: i + 1,
+				displayName: `Contact ${i + 1}`,
+				aliases: [`Alias${i + 1}`],
+				relationshipLabels: ["parent"],
+			}),
+		);
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Adding a note to mom.",
+			commandType: "create_note",
+			contactRef: "mom",
+			commandPayload: { body: "test" },
+			confidence: 0.85,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		// Should use normal disambiguation buttons
+		expect(update.intentClassification?.needsClarification).toBe(true);
+		expect(update.intentClassification?.disambiguationOptions).toBeDefined();
+		expect(update.intentClassification?.disambiguationOptions?.length).toBe(4);
+		expect(update.narrowingContext).toBeUndefined(); // not set in state update
+	});
+
+	// --- Progressive narrowing: 5b - Subsequent narrowing round ---
+
+	it("narrows pool on clarification_response with existing narrowingContext", async () => {
+		// Pool of 8 contacts; user says "Elena" to narrow
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({
+				contactId: 1,
+				displayName: "Elena Yuryevna",
+				aliases: ["Elena", "Yuryevna"],
+				relationshipLabels: ["parent"],
+			}),
+			makeSummary({
+				contactId: 2,
+				displayName: "Maria Petrova",
+				aliases: ["Maria", "Petrova"],
+				relationshipLabels: ["parent"],
+			}),
+			makeSummary({
+				contactId: 3,
+				displayName: "Elena Smirnova",
+				aliases: ["Elena", "Smirnova"],
+				relationshipLabels: ["parent"],
+			}),
+			makeSummary({
+				contactId: 4,
+				displayName: "Olga Ivanova",
+				aliases: ["Olga", "Ivanova"],
+				relationshipLabels: ["parent"],
+			}),
+			makeSummary({
+				contactId: 5,
+				displayName: "Anna Kozlova",
+				aliases: ["Anna", "Kozlova"],
+				relationshipLabels: ["parent"],
+			}),
+			makeSummary({
+				contactId: 6,
+				displayName: "Svetlana Popova",
+				aliases: ["Svetlana", "Popova"],
+				relationshipLabels: ["parent"],
+			}),
+			makeSummary({
+				contactId: 7,
+				displayName: "Natalia Sokolova",
+				aliases: ["Natalia", "Sokolova"],
+				relationshipLabels: ["parent"],
+			}),
+			makeSummary({
+				contactId: 8,
+				displayName: "Irina Lebedeva",
+				aliases: ["Irina", "Lebedeva"],
+				relationshipLabels: ["parent"],
+			}),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Elena",
+			commandType: "create_note",
+			contactRef: "Elena",
+			commandPayload: { body: "test" },
+			confidence: 0.8,
+		};
+
+		const narrowingContext = {
+			originalContactRef: "mom",
+			clarifications: [],
+			round: 0,
+			narrowingCandidateIds: [1, 2, 3, 4, 5, 6, 7, 8],
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification, { narrowingContext }));
+
+		// "Elena" matches contactId 1 and 3 -> 2 matches -> present buttons
+		expect(update.intentClassification?.needsClarification).toBe(true);
+		expect(update.intentClassification?.disambiguationOptions).toBeDefined();
+		expect(update.intentClassification?.disambiguationOptions?.length).toBe(2);
+		expect(update.narrowingContext).toBeNull(); // clear narrowing when showing buttons
+	});
+
+	it("resolves to single contact when narrowing produces exactly 1 match", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({
+				contactId: 1,
+				displayName: "Elena Yuryevna",
+				aliases: ["Elena", "Yuryevna"],
+				relationshipLabels: ["parent"],
+			}),
+			makeSummary({
+				contactId: 2,
+				displayName: "Maria Petrova",
+				aliases: ["Maria", "Petrova"],
+				relationshipLabels: ["parent"],
+			}),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Maria",
+			commandType: "create_note",
+			contactRef: "Maria",
+			commandPayload: { body: "test" },
+			confidence: 0.8,
+		};
+
+		const narrowingContext = {
+			originalContactRef: "mom",
+			clarifications: [],
+			round: 0,
+			narrowingCandidateIds: [1, 2],
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification, { narrowingContext }));
+
+		// Single match -> resolved
+		expect(update.contactResolution?.outcome).toBe("resolved");
+		expect(update.contactResolution?.resolved?.contactId).toBe(2);
+		expect(update.intentClassification?.commandPayload?.contactId).toBe(2);
+		expect(update.intentClassification?.needsClarification).toBe(false);
+		expect(update.narrowingContext).toBeNull();
+	});
+
+	it("returns no-match fallback when narrowing pool reaches 0", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({
+				contactId: 1,
+				displayName: "Elena Yuryevna",
+				aliases: ["Elena", "Yuryevna"],
+				relationshipLabels: ["parent"],
+			}),
+			makeSummary({
+				contactId: 2,
+				displayName: "Maria Petrova",
+				aliases: ["Maria", "Petrova"],
+				relationshipLabels: ["parent"],
+			}),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Xavier",
+			commandType: "create_note",
+			contactRef: "Xavier",
+			commandPayload: { body: "test" },
+			confidence: 0.8,
+		};
+
+		const narrowingContext = {
+			originalContactRef: "mom",
+			clarifications: [],
+			round: 0,
+			narrowingCandidateIds: [1, 2],
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification, { narrowingContext }));
+
+		// 0 matches -> no_match fallback
+		expect(update.contactResolution?.outcome).toBe("no_match");
+		expect(update.intentClassification?.needsClarification).toBe(true);
+		expect(update.narrowingContext).toBeNull();
+	});
+
+	it("continues narrowing when pool is still >5 and under round cap", async () => {
+		// 8 contacts, 7 of them have "Elena" as alias
+		const summaries: ContactResolutionSummary[] = Array.from({ length: 8 }, (_, i) =>
+			makeSummary({
+				contactId: i + 1,
+				displayName: `Elena Contact${i + 1}`,
+				aliases: ["Elena", `Contact${i + 1}`],
+				relationshipLabels: ["parent"],
+			}),
+		);
+		// Last one does not match Elena
+		summaries[7] = makeSummary({
+			contactId: 8,
+			displayName: "Olga Ivanova",
+			aliases: ["Olga", "Ivanova"],
+			relationshipLabels: ["parent"],
+		});
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Elena",
+			commandType: "create_note",
+			contactRef: "Elena",
+			commandPayload: { body: "test" },
+			confidence: 0.8,
+		};
+
+		const narrowingContext = {
+			originalContactRef: "mom",
+			clarifications: [],
+			round: 0,
+			narrowingCandidateIds: [1, 2, 3, 4, 5, 6, 7, 8],
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification, { narrowingContext }));
+
+		// 7 matches -> still > 5, continue narrowing
+		expect(update.intentClassification?.needsClarification).toBe(true);
+		expect(update.intentClassification?.disambiguationOptions).toBeUndefined();
+		expect(update.narrowingContext).not.toBeNull();
+		expect(update.narrowingContext?.round).toBe(1);
+		expect(update.narrowingContext?.narrowingCandidateIds).toHaveLength(7);
+		expect(update.narrowingContext?.clarifications).toContain("Elena");
+	});
+
+	it("forces top 5 as buttons at 3-round cap", async () => {
+		const summaries: ContactResolutionSummary[] = Array.from({ length: 8 }, (_, i) =>
+			makeSummary({
+				contactId: i + 1,
+				displayName: `Elena Contact${i + 1}`,
+				aliases: ["Elena", `Contact${i + 1}`],
+				relationshipLabels: ["parent"],
+			}),
+		);
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Elena",
+			commandType: "create_note",
+			contactRef: "Elena",
+			commandPayload: { body: "test" },
+			confidence: 0.8,
+		};
+
+		// Round 2 means the next round (2+1=3) would be the cap
+		const narrowingContext = {
+			originalContactRef: "mom",
+			clarifications: ["some term", "another term"],
+			round: 2,
+			narrowingCandidateIds: [1, 2, 3, 4, 5, 6, 7, 8],
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification, { narrowingContext }));
+
+		// At cap: force top 5 as buttons
+		expect(update.intentClassification?.needsClarification).toBe(true);
+		expect(update.intentClassification?.disambiguationOptions).toBeDefined();
+		expect(update.intentClassification?.disambiguationOptions?.length).toBeLessThanOrEqual(5);
+		expect(update.narrowingContext).toBeNull();
+	});
+
+	// --- Progressive narrowing: 5c - Abandonment ---
+
+	it("abandons narrowing when intent is not clarification_response", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({ contactId: 42, displayName: "John Doe", aliases: ["John", "Doe"] }),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "mutating_command",
+			detectedLanguage: "en",
+			userFacingText: "Adding a note to John.",
+			commandType: "create_note",
+			contactRef: "John Doe",
+			commandPayload: { body: "test" },
+			confidence: 0.9,
+		};
+
+		const narrowingContext = {
+			originalContactRef: "mom",
+			clarifications: [],
+			round: 0,
+			narrowingCandidateIds: [1, 2, 3, 4, 5, 6],
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification, { narrowingContext }));
+
+		// Should abandon narrowing and process normally
+		expect(update.narrowingContext).toBeNull();
+		expect(update.contactResolution?.outcome).toBe("resolved");
+		expect(update.contactResolution?.resolved?.contactId).toBe(42);
+	});
+
+	it("handles narrowing when contactRef is null in clarification_response (uses text)", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({
+				contactId: 1,
+				displayName: "Elena Yuryevna",
+				aliases: ["Elena", "Yuryevna"],
+				relationshipLabels: ["parent"],
+			}),
+			makeSummary({
+				contactId: 2,
+				displayName: "Maria Petrova",
+				aliases: ["Maria", "Petrova"],
+				relationshipLabels: ["parent"],
+			}),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		// LLM didn't set contactRef but user typed "Elena"
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Elena",
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: { body: "test" },
+			confidence: 0.8,
+		};
+
+		const narrowingContext = {
+			originalContactRef: "mom",
+			clarifications: [],
+			round: 0,
+			narrowingCandidateIds: [1, 2],
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(
+			makeState(classification, {
+				narrowingContext,
+				inboundEvent: {
+					type: "text_message" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "telegram:msg:456",
+					correlationId: "corr-123",
+					text: "Elena",
+				},
+			}),
+		);
+
+		// Should use inbound text as clarification and resolve
+		expect(update.contactResolution?.outcome).toBe("resolved");
+		expect(update.contactResolution?.resolved?.contactId).toBe(1);
 	});
 
 	it("appends birthdate to disambiguation label when available", async () => {

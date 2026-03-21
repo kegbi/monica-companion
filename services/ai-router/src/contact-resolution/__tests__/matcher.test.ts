@@ -651,6 +651,119 @@ describe("matchContacts", () => {
 			expect(result[1].score).toBe(0.9);
 		});
 
+		describe("pool narrowing (compound narrowing)", () => {
+			it("matchContacts with filtered pool: 'Elena' narrows kinship pool to name matches", () => {
+				// Simulates the narrowing round: user said "mom" (8 kinship matches),
+				// then "Elena" to narrow. matchContacts is called with "Elena" against the pool.
+				const pool = [
+					makeSummary({
+						contactId: 1,
+						displayName: "Elena Yuryevna",
+						aliases: ["Elena", "Yuryevna"],
+						relationshipLabels: ["parent"],
+					}),
+					makeSummary({
+						contactId: 2,
+						displayName: "Maria Petrova",
+						aliases: ["Maria", "Petrova"],
+						relationshipLabels: ["parent"],
+					}),
+					makeSummary({
+						contactId: 3,
+						displayName: "Elena Smirnova",
+						aliases: ["Elena", "Smirnova"],
+						relationshipLabels: ["parent"],
+					}),
+					makeSummary({
+						contactId: 4,
+						displayName: "Olga Ivanova",
+						aliases: ["Olga", "Ivanova"],
+						relationshipLabels: ["parent"],
+					}),
+				];
+
+				const result = matchContacts("Elena", pool);
+
+				// Only contacts 1 and 3 have "Elena" alias
+				expect(result).toHaveLength(2);
+				expect(result.map((r) => r.contactId).sort()).toEqual([1, 3]);
+			});
+
+			it("matchContacts with single matching contact in pool resolves clearly", () => {
+				const pool = [
+					makeSummary({
+						contactId: 1,
+						displayName: "Elena Yuryevna",
+						aliases: ["Elena", "Yuryevna"],
+						relationshipLabels: ["parent"],
+					}),
+					makeSummary({
+						contactId: 2,
+						displayName: "Maria Petrova",
+						aliases: ["Maria", "Petrova"],
+						relationshipLabels: ["parent"],
+					}),
+				];
+
+				const result = matchContacts("Maria Petrova", pool);
+
+				expect(result).toHaveLength(1);
+				expect(result[0].contactId).toBe(2);
+				expect(result[0].score).toBe(1.0); // exact display name match
+			});
+
+			it("matchContacts with no matching contacts in pool returns empty", () => {
+				const pool = [
+					makeSummary({
+						contactId: 1,
+						displayName: "Elena Yuryevna",
+						aliases: ["Elena", "Yuryevna"],
+						relationshipLabels: ["parent"],
+					}),
+					makeSummary({
+						contactId: 2,
+						displayName: "Maria Petrova",
+						aliases: ["Maria", "Petrova"],
+						relationshipLabels: ["parent"],
+					}),
+				];
+
+				const result = matchContacts("Xavier", pool);
+
+				expect(result).toHaveLength(0);
+			});
+
+			it("matchContacts with prefix narrows pool correctly", () => {
+				const pool = [
+					makeSummary({
+						contactId: 1,
+						displayName: "Elena Yuryevna",
+						aliases: ["Elena", "Yuryevna"],
+						relationshipLabels: ["parent"],
+					}),
+					makeSummary({
+						contactId: 2,
+						displayName: "Maria Petrova",
+						aliases: ["Maria", "Petrova"],
+						relationshipLabels: ["parent"],
+					}),
+					makeSummary({
+						contactId: 3,
+						displayName: "Elena Smirnova",
+						aliases: ["Elena", "Smirnova"],
+						relationshipLabels: ["parent"],
+					}),
+				];
+
+				// "Yur" is a prefix of "Yuryevna"
+				const result = matchContacts("Yur", pool);
+
+				expect(result).toHaveLength(1);
+				expect(result[0].contactId).toBe(1);
+				expect(result[0].score).toBe(0.6); // prefix match
+			});
+		});
+
 		it("direct match path survives refactor: 'parent' label matches term 'parent'", () => {
 			// LOW-3 review finding: verify the direct match path still works
 			const candidates = [

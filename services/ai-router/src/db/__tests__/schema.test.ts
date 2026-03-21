@@ -1,6 +1,6 @@
 import { getTableColumns, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { conversationTurns } from "../schema.js";
+import { conversationTurns, pendingCommands } from "../schema.js";
 
 describe("conversationTurns table schema", () => {
 	it("has the correct table name", () => {
@@ -53,5 +53,14 @@ describe("conversationTurns table schema", () => {
 	it("has exactly 6 columns", () => {
 		const columns = getTableColumns(conversationTurns);
 		expect(Object.keys(columns)).toHaveLength(6);
+	});
+});
+
+describe("pendingCommands table schema", () => {
+	it("has narrowingContext JSONB column that is nullable", () => {
+		const columns = getTableColumns(pendingCommands);
+		expect(columns).toHaveProperty("narrowingContext");
+		expect(columns.narrowingContext.notNull).toBe(false);
+		expect(columns.narrowingContext.dataType).toBe("json");
 	});
 });
