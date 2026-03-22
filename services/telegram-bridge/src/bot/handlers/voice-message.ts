@@ -11,12 +11,15 @@ export type TranscribeFn = (
 		mimeType: string;
 		durationSeconds: number;
 		correlationId: string;
+		languageHint?: string;
 	},
 	audioBuffer: ArrayBuffer,
 	userId: string,
 ) => Promise<{ success: boolean; text?: string; error?: string; correlationId: string }>;
 
 export type ForwardEventFn = (event: InboundEvent) => Promise<void>;
+
+export type GetLanguagePreferenceFn = (userId: string) => Promise<string | undefined>;
 
 /**
  * Creates a handler for voice messages.
@@ -26,6 +29,7 @@ export function createVoiceMessageHandler(
 	downloadFile: DownloadFileFn,
 	transcribe: TranscribeFn,
 	forwardEvent: ForwardEventFn,
+	getLanguagePreference?: GetLanguagePreferenceFn,
 ) {
 	return async (ctx: BotContext): Promise<void> => {
 		try {
@@ -34,11 +38,26 @@ export function createVoiceMessageHandler(
 			const voice = ctx.message!.voice!;
 			const { buffer } = await downloadFile(voice.file_id);
 
+			// Fetch user language preference for transcription hint (best-effort)
+			let languageHint: string | undefined;
+			if (getLanguagePreference) {
+				try {
+					languageHint = await getLanguagePreference(ctx.userId);
+				} catch (err) {
+					logger.warn("Failed to fetch language preference, proceeding without hint", {
+						correlationId: ctx.correlationId,
+						userId: ctx.userId,
+						error: err instanceof Error ? err.message : String(err),
+					});
+				}
+			}
+
 			const transcriptionResult = await transcribe(
 				{
 					mimeType: voice.mime_type ?? "audio/ogg",
 					durationSeconds: voice.duration,
 					correlationId: ctx.correlationId,
+					languageHint,
 				},
 				buffer,
 				ctx.userId,

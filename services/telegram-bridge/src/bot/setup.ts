@@ -8,6 +8,7 @@ import { createTextMessageHandler, type ForwardEventFn } from "./handlers/text-m
 import {
 	createVoiceMessageHandler,
 	type DownloadFileFn,
+	type GetLanguagePreferenceFn,
 	type TranscribeFn,
 } from "./handlers/voice-message";
 import { privateChatOnly } from "./middleware/private-chat-only";
@@ -20,6 +21,7 @@ export interface SetupDeps {
 	transcribe: TranscribeFn;
 	disconnect: DisconnectFn;
 	issueSetupToken: IssueSetupTokenFn;
+	getLanguagePreference?: GetLanguagePreferenceFn;
 }
 
 /**
@@ -49,7 +51,12 @@ export function setupBot(bot: Bot<BotContext>, deps: SetupDeps): void {
 	bot.on("message:text", createTextMessageHandler(deps.forwardEvent));
 	bot.on(
 		"message:voice",
-		createVoiceMessageHandler(deps.downloadFile, deps.transcribe, deps.forwardEvent),
+		createVoiceMessageHandler(
+			deps.downloadFile,
+			deps.transcribe,
+			deps.forwardEvent,
+			deps.getLanguagePreference,
+		),
 	);
 	bot.on("callback_query:data", createCallbackQueryHandler(deps.forwardEvent));
 

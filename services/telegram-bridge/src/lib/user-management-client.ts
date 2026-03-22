@@ -18,6 +18,7 @@ export interface UserManagementClient extends ServiceClient {
 		correlationId?: string,
 	): Promise<{ disconnected: boolean; purgeScheduledAt: string }>;
 	issueSetupToken(telegramUserId: string, correlationId?: string): Promise<IssueSetupTokenResponse>;
+	getLanguagePreference(userId: string): Promise<string | undefined>;
 }
 
 export function createUserManagementClient(
@@ -78,6 +79,13 @@ export function createUserManagementClient(
 				throw new Error(`Issue setup token failed with status ${res.status}`);
 			}
 			return res.json();
+		},
+		async getLanguagePreference(userId: string): Promise<string | undefined> {
+			const signal = AbortSignal.timeout(options.timeoutMs ?? 5000);
+			const res = await base.fetch(`/internal/users/${userId}/preferences`, { signal });
+			if (!res.ok) return undefined;
+			const body = (await res.json()) as { language?: string };
+			return body.language;
 		},
 	};
 }

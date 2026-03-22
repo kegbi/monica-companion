@@ -101,6 +101,60 @@ describe("voiceMessageHandler", () => {
 		expect(mockForward).not.toHaveBeenCalled();
 	});
 
+	it("passes user language preference as languageHint in transcription metadata", async () => {
+		const mockDownload = vi.fn(async () => ({
+			buffer: new ArrayBuffer(10),
+		}));
+		const mockTranscribe = vi.fn(async () => ({
+			success: true,
+			text: "Elena",
+			correlationId: "corr-voice",
+		}));
+		const mockForward = vi.fn(async () => {});
+		const mockGetLanguagePreference = vi.fn(async () => "en");
+
+		const handler = createVoiceMessageHandler(
+			mockDownload,
+			mockTranscribe,
+			mockForward,
+			mockGetLanguagePreference,
+		);
+		const ctx = createMockCtx();
+
+		await handler(ctx as never);
+
+		expect(mockGetLanguagePreference).toHaveBeenCalledWith("user-uuid-123");
+		expect(mockTranscribe).toHaveBeenCalledWith(
+			expect.objectContaining({
+				languageHint: "en",
+				correlationId: "corr-voice",
+			}),
+			expect.any(ArrayBuffer),
+			"user-uuid-123",
+		);
+	});
+
+	it("omits languageHint when getLanguagePreference is not provided", async () => {
+		const mockDownload = vi.fn(async () => ({
+			buffer: new ArrayBuffer(10),
+		}));
+		const mockTranscribe = vi.fn(async () => ({
+			success: true,
+			text: "Hello",
+			correlationId: "corr-voice",
+		}));
+		const mockForward = vi.fn(async () => {});
+
+		const handler = createVoiceMessageHandler(mockDownload, mockTranscribe, mockForward);
+		const ctx = createMockCtx();
+
+		await handler(ctx as never);
+
+		// Without the dep, languageHint should be undefined
+		const metadata = mockTranscribe.mock.calls[0][0];
+		expect(metadata.languageHint).toBeUndefined();
+	});
+
 	it("sends error message when download fails", async () => {
 		const mockDownload = vi.fn(async () => {
 			throw new Error("Download failed");
