@@ -285,7 +285,7 @@ _Fix fundamental issues with kinship matching and disambiguation UX discovered d
   - [x] Migrate applicable tests from `llm-integration.test.ts` (intent classification, payload extraction, language detection, out-of-scope rejection) into the promptfoo datasets. Keep multi-turn context tests and prompt injection tests as Vitest integration tests.
   - [x] Verify CI runs both: `promptfoo eval` for LLM quality gates and `vitest` for contact-resolution precision + graph integration tests.
 
-- [ ] **Graph-Level Integration Tests for Multi-Turn Contact Flow**
-  - [ ] Add graph-level test: full round-trip for kinship disambiguation — initial message → action confirmation → clarification question ("What's your mom's name?") → user answers → buttons presented → user selects → command executed.
-  - [ ] Add graph-level test: confirm-then-resolve flow where user cancels at action confirmation step (contact resolution never runs).
-  - [ ] Add graph-level test: unambiguous contact with kinship term (only one "parent" candidate) → action confirmation → auto-resolve → execute.
+- [x] **Graph-Level Integration Tests for Multi-Turn Contact Flow**
+  - [x] Add graph-level test: full round-trip for kinship disambiguation — initial message → action confirmation → clarification question ("What's your mom's name?") → user answers → buttons presented → user selects → command executed.
+  - [x] Add graph-level test: confirm-then-resolve flow where user cancels at action confirmation step (contact resolution never runs).
+  - [x] Add graph-level test: unambiguous contact with kinship term (only one "parent" candidate) → action confirmation → auto-resolve → execute.
