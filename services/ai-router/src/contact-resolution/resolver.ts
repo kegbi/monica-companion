@@ -62,6 +62,18 @@ export async function resolveContact(
 		};
 	}
 
+	// Single candidate above minimum: auto-resolve — no competing candidates means
+	// no ambiguity, so showing a disambiguation button is unnecessary friction.
+	if (candidates.length === 1 && topScore >= MINIMUM_MATCH_THRESHOLD) {
+		const resolvedSummary = summaries.find((s) => s.contactId === candidates[0].contactId);
+		return {
+			outcome: "resolved",
+			resolved: resolvedSummary ?? null,
+			candidates: [],
+			query: contactRef,
+		};
+	}
+
 	// Ambiguous: at least one candidate above minimum threshold
 	if (topScore >= MINIMUM_MATCH_THRESHOLD) {
 		return {

@@ -90,6 +90,7 @@ export interface ConversationGraphConfig {
 		id: string,
 		contactRef: string,
 	) => Promise<PendingCommandRow | null>;
+	clearUnresolvedContactRef: (db: Database, id: string) => Promise<PendingCommandRow | null>;
 	schedulerClient: SchedulerClient;
 	deliveryClient: DeliveryClient;
 	userManagementClient: UserManagementClient;
@@ -123,6 +124,7 @@ export function createConversationGraph(config: ConversationGraphConfig) {
 		clearNarrowingContext: config.clearNarrowingContext,
 		updatePendingPayload: config.updatePendingPayload,
 		setUnresolvedContactRef: config.setUnresolvedContactRef,
+		clearUnresolvedContactRef: config.clearUnresolvedContactRef,
 		buildConfirmedPayload,
 		schedulerClient: config.schedulerClient,
 		userManagementClient: config.userManagementClient,

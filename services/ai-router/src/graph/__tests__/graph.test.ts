@@ -73,6 +73,7 @@ const mockUpdateNarrowingContext = vi.fn().mockResolvedValue({});
 const mockClearNarrowingContext = vi.fn().mockResolvedValue({});
 const mockUpdatePendingPayload = vi.fn();
 const mockSetUnresolvedContactRef = vi.fn().mockResolvedValue({});
+const mockClearUnresolvedContactRef = vi.fn().mockResolvedValue({});
 const mockSchedulerExecute = vi.fn().mockResolvedValue({ executionId: "exec-1", status: "queued" });
 const mockDeliveryDeliver = vi.fn().mockResolvedValue({ deliveryId: "del-1", status: "delivered" });
 const mockGetDeliveryRouting = vi
@@ -103,6 +104,7 @@ function makeConfig() {
 		clearNarrowingContext: mockClearNarrowingContext,
 		updatePendingPayload: mockUpdatePendingPayload,
 		setUnresolvedContactRef: mockSetUnresolvedContactRef,
+		clearUnresolvedContactRef: mockClearUnresolvedContactRef,
 		schedulerClient: { execute: mockSchedulerExecute },
 		deliveryClient: { deliver: mockDeliveryDeliver },
 		userManagementClient: {
@@ -140,6 +142,7 @@ describe("createConversationGraph", () => {
 		mockClearNarrowingContext.mockReset().mockResolvedValue({});
 		mockUpdatePendingPayload.mockReset();
 		mockSetUnresolvedContactRef.mockReset().mockResolvedValue({});
+		mockClearUnresolvedContactRef.mockReset().mockResolvedValue({});
 		mockSchedulerExecute.mockReset().mockResolvedValue({ executionId: "exec-1", status: "queued" });
 		mockDeliveryDeliver.mockReset().mockResolvedValue({ deliveryId: "del-1", status: "delivered" });
 		mockGetDeliveryRouting

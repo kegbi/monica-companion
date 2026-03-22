@@ -2,6 +2,7 @@ export { buildConfirmedPayload } from "./confirm.js";
 export { startExpirySweep } from "./expiry-sweep.js";
 export {
 	type CreatePendingCommandParams,
+	clearUnresolvedContactRef,
 	createPendingCommand,
 	expireStaleCommands,
 	getActivePendingCommandForUser,

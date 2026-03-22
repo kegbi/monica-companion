@@ -110,6 +110,7 @@ vi.mock("../pending-command/repository.js", () => ({
 	clearNarrowingContext: vi.fn().mockResolvedValue({}),
 	updatePendingPayload: vi.fn().mockResolvedValue(null),
 	setUnresolvedContactRef: vi.fn().mockResolvedValue({}),
+	clearUnresolvedContactRef: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("../lib/delivery-client.js", () => ({

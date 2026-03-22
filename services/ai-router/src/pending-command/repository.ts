@@ -275,6 +275,28 @@ export async function setUnresolvedContactRef(
 }
 
 /**
+ * Clear the unresolved contact reference on a pending command.
+ * Idempotent: sets the column to null regardless of current value.
+ * Does NOT bump the version.
+ *
+ * Returns the updated row, or null if the command was not found.
+ */
+export async function clearUnresolvedContactRef(
+	db: Database,
+	id: string,
+): Promise<PendingCommandRow | null> {
+	const rows = await db
+		.update(pendingCommands)
+		.set({
+			unresolvedContactRef: null,
+		})
+		.where(eq(pendingCommands.id, id))
+		.returning();
+
+	return rows[0] ?? null;
+}
+
+/**
  * Expire all stale pending commands that have passed their TTL.
  * Only transitions active (non-terminal) commands.
  * Returns the number of expired commands.

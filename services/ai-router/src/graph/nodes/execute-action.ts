@@ -76,6 +76,7 @@ export interface ExecuteActionDeps {
 		id: string,
 		contactRef: string,
 	) => Promise<PendingCommandRow | null>;
+	clearUnresolvedContactRef: (db: Database, id: string) => Promise<PendingCommandRow | null>;
 	buildConfirmedPayload: (record: PendingCommandRow) => ConfirmedCommandPayload;
 	schedulerClient: Pick<SchedulerClient, "execute">;
 	userManagementClient: Pick<UserManagementClient, "getPreferences">;
@@ -670,6 +671,10 @@ async function handleConfirm(
 			contactResolution.outcome === "ambiguous" ||
 			contactResolution.outcome === "no_match"
 		) {
+			// Clear unresolvedContactRef from DB so the next confirm callback
+			// after disambiguation does not re-trigger deferred resolution.
+			await deps.clearUnresolvedContactRef(deps.db, command.id);
+
 			// Ambiguous or no match: transition back to draft for disambiguation
 			const draftRow = await deps.transitionStatus(
 				deps.db,
@@ -882,6 +887,10 @@ async function handleSelect(
 	if (!updatedRow) {
 		return { actionOutcome: { type: "passthrough" } as ActionOutcome };
 	}
+
+	// Contact selected — clear the deferred contactRef from DB so the next
+	// confirm callback does not re-trigger deferred resolution.
+	await deps.clearUnresolvedContactRef(deps.db, command.id);
 
 	// If clarification is still incomplete, stay in draft
 	if (intentClassification.needsClarification) {

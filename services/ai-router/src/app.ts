@@ -20,6 +20,7 @@ import { createSchedulerClient } from "./lib/scheduler-client.js";
 import { createUserManagementClient } from "./lib/user-management-client.js";
 import {
 	clearNarrowingContext,
+	clearUnresolvedContactRef,
 	createPendingCommand,
 	getActivePendingCommandForUser,
 	getPendingCommand,
@@ -89,6 +90,7 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 		clearNarrowingContext,
 		updatePendingPayload,
 		setUnresolvedContactRef,
+		clearUnresolvedContactRef,
 		schedulerClient,
 		deliveryClient,
 		userManagementClient,

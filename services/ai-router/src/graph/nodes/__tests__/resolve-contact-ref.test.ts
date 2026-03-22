@@ -181,6 +181,40 @@ describe("resolveContactRefNode", () => {
 		]);
 	});
 
+	// --- Single-candidate auto-resolve ---
+
+	it("auto-resolves single candidate above minimum threshold instead of showing disambiguation", async () => {
+		const summaries: ContactResolutionSummary[] = [
+			makeSummary({
+				contactId: 682023,
+				displayName: "Elena Yuryevna Rud",
+				aliases: ["Elena", "Yuryevna"],
+				relationshipLabels: ["parent"],
+			}),
+		];
+		mockFetchContactSummaries.mockResolvedValue(summaries);
+
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "I'll look up Elena.",
+			commandType: "create_note",
+			contactRef: "Elena",
+			commandPayload: { body: "artillery park" },
+			confidence: 0.9,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(makeState(classification));
+
+		expect(update.contactResolution?.outcome).toBe("resolved");
+		expect(update.contactResolution?.resolved?.contactId).toBe(682023);
+		expect(update.intentClassification?.needsClarification).toBe(false);
+		expect(update.intentClassification?.commandPayload).toEqual(
+			expect.objectContaining({ contactId: 682023 }),
+		);
+	});
+
 	// --- No match outcome ---
 
 	it("returns no_match when no contacts match and preserves LLM userFacingText (M3 fix)", async () => {
@@ -1300,6 +1334,39 @@ describe("resolveContactRefNode", () => {
 		// Should skip resolution as before (no unresolvedContactRef)
 		expect(mockFetchContactSummaries).not.toHaveBeenCalled();
 		expect(update).toEqual({});
+	});
+
+	it("passes through on select callback when unresolvedContactRef is set (does not clear it)", async () => {
+		const classification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Got it — using that selection.",
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: null,
+			confidence: 1.0,
+		};
+
+		const node = createResolveContactRefNode(makeDeps());
+		const update = await node(
+			makeState(classification, {
+				unresolvedContactRef: "mum",
+				inboundEvent: {
+					type: "callback_action" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "tg:cb:789",
+					correlationId: "corr-123",
+					action: "select",
+					data: "682023:0",
+				},
+			}),
+		);
+
+		// select should pass through — execute-action handles selection & DB cleanup
+		expect(mockFetchContactSummaries).not.toHaveBeenCalled();
+		expect(update).toEqual({});
+		// Critically: should NOT clear unresolvedContactRef (that's execute-action's job)
+		expect(update.unresolvedContactRef).toBeUndefined();
 	});
 
 	it("handles deferred resolution no-match on confirm callback", async () => {

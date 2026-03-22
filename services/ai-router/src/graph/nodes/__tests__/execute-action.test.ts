@@ -60,6 +60,7 @@ const mockSchedulerExecute = vi.fn();
 const mockGetPreferences = vi.fn();
 const mockUpdatePendingPayload = vi.fn();
 const mockSetUnresolvedContactRef = vi.fn();
+const mockClearUnresolvedContactRef = vi.fn();
 
 function makeDeps(overrides: Partial<ExecuteActionDeps> = {}): ExecuteActionDeps {
 	return {
@@ -74,6 +75,7 @@ function makeDeps(overrides: Partial<ExecuteActionDeps> = {}): ExecuteActionDeps
 		clearNarrowingContext: mockClearNarrowingContext,
 		updatePendingPayload: mockUpdatePendingPayload,
 		setUnresolvedContactRef: mockSetUnresolvedContactRef,
+		clearUnresolvedContactRef: mockClearUnresolvedContactRef,
 		buildConfirmedPayload: (record: any) => ({
 			pendingCommandId: record.id,
 			userId: record.userId,
@@ -1191,6 +1193,8 @@ describe("executeActionNode", () => {
 			expect.objectContaining({ contactId: 42 }),
 			30,
 		);
+		// Must clear unresolvedContactRef from DB to prevent deferred re-resolution
+		expect(mockClearUnresolvedContactRef).toHaveBeenCalledWith(expect.anything(), "cmd-sel-2");
 		expect(mockTransitionStatus).toHaveBeenCalledWith(
 			expect.anything(),
 			"cmd-sel-2",

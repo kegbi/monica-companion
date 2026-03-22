@@ -114,6 +114,24 @@ describe("resolveContact", () => {
 		);
 	});
 
+	it("auto-resolves when only one candidate exists above minimum threshold even if score < 0.9", async () => {
+		// "Elena" prefix-matches "Elena Yuryevna" at score 0.6 — the only candidate.
+		// With no competing candidates, disambiguation is unnecessary friction.
+		const summary = makeSummary({
+			contactId: 682023,
+			displayName: "Elena Yuryevna Rud",
+			aliases: ["Elena", "Yuryevna"],
+			relationshipLabels: ["parent"],
+		});
+		mockFetch.mockResolvedValue([summary]);
+
+		const result = await resolveContact(mockServiceClient, "user-123", "Elena", "corr-single");
+
+		expect(result.outcome).toBe("resolved");
+		expect(result.resolved?.contactId).toBe(682023);
+		expect(result.candidates).toEqual([]);
+	});
+
 	it("limits disambiguation candidates to MAX_DISAMBIGUATION_CANDIDATES", async () => {
 		const summaries = Array.from({ length: 10 }, (_, i) =>
 			makeSummary({

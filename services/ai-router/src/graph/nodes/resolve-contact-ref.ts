@@ -166,6 +166,18 @@ function resolveFromCandidates(
 		};
 	}
 
+	// Single candidate above minimum: auto-resolve — no competing candidates means
+	// no ambiguity, so showing a disambiguation button is unnecessary friction.
+	if (candidates.length === 1 && topScore >= MINIMUM_MATCH_THRESHOLD) {
+		const resolvedSummary = summaries.find((s) => s.contactId === candidates[0].contactId);
+		return {
+			outcome: "resolved",
+			resolved: resolvedSummary ?? null,
+			candidates: [],
+			query: contactRef,
+		};
+	}
+
 	// Ambiguous: at least one candidate above minimum threshold
 	if (topScore >= MINIMUM_MATCH_THRESHOLD) {
 		return {
@@ -400,14 +412,20 @@ export function createResolveContactRefNode(deps: ResolveContactRefDeps) {
 						return await resolveDeferredContact(deps, state, state.unresolvedContactRef, span);
 					}
 
-					// Cancel/edit: clear unresolvedContactRef without resolving
-					logger.info("Clearing unresolvedContactRef on cancel/edit callback", {
-						correlationId,
-						action,
-						unresolvedContactRef: state.unresolvedContactRef,
-					});
-					span.setAttribute("ai-router.resolution_outcome", "deferred_cleared");
-					return { unresolvedContactRef: null };
+					if (action === "cancel" || action === "edit") {
+						// Cancel/edit: clear unresolvedContactRef without resolving
+						logger.info("Clearing unresolvedContactRef on cancel/edit callback", {
+							correlationId,
+							action,
+							unresolvedContactRef: state.unresolvedContactRef,
+						});
+						span.setAttribute("ai-router.resolution_outcome", "deferred_cleared");
+						return { unresolvedContactRef: null };
+					}
+
+					// select: pass through — execute-action handles contact selection & DB cleanup
+					span.setAttribute("ai-router.resolution_outcome", "skipped");
+					return {};
 				}
 
 				// --- MEDIUM-2 fix: Check narrowing context FIRST, before skip guards ---

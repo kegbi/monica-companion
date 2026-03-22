@@ -320,3 +320,78 @@
     - type: is-json
     - type: javascript
       value: "JSON.parse(output).intent === 'clarification_response'"
+
+# ========================================================================
+# Kinship narrowing & contact disambiguation regressions (cl-026 to cl-030)
+# ========================================================================
+- description: "Narrowing response - single name after kinship ambiguity"
+  vars:
+    utterance: "Elena"
+    recentTurns: '[{"role":"user","summary":"User asked to add a note to mum about going to the artillery park","createdAt":"2026-03-22T18:52:00Z","correlationId":"corr-cl026"},{"role":"assistant","summary":"Found 8 contacts matching mum, asked user to provide the name to narrow it down","createdAt":"2026-03-22T18:53:00Z","correlationId":"corr-cl026"}]'
+  metadata:
+    id: "cl-026"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('elena'))"
+
+- description: "Language switch with name correction during disambiguation"
+  vars:
+    utterance: "Speak english. The name is elena"
+    recentTurns: '[{"role":"user","summary":"User asked to add a note to mum","createdAt":"2026-03-22T18:52:00Z","correlationId":"corr-cl027"},{"role":"assistant","summary":"Found 8 contacts matching mum, asked for name","createdAt":"2026-03-22T18:53:00Z","correlationId":"corr-cl027"},{"role":"assistant","summary":"Responded in Serbian asking about Jelena","createdAt":"2026-03-22T18:53:45Z","correlationId":"corr-cl027"}]'
+  metadata:
+    id: "cl-027"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "JSON.parse(output).detectedLanguage === 'en'"
+    - type: javascript
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('elena'))"
+
+- description: "Voice-style narrowing with kinship and first name"
+  vars:
+    utterance: "its my mum elena"
+    recentTurns: '[{"role":"user","summary":"User asked to add a note to mum","createdAt":"2026-03-22T18:52:00Z","correlationId":"corr-cl028"},{"role":"assistant","summary":"Found 8 contacts matching mum, asked for name","createdAt":"2026-03-22T18:53:00Z","correlationId":"corr-cl028"}]'
+  metadata:
+    id: "cl-028"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('elena'))"
+
+- description: "Short single-word name response during contact disambiguation"
+  vars:
+    utterance: "David"
+    recentTurns: '[{"role":"user","summary":"User asked to add a note to dad","createdAt":"2026-03-22T10:00:00Z","correlationId":"corr-cl029"},{"role":"assistant","summary":"Found 6 contacts matching dad, asked for name to narrow it down","createdAt":"2026-03-22T10:00:05Z","correlationId":"corr-cl029"}]'
+  metadata:
+    id: "cl-029"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+
+- description: "Full name response to narrow kinship-based ambiguity"
+  vars:
+    utterance: "Elena Yuryevna"
+    recentTurns: '[{"role":"user","summary":"User asked to create a note for mum about the artillery park visit","createdAt":"2026-03-22T18:52:00Z","correlationId":"corr-cl030"},{"role":"assistant","summary":"Found 8 contacts matching mum via kinship. Asked user to provide name to narrow down.","createdAt":"2026-03-22T18:53:00Z","correlationId":"corr-cl030"}]'
+  metadata:
+    id: "cl-030"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('elena'))"

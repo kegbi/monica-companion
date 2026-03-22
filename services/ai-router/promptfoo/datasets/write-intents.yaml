@@ -1531,3 +1531,36 @@
       value: "JSON.parse(output).commandType === 'update_contact_address'"
     - type: javascript
       value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+
+# ========================================================================
+# Kinship variant regression: "mum" (British English) (wi-101 to wi-102)
+# ========================================================================
+- description: "Voice-style create note for mum (British English kinship)"
+  vars:
+    utterance: "add a note to mum today we went to the artillery park"
+  metadata:
+    id: "wi-101"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mum'))"
+
+- description: "Create note for mum with polite phrasing"
+  vars:
+    utterance: "Could you please note down that mum's garden is looking lovely this spring"
+  metadata:
+    id: "wi-102"
+    category: "write_intent"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'mutating_command'"
+    - type: javascript
+      value: "JSON.parse(output).commandType === 'create_note'"
+    - type: javascript
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mum'))"
