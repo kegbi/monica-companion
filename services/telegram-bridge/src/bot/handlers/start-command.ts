@@ -26,18 +26,30 @@ export function createStartHandler(lookupUser: UserLookupFn, issueSetupToken: Is
 		}
 
 		const correlationId = randomUUID();
+		const uid = String(telegramUserId);
+
+		logger.info("/start command received", { correlationId, telegramUserId: uid });
 
 		try {
-			const result = await lookupUser(String(telegramUserId));
+			const result = await lookupUser(uid);
 
 			if (result.found) {
+				logger.info("User already registered, skipping onboarding", {
+					correlationId,
+					telegramUserId: uid,
+				});
 				await ctx.reply(
 					"You're already set up! Send me a message or voice note to get started. Use /disconnect to unlink your account.",
 				);
 				return;
 			}
 
-			const { setupUrl } = await issueSetupToken(String(telegramUserId), correlationId);
+			logger.info("User not registered, issuing setup token", {
+				correlationId,
+				telegramUserId: uid,
+			});
+			const { setupUrl } = await issueSetupToken(uid, correlationId);
+			logger.info("Setup token issued, sending setup link", { correlationId, telegramUserId: uid });
 
 			await ctx.reply(
 				`Welcome to Monica Companion! To get started, please complete your setup using this link:\n\n<a href="${setupUrl}">Open Setup</a>\n\nYour credentials will be collected securely through the web form — never share them in this chat. The link expires in 15 minutes.`,
@@ -47,7 +59,7 @@ export function createStartHandler(lookupUser: UserLookupFn, issueSetupToken: Is
 			const msg = err instanceof Error ? err.message : String(err);
 			logger.error("Failed to handle /start command", {
 				correlationId,
-				telegramUserId: String(telegramUserId),
+				telegramUserId: uid,
 				error: msg,
 			});
 			await ctx.reply("Sorry, I encountered an error. Please try again later.");
