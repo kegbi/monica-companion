@@ -13,7 +13,8 @@
  */
 
 import { readdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { createRequire } from "node:module";
+import { join, resolve, sep } from "node:path";
 
 const ROOT = resolve(__dirname, "..");
 const PNPM_STORE = resolve(ROOT, "node_modules/.pnpm");
@@ -55,4 +56,58 @@ export function pkg(name: string, subpath = ""): string {
 export function workspace(name: string): string {
 	const short = name.replace("@monica-companion/", "");
 	return resolve(PACKAGES, short, "src/index.ts");
+}
+
+const OTEL_RESOLVE_DIR = resolve(PACKAGES, "observability");
+
+const OTEL_PACKAGES = [
+	"@opentelemetry/api",
+	"@opentelemetry/api-logs",
+	"@opentelemetry/exporter-logs-otlp-http",
+	"@opentelemetry/exporter-metrics-otlp-http",
+	"@opentelemetry/exporter-trace-otlp-http",
+	"@opentelemetry/resources",
+	"@opentelemetry/sdk-logs",
+	"@opentelemetry/sdk-metrics",
+	"@opentelemetry/sdk-node",
+	"@opentelemetry/sdk-trace-base",
+	"@opentelemetry/semantic-conventions",
+] as const;
+
+/**
+ * Resolve a scoped package to its root directory using require.resolve.
+ * Follows the resolved entry point path back to the package root
+ * (the directory containing `@scope/name`).
+ */
+function resolvePackageRoot(name: string, from: string): string {
+	const require_ = createRequire(resolve(from, "package.json"));
+	const resolved = require_.resolve(name);
+	// Find the last occurrence of /node_modules/@scope/pkg in the resolved path
+	const needle = `${sep}${join("node_modules", ...name.split("/"))}`;
+	const idx = resolved.lastIndexOf(needle);
+	if (idx === -1) {
+		throw new Error(`Could not find package root for "${name}" in resolved path: ${resolved}`);
+	}
+	return resolved.substring(0, idx + needle.length);
+}
+
+/**
+ * Returns all OpenTelemetry package aliases required by the observability
+ * workspace package. Spread this into the `alias` object of any vitest
+ * config that aliases `@monica-companion/observability`.
+ *
+ * Uses `pkg()` for packages findable in the pnpm store, and falls back
+ * to `require.resolve` from the observability package for long-named
+ * packages whose pnpm store directories are truncated to hashes.
+ */
+export function otelAliases(): Record<string, string> {
+	const aliases: Record<string, string> = {};
+	for (const name of OTEL_PACKAGES) {
+		try {
+			aliases[name] = pkg(name);
+		} catch {
+			aliases[name] = resolvePackageRoot(name, OTEL_RESOLVE_DIR);
+		}
+	}
+	return aliases;
 }

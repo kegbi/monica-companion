@@ -30,8 +30,13 @@ describe("startCommandHandler", () => {
 		expect(mockIssueToken).toHaveBeenCalledWith("12345", expect.any(String));
 		expect(ctx.reply).toHaveBeenCalledTimes(1);
 		const replyText = (ctx.reply as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+		const replyOpts = (ctx.reply as ReturnType<typeof vi.fn>).mock.calls[0][1] as Record<
+			string,
+			unknown
+		>;
 		expect(replyText).toContain("https://app.example.com/setup?sig=abc123");
-		expect(replyText).toContain("web");
+		expect(replyText).toContain("<a href=");
+		expect(replyOpts.parse_mode).toBe("HTML");
 	});
 
 	it("sends already-set-up message for registered user", async () => {

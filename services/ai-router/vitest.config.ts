@@ -1,5 +1,5 @@
 import { defineConfig } from "vitest/config";
-import { pkg, workspace } from "../../config/vitest-resolve.js";
+import { otelAliases, pkg, workspace } from "../../config/vitest-resolve.js";
 
 export default defineConfig({
 	resolve: {
@@ -15,8 +15,7 @@ export default defineConfig({
 			hono: pkg("hono", "dist/index.js"),
 			jose: pkg("jose"),
 			"@langchain/core/messages": pkg("@langchain/core", "messages.js"),
-			"@opentelemetry/api-logs": pkg("@opentelemetry/api-logs"),
-			"@opentelemetry/api": pkg("@opentelemetry/api"),
+			...otelAliases(),
 			"@monica-companion/auth": workspace("@monica-companion/auth"),
 			"@monica-companion/guardrails": workspace("@monica-companion/guardrails"),
 			"@monica-companion/types": workspace("@monica-companion/types"),

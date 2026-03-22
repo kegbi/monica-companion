@@ -1,5 +1,5 @@
 import { defineConfig } from "vitest/config";
-import { pkg, workspace } from "../../config/vitest-resolve.js";
+import { otelAliases, pkg, workspace } from "../../config/vitest-resolve.js";
 
 /**
  * Vitest config for benchmark quality gate tests only.
@@ -20,7 +20,7 @@ export default defineConfig({
 			jose: pkg("jose"),
 			"@langchain/openai": pkg("@langchain/openai"),
 			"@langchain/core": pkg("@langchain/core"),
-			"@opentelemetry/api-logs": pkg("@opentelemetry/api-logs"),
+			...otelAliases(),
 			"@monica-companion/auth": workspace("@monica-companion/auth"),
 			"@monica-companion/types": workspace("@monica-companion/types"),
 			"@monica-companion/observability": workspace("@monica-companion/observability"),

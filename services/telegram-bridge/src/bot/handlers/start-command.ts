@@ -40,7 +40,8 @@ export function createStartHandler(lookupUser: UserLookupFn, issueSetupToken: Is
 			const { setupUrl } = await issueSetupToken(String(telegramUserId), correlationId);
 
 			await ctx.reply(
-				`Welcome to Monica Companion! To get started, please complete your setup using this link:\n\n${setupUrl}\n\nYour credentials will be collected securely through the web form — never share them in this chat. The link expires in 15 minutes.`,
+				`Welcome to Monica Companion! To get started, please complete your setup using this link:\n\n<a href="${setupUrl}">Open Setup</a>\n\nYour credentials will be collected securely through the web form — never share them in this chat. The link expires in 15 minutes.`,
+				{ parse_mode: "HTML" },
 			);
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
