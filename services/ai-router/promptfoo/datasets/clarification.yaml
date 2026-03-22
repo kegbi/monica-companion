@@ -70,9 +70,10 @@
 # ========================================================================
 # Disambiguation answers (cl-006 to cl-010)
 # ========================================================================
-- description: "Disambiguation answer - the one from work"
+- description: "Disambiguation answer - the one from work (with prior ambiguity context)"
   vars:
     utterance: "The one from work"
+    recentTurns: '[{"role":"user","summary":"User asked to add a note to Alex","createdAt":"2026-03-22T10:00:00Z","correlationId":"corr-cl006"},{"role":"assistant","summary":"Which Alex? Alex Torres from work or Alex Kim from school?","createdAt":"2026-03-22T10:00:05Z","correlationId":"corr-cl006"}]'
   metadata:
     id: "cl-006"
     category: "clarification"
@@ -81,7 +82,7 @@
     - type: javascript
       value: "JSON.parse(output).intent === 'clarification_response'"
     - type: javascript
-      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('work')"
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex torres'))"
 
 - description: "Disambiguation answer - the friend"
   vars:
@@ -94,7 +95,7 @@
     - type: javascript
       value: "JSON.parse(output).intent === 'clarification_response'"
     - type: javascript
-      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('friend')"
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('friend'))"
 
 - description: "Voice-style disambiguation answer with full name"
   vars:
@@ -107,7 +108,7 @@
     - type: javascript
       value: "JSON.parse(output).intent === 'clarification_response'"
     - type: javascript
-      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex torres')"
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex torres'))"
 
 - description: "Disambiguation answer with last name"
   vars:
@@ -120,7 +121,7 @@
     - type: javascript
       value: "JSON.parse(output).intent === 'clarification_response'"
     - type: javascript
-      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david chen')"
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david chen'))"
 
 - description: "Disambiguation answer - my husband"
   vars:
@@ -254,7 +255,7 @@
     - type: javascript
       value: "JSON.parse(output).intent === 'clarification_response'"
     - type: javascript
-      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david park')"
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david park'))"
 
 - description: "Voice-style edit with correction"
   vars:
@@ -267,11 +268,12 @@
     - type: javascript
       value: "JSON.parse(output).intent === 'clarification_response'"
     - type: javascript
-      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sherry chen')"
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sherry chen'))"
 
-- description: "Edit with partial correction"
+- description: "Edit with partial correction (with prior turn context)"
   vars:
     utterance: "Change that to Alex Kim instead"
+    recentTurns: '[{"role":"user","summary":"User asked to add a note to Alex Torres about the project","createdAt":"2026-03-22T10:00:00Z","correlationId":"corr-cl022"},{"role":"assistant","summary":"Proposed creating a note for Alex Torres about the project, waiting for confirmation","createdAt":"2026-03-22T10:00:05Z","correlationId":"corr-cl022"}]'
   metadata:
     id: "cl-022"
     category: "clarification"
@@ -280,14 +282,15 @@
     - type: javascript
       value: "JSON.parse(output).intent === 'clarification_response'"
     - type: javascript
-      value: "JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex kim')"
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex kim'))"
 
 # ========================================================================
 # Provide missing info (cl-023 to cl-025)
 # ========================================================================
-- description: "Provide missing date info"
+- description: "Provide missing date info (with prior turn asking for date)"
   vars:
     utterance: "The date is March 15th"
+    recentTurns: '[{"role":"user","summary":"User asked to update Sarah birthday","createdAt":"2026-03-22T10:00:00Z","correlationId":"corr-cl023"},{"role":"assistant","summary":"Asked user what date Sarah birthday should be updated to","createdAt":"2026-03-22T10:00:05Z","correlationId":"corr-cl023"}]'
   metadata:
     id: "cl-023"
     category: "clarification"

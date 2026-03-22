@@ -5,6 +5,11 @@
  * promptfooconfig.yaml. It instantiates the intent classifier once
  * per eval run and returns IntentClassificationResult as JSON.
  *
+ * Supports optional conversation context injection via test vars:
+ * - `recentTurns`: JSON array of TurnSummary objects injected into
+ *   the system prompt so single-turn promptfoo cases can simulate
+ *   multi-turn context (e.g. clarification follow-ups).
+ *
  * Security:
  * - OPENAI_API_KEY is read from environment, never logged or hardcoded.
  * - Utterance text and PII are NOT logged -- only case IDs and pass/fail
@@ -14,6 +19,7 @@
 
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { createIntentClassifier } from "../src/graph/llm.js";
+import type { TurnSummary } from "../src/graph/state.js";
 import { buildSystemPrompt } from "../src/graph/system-prompt.js";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
@@ -38,8 +44,17 @@ export default class IntentClassifierProvider {
 		return "intent-classifier";
 	}
 
-	async callApi(prompt: string): Promise<{ output: string }> {
-		const systemPrompt = buildSystemPrompt();
+	async callApi(
+		prompt: string,
+		context?: { vars?: Record<string, unknown> },
+	): Promise<{ output: string }> {
+		let recentTurns: TurnSummary[] | undefined;
+		const rawTurns = context?.vars?.recentTurns;
+		if (typeof rawTurns === "string" && rawTurns.length > 0) {
+			recentTurns = JSON.parse(rawTurns) as TurnSummary[];
+		}
+
+		const systemPrompt = buildSystemPrompt({ recentTurns });
 		const messages = [new SystemMessage(systemPrompt), new HumanMessage(prompt)];
 		const result = await classifier.invoke(messages);
 		return { output: JSON.stringify(result) };
