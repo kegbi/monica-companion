@@ -38,7 +38,8 @@ describe("pending-command repository (integration)", () => {
 				executed_at TIMESTAMPTZ,
 				terminal_at TIMESTAMPTZ,
 				execution_result JSONB,
-				narrowing_context JSONB
+				narrowing_context JSONB,
+				unresolved_contact_ref TEXT
 			)
 		`);
 		await db.execute(

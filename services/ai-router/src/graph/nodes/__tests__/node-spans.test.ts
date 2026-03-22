@@ -417,9 +417,10 @@ describe("Node OTel span instrumentation", () => {
 
 			await node(state);
 
+			// mutating_command intents defer contact resolution (confirm-then-resolve)
 			expect(lastSpan?.setAttribute).toHaveBeenCalledWith(
 				"ai-router.resolution_outcome",
-				"resolved",
+				"deferred",
 			);
 		});
 

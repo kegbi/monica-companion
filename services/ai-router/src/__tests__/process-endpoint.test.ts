@@ -106,6 +106,10 @@ vi.mock("../pending-command/repository.js", () => ({
 		commandType: "create_note",
 	}),
 	getPendingCommand: vi.fn().mockResolvedValue(null),
+	updateNarrowingContext: vi.fn().mockResolvedValue({}),
+	clearNarrowingContext: vi.fn().mockResolvedValue({}),
+	updatePendingPayload: vi.fn().mockResolvedValue(null),
+	setUnresolvedContactRef: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("../lib/delivery-client.js", () => ({
