@@ -75,6 +75,7 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 		saveHistory,
 		pendingCommandTtlMinutes: config.pendingCommandTtlMinutes,
 		monicaServiceClient: monicaIntegrationServiceClient,
+		schedulerClient,
 	};
 
 	app.use(otelMiddleware());

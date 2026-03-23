@@ -603,3 +603,109 @@ describe("ai-router /internal/clear-history", () => {
 		expect(status).toBe(400);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// 10. monica-integration /internal/contacts/:contactId/contact-fields
+//     (Stage 4: Read-Only Query & Write Tool Handlers)
+// ---------------------------------------------------------------------------
+describe("monica-integration /internal/contacts/:contactId/contact-fields", () => {
+	const url = `${config.MONICA_INTEGRATION_URL}/internal/contacts/1/contact-fields`;
+
+	it("rejects requests without auth (401)", async () => {
+		const { status } = await smokeRequest(url);
+		expect(status).toBe(401);
+	});
+
+	it("rejects requests from scheduler (not in allowed callers) (403)", async () => {
+		const { status } = await authedRequest(url, "monica-integration", {
+			issuer: "scheduler",
+		});
+		expect(status).toBe(403);
+	});
+
+	it("accepts auth from ai-router (allowed caller) — reaches handler", async () => {
+		const userId = randomUUID();
+		const { status } = await authedRequest(url, "monica-integration", {
+			issuer: "ai-router",
+			userId,
+		});
+		// ai-router is allowed. Handler will try to call Monica API which
+		// does not exist in smoke env, so expect 502 or 500 (not 401/403).
+		expect(status).not.toBe(401);
+		expect(status).not.toBe(403);
+	});
+
+	it("returns 400 for invalid contactId", async () => {
+		const invalidUrl = `${config.MONICA_INTEGRATION_URL}/internal/contacts/abc/contact-fields`;
+		const { status } = await authedRequest(invalidUrl, "monica-integration", {
+			issuer: "ai-router",
+		});
+		expect(status).toBe(400);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// 11. monica-integration /internal/contact-field-types — ai-router access
+//     (Stage 4: Reference route caller allowlist update)
+// ---------------------------------------------------------------------------
+describe("monica-integration /internal/contact-field-types caller allowlist", () => {
+	const url = `${config.MONICA_INTEGRATION_URL}/internal/contact-field-types`;
+
+	it("rejects requests without auth (401)", async () => {
+		const { status } = await smokeRequest(url);
+		expect(status).toBe(401);
+	});
+
+	it("rejects requests from telegram-bridge (not allowed) (403)", async () => {
+		const { status } = await authedRequest(url, "monica-integration", {
+			issuer: "telegram-bridge",
+		});
+		expect(status).toBe(403);
+	});
+
+	it("accepts auth from ai-router (newly allowed caller) — reaches handler", async () => {
+		const userId = randomUUID();
+		const { status } = await authedRequest(url, "monica-integration", {
+			issuer: "ai-router",
+			userId,
+		});
+		// ai-router is now allowed per Stage 4 M1 fix. Handler tries Monica API.
+		expect(status).not.toBe(401);
+		expect(status).not.toBe(403);
+	});
+
+	it("accepts auth from scheduler (original allowed caller) — reaches handler", async () => {
+		const userId = randomUUID();
+		const { status } = await authedRequest(url, "monica-integration", {
+			issuer: "scheduler",
+			userId,
+		});
+		expect(status).not.toBe(401);
+		expect(status).not.toBe(403);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// 12. monica-integration /internal/genders — scheduler-only auth
+//     (Stage 4: Verifies M1 fix did not break scheduler-only routes)
+// ---------------------------------------------------------------------------
+describe("monica-integration /internal/genders per-endpoint auth", () => {
+	const url = `${config.MONICA_INTEGRATION_URL}/internal/genders`;
+
+	it("rejects requests from ai-router (not allowed on genders) (403)", async () => {
+		const { status } = await authedRequest(url, "monica-integration", {
+			issuer: "ai-router",
+		});
+		expect(status).toBe(403);
+	});
+
+	it("accepts auth from scheduler (allowed caller) — reaches handler", async () => {
+		const userId = randomUUID();
+		const { status } = await authedRequest(url, "monica-integration", {
+			issuer: "scheduler",
+			userId,
+		});
+		expect(status).not.toBe(401);
+		expect(status).not.toBe(403);
+	});
+});

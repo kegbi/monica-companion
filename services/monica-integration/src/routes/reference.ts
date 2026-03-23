@@ -7,21 +7,25 @@ import { createMonicaClient, handleMonicaError } from "./shared.js";
 /**
  * Reference data endpoints.
  * These return Monica reference data needed for contact creation.
- * All callers: scheduler only.
+ * Per-endpoint caller allowlists (M1 fix: no global route-level auth).
  */
 export function referenceRoutes(config: Config) {
 	const routes = new Hono();
 
-	const schedulerAuth = serviceAuth({
+	const schedulerOnlyAuth = serviceAuth({
 		audience: "monica-integration",
 		secrets: config.auth.jwtSecrets,
 		allowedCallers: ["scheduler"],
 	});
 
-	routes.use(schedulerAuth);
+	const schedulerAndAiRouterAuth = serviceAuth({
+		audience: "monica-integration",
+		secrets: config.auth.jwtSecrets,
+		allowedCallers: ["scheduler", "ai-router"],
+	});
 
-	// --- Genders ---
-	routes.get("/genders", async (c) => {
+	// --- Genders (scheduler only) ---
+	routes.get("/genders", schedulerOnlyAuth, async (c) => {
 		const userId = requireUserId(c);
 		const correlationId = getCorrelationId(c);
 
@@ -40,8 +44,8 @@ export function referenceRoutes(config: Config) {
 		}
 	});
 
-	// --- Contact field types ---
-	routes.get("/contact-field-types", async (c) => {
+	// --- Contact field types (scheduler + ai-router) ---
+	routes.get("/contact-field-types", schedulerAndAiRouterAuth, async (c) => {
 		const userId = requireUserId(c);
 		const correlationId = getCorrelationId(c);
 

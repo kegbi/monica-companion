@@ -80,6 +80,10 @@ function setupMockClient(overrides: Record<string, unknown> = {}) {
 	const mockClient = {
 		getAllContacts: vi.fn().mockResolvedValue([fullContactFixture]),
 		getContact: vi.fn().mockResolvedValue(fullContactFixture),
+		getContactWithFields: vi.fn().mockResolvedValue({
+			...fullContactFixture,
+			contactFields: [contactFieldFixture],
+		}),
 		listContactNotes: vi.fn().mockResolvedValue({
 			data: [noteFixture],
 			links: { first: "", last: "", prev: null, next: null },
@@ -418,6 +422,98 @@ describe("monica-integration app", () => {
 			expect(res.status).toBe(201);
 			const body = await res.json();
 			expect(body.addressId).toBe(10);
+		});
+	});
+
+	describe("GET /internal/contacts/:contactId/contact-fields", () => {
+		it("returns 200 with contact fields in Monica-agnostic format", async () => {
+			const contactWithFields = {
+				...fullContactFixture,
+				contactFields: [contactFieldFixture],
+			};
+			setupMockClient({
+				getContactWithFields: vi.fn().mockResolvedValue(contactWithFields),
+			});
+
+			const token = await createToken("ai-router", "user-123");
+			const res = await app.request("/internal/contacts/42/contact-fields", {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+
+			expect(res.status).toBe(200);
+			const body = await res.json();
+			expect(body.data).toHaveLength(1);
+			expect(body.data[0]).toEqual({
+				fieldId: 401,
+				type: "email",
+				typeName: "Email",
+				typeId: 1,
+				value: "john.doe@example.test",
+			});
+		});
+
+		it("returns 400 for invalid contactId", async () => {
+			const token = await createToken("ai-router", "user-123");
+			const res = await app.request("/internal/contacts/invalid/contact-fields", {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+
+			expect(res.status).toBe(400);
+		});
+
+		it("skips unparseable contact fields", async () => {
+			const contactWithFields = {
+				...fullContactFixture,
+				contactFields: [
+					contactFieldFixture,
+					{ id: "bad", broken: true }, // unparseable entry
+				],
+			};
+			setupMockClient({
+				getContactWithFields: vi.fn().mockResolvedValue(contactWithFields),
+			});
+
+			const token = await createToken("ai-router", "user-123");
+			const res = await app.request("/internal/contacts/42/contact-fields", {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+
+			expect(res.status).toBe(200);
+			const body = await res.json();
+			expect(body.data).toHaveLength(1); // only the valid one
+		});
+
+		it("returns 403 when called by scheduler", async () => {
+			const token = await createToken("scheduler", "user-123");
+			const res = await app.request("/internal/contacts/42/contact-fields", {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+
+			expect(res.status).toBe(403);
+		});
+	});
+
+	describe("GET /internal/contact-field-types (per-endpoint auth - M1)", () => {
+		it("returns 200 when called by ai-router", async () => {
+			const token = await createToken("ai-router", "user-123");
+			const res = await app.request("/internal/contact-field-types", {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+
+			expect(res.status).toBe(200);
+			const body = await res.json();
+			expect(body.data).toHaveLength(1);
+		});
+	});
+
+	describe("GET /internal/genders (per-endpoint auth - M1)", () => {
+		it("still returns 403 when called by ai-router", async () => {
+			const token = await createToken("ai-router", "user-123");
+			const res = await app.request("/internal/genders", {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+
+			expect(res.status).toBe(403);
 		});
 	});
 

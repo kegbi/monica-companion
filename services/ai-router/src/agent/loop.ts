@@ -13,16 +13,20 @@ import type { InboundEvent } from "@monica-companion/types";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import type { Database } from "../db/connection.js";
 import type { GraphResponse } from "../graph/state.js";
+import type { SchedulerClient } from "../lib/scheduler-client.js";
 import type { ConversationHistoryRow } from "./history-repository.js";
 import type { LlmClient } from "./llm-client.js";
 import type { PendingToolCall } from "./pending-tool-call.js";
 import { isPendingToolCallExpired, PendingToolCallSchema } from "./pending-tool-call.js";
 import { buildAgentSystemPrompt } from "./system-prompt.js";
+import { executeMutatingTool } from "./tool-handlers/mutating-handlers.js";
+import { handleQueryBirthday } from "./tool-handlers/query-birthday.js";
+import { handleQueryLastNote } from "./tool-handlers/query-last-note.js";
+import { handleQueryPhone } from "./tool-handlers/query-phone.js";
 import { handleSearchContacts } from "./tool-handlers/search-contacts.js";
 import {
 	generateActionDescription,
 	MUTATING_TOOLS,
-	SearchContactsArgsSchema,
 	TOOL_ARG_SCHEMAS,
 	TOOL_DEFINITIONS,
 } from "./tools.js";
@@ -47,6 +51,7 @@ export interface AgentLoopDeps {
 	) => Promise<void>;
 	pendingCommandTtlMinutes: number;
 	monicaServiceClient: ServiceClient;
+	schedulerClient: SchedulerClient;
 }
 
 /**
@@ -172,8 +177,8 @@ async function handleCallback(
 }
 
 /**
- * Handle confirm callback: append assistant tool-call message + stub tool result,
- * call LLM for success message. (MEDIUM-3: stub execution, real execution in Stage 4)
+ * Handle confirm callback: execute the confirmed mutating tool via scheduler,
+ * append the result to history, and call LLM for the success/failure message.
  */
 async function handleConfirm(
 	deps: AgentLoopDeps,
@@ -187,22 +192,48 @@ async function handleConfirm(
 		content: buildAgentSystemPrompt(),
 	};
 
-	// Reconstruct: assistant message with tool call + stub tool result
+	// Parse tool arguments from pending tool call
+	let parsedArgs: Record<string, unknown>;
+	try {
+		parsedArgs = JSON.parse(pendingToolCall.arguments);
+	} catch {
+		parsedArgs = {};
+	}
+
+	// Execute the mutating tool via the scheduler
+	const handlerResult = await executeMutatingTool({
+		toolName: pendingToolCall.name,
+		args: parsedArgs,
+		userId,
+		correlationId,
+		pendingCommandId: pendingToolCall.pendingCommandId,
+		schedulerClient: deps.schedulerClient,
+		monicaServiceClient: deps.monicaServiceClient,
+	});
+
+	// Build tool result from handler response
 	const assistantMsg = pendingToolCall.assistantMessage as ChatCompletionMessageParam;
-	const stubToolResult: ChatCompletionMessageParam = {
+	const toolResult: ChatCompletionMessageParam = {
 		role: "tool",
 		tool_call_id: pendingToolCall.toolCallId,
-		content: JSON.stringify({
-			status: "success",
-			message: `Tool "${pendingToolCall.name}" executed successfully (confirmed by user).`,
-		}),
+		content:
+			handlerResult.status === "success"
+				? JSON.stringify({
+						status: "success",
+						executionId: handlerResult.executionId,
+						message: "Action executed successfully.",
+					})
+				: JSON.stringify({
+						status: "error",
+						message: handlerResult.message,
+					}),
 	};
 
 	const messages: ChatCompletionMessageParam[] = [
 		systemMessage,
 		...existingMessages,
 		assistantMsg,
-		stubToolResult,
+		toolResult,
 	];
 
 	const completion = await deps.llmClient.chatCompletion(messages, TOOL_DEFINITIONS);
@@ -210,7 +241,7 @@ async function handleConfirm(
 		completion.choices?.[0]?.message?.content ?? "The action was completed successfully.";
 
 	// Save history (without system prompt, with cleared pendingToolCall)
-	const historyToSave = [...existingMessages, assistantMsg, stubToolResult];
+	const historyToSave = [...existingMessages, assistantMsg, toolResult];
 	if (completion.choices?.[0]?.message) {
 		historyToSave.push(completion.choices[0].message as ChatCompletionMessageParam);
 	}
@@ -307,6 +338,106 @@ async function handleEdit(
 	await deps.saveHistory(deps.db, userId, historyToSave, null);
 
 	return { type: "text", text: responseText };
+}
+
+/**
+ * Generic read-only tool dispatch helper (M4 fix: avoid duplicated
+ * JSON-parse-validate-dispatch pattern for each read-only tool).
+ *
+ * Parses JSON arguments, validates with Zod schema, and dispatches
+ * to the appropriate handler. Returns a ChatCompletionMessageParam
+ * containing the tool result.
+ */
+async function executeReadOnlyTool(
+	toolName: string,
+	toolCall: { id: string; function: { arguments: string } },
+	deps: AgentLoopDeps,
+	userId: string,
+	correlationId: string,
+): Promise<ChatCompletionMessageParam> {
+	// Step 1: Parse JSON arguments
+	let parsedArgs: Record<string, unknown>;
+	try {
+		parsedArgs = JSON.parse(toolCall.function.arguments);
+	} catch {
+		return {
+			role: "tool",
+			tool_call_id: toolCall.id,
+			content: JSON.stringify({
+				status: "error",
+				message: `Invalid JSON arguments for "${toolName}".`,
+			}),
+		};
+	}
+
+	// Step 2: Validate with Zod schema
+	const schema = TOOL_ARG_SCHEMAS[toolName];
+	if (schema) {
+		const validation = schema.safeParse(parsedArgs);
+		if (!validation.success) {
+			return {
+				role: "tool",
+				tool_call_id: toolCall.id,
+				content: JSON.stringify({
+					status: "error",
+					message: `Invalid arguments for "${toolName}": ${validation.error.issues.map((i: { message: string }) => i.message).join(", ")}`,
+				}),
+			};
+		}
+	}
+
+	// Step 3: Dispatch to handler
+	let handlerResult: unknown;
+
+	switch (toolName) {
+		case "search_contacts":
+			handlerResult = await handleSearchContacts({
+				query: parsedArgs.query as string,
+				serviceClient: deps.monicaServiceClient,
+				userId,
+				correlationId,
+			});
+			break;
+
+		case "query_birthday":
+			handlerResult = await handleQueryBirthday({
+				contactId: parsedArgs.contact_id as number,
+				serviceClient: deps.monicaServiceClient,
+				userId,
+				correlationId,
+			});
+			break;
+
+		case "query_phone":
+			handlerResult = await handleQueryPhone({
+				contactId: parsedArgs.contact_id as number,
+				serviceClient: deps.monicaServiceClient,
+				userId,
+				correlationId,
+			});
+			break;
+
+		case "query_last_note":
+			handlerResult = await handleQueryLastNote({
+				contactId: parsedArgs.contact_id as number,
+				serviceClient: deps.monicaServiceClient,
+				userId,
+				correlationId,
+			});
+			break;
+
+		default:
+			handlerResult = {
+				status: "error",
+				message: `Unknown tool "${toolName}".`,
+			};
+	}
+
+	return {
+		role: "tool",
+		tool_call_id: toolCall.id,
+		content: JSON.stringify(handlerResult),
+	};
 }
 
 /**
@@ -472,58 +603,16 @@ export async function runAgentLoop(
 					// Valid mutating tool call — intercept it
 					interceptedMutatingTool = { toolCall, parsedArgs };
 					hasIntercepted = true;
-				} else if (toolName === "search_contacts") {
-					// search_contacts: validate args, call handler
-					let parsedSearchArgs: Record<string, unknown>;
-					try {
-						parsedSearchArgs = JSON.parse(toolCall.function.arguments);
-					} catch {
-						toolResults.push({
-							role: "tool",
-							tool_call_id: toolCall.id,
-							content: JSON.stringify({
-								status: "error",
-								message: `Invalid JSON arguments for "${toolName}".`,
-							}),
-						});
-						continue;
-					}
-
-					const searchValidation = SearchContactsArgsSchema.safeParse(parsedSearchArgs);
-					if (!searchValidation.success) {
-						toolResults.push({
-							role: "tool",
-							tool_call_id: toolCall.id,
-							content: JSON.stringify({
-								status: "error",
-								message: `Invalid arguments for "${toolName}": ${searchValidation.error.issues.map((i: { message: string }) => i.message).join(", ")}`,
-							}),
-						});
-						continue;
-					}
-
-					const searchResult = await handleSearchContacts({
-						query: searchValidation.data.query,
-						serviceClient: deps.monicaServiceClient,
+				} else {
+					// Read-only tools: validate args + dispatch to handler
+					const readOnlyResult = await executeReadOnlyTool(
+						toolName,
+						toolCall,
+						deps,
 						userId,
 						correlationId,
-					});
-
-					toolResults.push({
-						role: "tool",
-						tool_call_id: toolCall.id,
-						content: JSON.stringify(searchResult),
-					});
-				} else {
-					// Other read-only tools: provide stub result (Stage 4)
-					toolResults.push({
-						role: "tool",
-						tool_call_id: toolCall.id,
-						content: JSON.stringify({
-							status: "not_implemented",
-							message: `Tool "${toolName}" is not yet implemented. It will be available in a future update.`,
-						}),
-					});
+					);
+					toolResults.push(readOnlyResult);
 				}
 			}
 

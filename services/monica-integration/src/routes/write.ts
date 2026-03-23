@@ -60,6 +60,8 @@ const CreateAddressBody = z.object({
 /**
  * Write/execution endpoints.
  * All callers: scheduler only.
+ * Per-endpoint caller allowlists (no global route-level auth to avoid
+ * leaking middleware to sibling route groups when Hono merges routes).
  */
 export function writeRoutes(config: Config) {
 	const routes = new Hono();
@@ -70,10 +72,8 @@ export function writeRoutes(config: Config) {
 		allowedCallers: ["scheduler"],
 	});
 
-	routes.use(schedulerAuth);
-
 	// --- Create contact ---
-	routes.post("/contacts", async (c) => {
+	routes.post("/contacts", schedulerAuth, async (c) => {
 		const userId = requireUserId(c);
 		const correlationId = getCorrelationId(c);
 
@@ -115,7 +115,7 @@ export function writeRoutes(config: Config) {
 	});
 
 	// --- Update contact ---
-	routes.put("/contacts/:contactId", async (c) => {
+	routes.put("/contacts/:contactId", schedulerAuth, async (c) => {
 		const userId = requireUserId(c);
 		const correlationId = getCorrelationId(c);
 		const contactId = Number(c.req.param("contactId"));
@@ -165,7 +165,7 @@ export function writeRoutes(config: Config) {
 	});
 
 	// --- Create note ---
-	routes.post("/contacts/:contactId/notes", async (c) => {
+	routes.post("/contacts/:contactId/notes", schedulerAuth, async (c) => {
 		const userId = requireUserId(c);
 		const correlationId = getCorrelationId(c);
 		const contactId = Number(c.req.param("contactId"));
@@ -200,7 +200,7 @@ export function writeRoutes(config: Config) {
 	});
 
 	// --- Create activity ---
-	routes.post("/activities", async (c) => {
+	routes.post("/activities", schedulerAuth, async (c) => {
 		const userId = requireUserId(c);
 		const correlationId = getCorrelationId(c);
 
@@ -233,7 +233,7 @@ export function writeRoutes(config: Config) {
 	});
 
 	// --- Create contact field ---
-	routes.post("/contacts/:contactId/contact-fields", async (c) => {
+	routes.post("/contacts/:contactId/contact-fields", schedulerAuth, async (c) => {
 		const userId = requireUserId(c);
 		const correlationId = getCorrelationId(c);
 		const contactId = Number(c.req.param("contactId"));
@@ -269,7 +269,7 @@ export function writeRoutes(config: Config) {
 	});
 
 	// --- Create address ---
-	routes.post("/contacts/:contactId/addresses", async (c) => {
+	routes.post("/contacts/:contactId/addresses", schedulerAuth, async (c) => {
 		const userId = requireUserId(c);
 		const correlationId = getCorrelationId(c);
 		const contactId = Number(c.req.param("contactId"));

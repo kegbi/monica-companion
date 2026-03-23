@@ -9,15 +9,35 @@ vi.mock("openai", () => ({
 	},
 }));
 
-// Mock the search_contacts handler
+// Mock tool handlers
 vi.mock("../tool-handlers/search-contacts.js", () => ({
 	handleSearchContacts: vi.fn(),
 }));
+vi.mock("../tool-handlers/query-birthday.js", () => ({
+	handleQueryBirthday: vi.fn(),
+}));
+vi.mock("../tool-handlers/query-phone.js", () => ({
+	handleQueryPhone: vi.fn(),
+}));
+vi.mock("../tool-handlers/query-last-note.js", () => ({
+	handleQueryLastNote: vi.fn(),
+}));
+vi.mock("../tool-handlers/mutating-handlers.js", () => ({
+	executeMutatingTool: vi.fn(),
+}));
 
 import { runAgentLoop } from "../loop.js";
+import { executeMutatingTool } from "../tool-handlers/mutating-handlers.js";
+import { handleQueryBirthday } from "../tool-handlers/query-birthday.js";
+import { handleQueryLastNote } from "../tool-handlers/query-last-note.js";
+import { handleQueryPhone } from "../tool-handlers/query-phone.js";
 import { handleSearchContacts } from "../tool-handlers/search-contacts.js";
 
 const mockedHandleSearchContacts = vi.mocked(handleSearchContacts);
+const mockedHandleQueryBirthday = vi.mocked(handleQueryBirthday);
+const mockedHandleQueryPhone = vi.mocked(handleQueryPhone);
+const mockedHandleQueryLastNote = vi.mocked(handleQueryLastNote);
+const mockedExecuteMutatingTool = vi.mocked(executeMutatingTool);
 
 function createMockServiceClient(): ServiceClient {
 	return {
@@ -46,6 +66,9 @@ function createMockDeps(overrides?: Partial<AgentLoopDeps>): AgentLoopDeps {
 		saveHistory: vi.fn().mockResolvedValue(undefined),
 		pendingCommandTtlMinutes: 30,
 		monicaServiceClient: createMockServiceClient(),
+		schedulerClient: {
+			execute: vi.fn().mockResolvedValue({ executionId: "exec-1", status: "queued" }),
+		},
 		...overrides,
 	};
 }
@@ -298,7 +321,14 @@ describe("runAgentLoop", () => {
 		expect(mockedHandleSearchContacts).not.toHaveBeenCalled();
 	});
 
-	it("still provides stub results for other read-only tools", async () => {
+	it("dispatches query_birthday to the handler instead of stub", async () => {
+		mockedHandleQueryBirthday.mockResolvedValue({
+			status: "ok",
+			birthday: "1990-05-15",
+			isYearUnknown: false,
+			contactId: 1,
+		});
+
 		const chatCompletion = vi
 			.fn()
 			.mockResolvedValueOnce({
@@ -327,7 +357,7 @@ describe("runAgentLoop", () => {
 					{
 						message: {
 							role: "assistant",
-							content: "That feature is not yet available.",
+							content: "Jane's birthday is May 15, 1990.",
 							tool_calls: undefined,
 						},
 						finish_reason: "stop",
@@ -350,8 +380,14 @@ describe("runAgentLoop", () => {
 		const result = await runAgentLoop(deps, userId, event, correlationId);
 		expect(result.type).toBe("text");
 		expect(chatCompletion).toHaveBeenCalledTimes(2);
+		expect(mockedHandleQueryBirthday).toHaveBeenCalledWith({
+			contactId: 1,
+			serviceClient: deps.monicaServiceClient,
+			userId,
+			correlationId,
+		});
 
-		// Verify stub result was sent for query_birthday
+		// Verify handler result was sent to LLM (not "not_implemented")
 		const secondCall = chatCompletion.mock.calls[1];
 		const messages = secondCall[0];
 		const toolResultMsg = messages.find(
@@ -359,7 +395,122 @@ describe("runAgentLoop", () => {
 				m.role === "tool" && m.tool_call_id === "call_qb",
 		);
 		expect(toolResultMsg).toBeTruthy();
-		expect(toolResultMsg.content).toContain("not_implemented");
+		expect(toolResultMsg.content).toContain("1990-05-15");
+		expect(toolResultMsg.content).not.toContain("not_implemented");
+	});
+
+	it("returns validation error to LLM when query_birthday args are invalid", async () => {
+		const chatCompletion = vi
+			.fn()
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_qb_bad",
+									type: "function",
+									function: {
+										name: "query_birthday",
+										arguments: '{"contact_id": -1}',
+									},
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+			})
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: "Please provide a valid contact ID.",
+							tool_calls: undefined,
+						},
+						finish_reason: "stop",
+					},
+				],
+			});
+
+		const deps = createMockDeps({ llmClient: { chatCompletion } });
+
+		const event = {
+			type: "text_message" as const,
+			userId,
+			sourceRef: "telegram:msg:6d",
+			correlationId,
+			text: "What is someone's birthday?",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("text");
+		expect(chatCompletion).toHaveBeenCalledTimes(2);
+		// Handler should NOT have been called due to validation failure
+		expect(mockedHandleQueryBirthday).not.toHaveBeenCalled();
+	});
+
+	it("returns error for truly unknown tools", async () => {
+		const chatCompletion = vi
+			.fn()
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_unknown",
+									type: "function",
+									function: {
+										name: "nonexistent_tool",
+										arguments: "{}",
+									},
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+			})
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: "I cannot do that.",
+							tool_calls: undefined,
+						},
+						finish_reason: "stop",
+					},
+				],
+			});
+
+		const deps = createMockDeps({ llmClient: { chatCompletion } });
+
+		const event = {
+			type: "text_message" as const,
+			userId,
+			sourceRef: "telegram:msg:6e",
+			correlationId,
+			text: "Do something impossible",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("text");
+
+		const secondCall = chatCompletion.mock.calls[1];
+		const messages = secondCall[0];
+		const toolResultMsg = messages.find(
+			(m: { role: string; tool_call_id?: string }) =>
+				m.role === "tool" && m.tool_call_id === "call_unknown",
+		);
+		expect(toolResultMsg).toBeTruthy();
+		expect(toolResultMsg.content).toContain("Unknown tool");
 	});
 
 	it("caps at 5 iterations and returns graceful fallback", async () => {
@@ -701,7 +852,12 @@ function makePendingToolCall(overrides?: Record<string, unknown>) {
 }
 
 describe("callback handling — confirm", () => {
-	it("on confirm, appends stub tool result to history, calls LLM, and returns text", async () => {
+	it("on confirm, calls executeMutatingTool, then LLM, and returns text", async () => {
+		mockedExecuteMutatingTool.mockResolvedValue({
+			status: "success",
+			executionId: "exec-456",
+		});
+
 		const pending = makePendingToolCall();
 		const chatCompletion = vi.fn().mockResolvedValueOnce({
 			choices: [
@@ -741,9 +897,82 @@ describe("callback handling — confirm", () => {
 		expect(result.text).toContain("Done");
 		expect(chatCompletion).toHaveBeenCalledTimes(1);
 
+		// executeMutatingTool should have been called with correct params
+		expect(mockedExecuteMutatingTool).toHaveBeenCalledWith(
+			expect.objectContaining({
+				toolName: "create_note",
+				userId,
+				correlationId,
+				pendingCommandId: "cmd-aaa-bbb-ccc",
+			}),
+		);
+
+		// Tool result passed to LLM should contain "success"
+		const llmCallMessages = chatCompletion.mock.calls[0][0];
+		const toolResultMsg = llmCallMessages.find(
+			(m: { role: string; tool_call_id?: string }) =>
+				m.role === "tool" && m.tool_call_id === "call_abc123",
+		);
+		expect(toolResultMsg).toBeTruthy();
+		expect(toolResultMsg.content).toContain("success");
+
 		// History should have been saved with null pendingToolCall (cleared)
 		const saveCall = (deps.saveHistory as ReturnType<typeof vi.fn>).mock.calls[0];
 		expect(saveCall[3]).toBeNull();
+	});
+
+	it("on confirm with scheduler error, still calls LLM with error result", async () => {
+		mockedExecuteMutatingTool.mockResolvedValue({
+			status: "error",
+			message: "scheduler timeout",
+		});
+
+		const pending = makePendingToolCall();
+		const chatCompletion = vi.fn().mockResolvedValueOnce({
+			choices: [
+				{
+					message: {
+						role: "assistant",
+						content: "Sorry, the action failed. Please try again.",
+						tool_calls: undefined,
+					},
+					finish_reason: "stop",
+				},
+			],
+		});
+
+		const deps = createMockDeps({
+			llmClient: { chatCompletion },
+			getHistory: vi.fn().mockResolvedValue({
+				id: "hist-1",
+				userId,
+				messages: [{ role: "user", content: "Create note" }],
+				pendingToolCall: pending,
+				updatedAt: new Date(),
+			}),
+		});
+
+		const event = {
+			type: "callback_action" as const,
+			userId,
+			sourceRef: "telegram:msg:30b",
+			correlationId,
+			action: "confirm",
+			data: `confirm:cmd-aaa-bbb-ccc:1`,
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("text");
+		expect(chatCompletion).toHaveBeenCalledTimes(1);
+
+		// Tool result should contain error
+		const llmCallMessages = chatCompletion.mock.calls[0][0];
+		const toolResultMsg = llmCallMessages.find(
+			(m: { role: string; tool_call_id?: string }) =>
+				m.role === "tool" && m.tool_call_id === "call_abc123",
+		);
+		expect(toolResultMsg).toBeTruthy();
+		expect(toolResultMsg.content).toContain("error");
 	});
 });
 

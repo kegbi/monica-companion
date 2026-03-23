@@ -294,6 +294,18 @@ export const SearchContactsArgsSchema = z.object({
 	query: z.string().min(1),
 });
 
+export const QueryBirthdayArgsSchema = z.object({
+	contact_id: z.number().int().positive(),
+});
+
+export const QueryPhoneArgsSchema = z.object({
+	contact_id: z.number().int().positive(),
+});
+
+export const QueryLastNoteArgsSchema = z.object({
+	contact_id: z.number().int().positive(),
+});
+
 // --- Zod argument schemas for mutating tools ---
 
 const CreateNoteArgsSchema = z.object({
@@ -309,7 +321,7 @@ const CreateContactArgsSchema = z.object({
 
 const CreateActivityArgsSchema = z.object({
 	contact_ids: z.array(z.number().int()).min(1),
-	description: z.string().min(1),
+	description: z.string().min(1).max(255),
 	activity_type: z.string().optional(),
 	date: z.string().optional(),
 });
@@ -345,6 +357,9 @@ const UpdateContactAddressArgsSchema = z.object({
  */
 export const TOOL_ARG_SCHEMAS: Record<string, z.ZodType> = {
 	search_contacts: SearchContactsArgsSchema,
+	query_birthday: QueryBirthdayArgsSchema,
+	query_phone: QueryPhoneArgsSchema,
+	query_last_note: QueryLastNoteArgsSchema,
 	create_note: CreateNoteArgsSchema,
 	create_contact: CreateContactArgsSchema,
 	create_activity: CreateActivityArgsSchema,

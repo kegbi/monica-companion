@@ -1,4 +1,5 @@
 import { getCorrelationId, serviceAuth } from "@monica-companion/auth";
+import { ContactField } from "@monica-companion/monica-api-lib";
 import { Hono } from "hono";
 import type { Config } from "../config.js";
 import {
@@ -88,6 +89,38 @@ export function readRoutes(config: Config) {
 					createdAt: note.created_at,
 				})),
 			});
+		} catch (err) {
+			return handleMonicaError(c, err);
+		}
+	});
+
+	// --- Contact fields (ai-router only) ---
+	routes.get("/contacts/:contactId/contact-fields", aiRouterAuth, async (c) => {
+		const userId = requireUserId(c);
+		const correlationId = getCorrelationId(c);
+		const contactId = Number(c.req.param("contactId"));
+
+		if (!Number.isFinite(contactId) || contactId <= 0) {
+			return c.json({ error: "Invalid contactId" }, 400);
+		}
+
+		try {
+			const client = await createMonicaClient(config, userId, correlationId);
+			const contact = await client.getContactWithFields(contactId);
+			const rawFields = contact.contactFields ?? [];
+
+			const fields = rawFields
+				.map((raw) => ContactField.safeParse(raw))
+				.filter((r): r is { success: true; data: typeof ContactField._type } => r.success === true)
+				.map((r) => ({
+					fieldId: r.data.id,
+					type: r.data.contact_field_type.type,
+					typeName: r.data.contact_field_type.name,
+					typeId: r.data.contact_field_type.id,
+					value: r.data.content,
+				}));
+
+			return c.json({ data: fields });
 		} catch (err) {
 			return handleMonicaError(c, err);
 		}

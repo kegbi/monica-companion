@@ -75,10 +75,9 @@ describe("TOOL_ARG_SCHEMAS", () => {
 		}
 	});
 
-	it("has no entries for read-only tools except search_contacts", () => {
+	it("has an entry for every read-only tool", () => {
 		for (const name of READ_ONLY_TOOLS) {
-			if (name === "search_contacts") continue;
-			expect(TOOL_ARG_SCHEMAS).not.toHaveProperty(name);
+			expect(TOOL_ARG_SCHEMAS).toHaveProperty(name);
 		}
 	});
 
