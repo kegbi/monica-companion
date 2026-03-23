@@ -71,6 +71,7 @@ export function createApp(config: Config, redis?: Redis): AppResult {
 			userManagementClient.disconnectUser(userId, correlationId),
 		issueSetupToken: (telegramUserId, correlationId) =>
 			userManagementClient.issueSetupToken(telegramUserId, correlationId),
+		clearHistory: (userId) => aiRouterClient.clearHistory(userId),
 		getLanguagePreference: (userId) => userManagementClient.getLanguagePreference(userId),
 	});
 

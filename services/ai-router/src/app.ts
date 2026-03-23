@@ -5,31 +5,20 @@ import {
 	guardrailMiddleware,
 } from "@monica-companion/guardrails";
 import { createLogger, otelMiddleware } from "@monica-companion/observability";
-import { redactString } from "@monica-companion/redaction";
 import { InboundEventSchema } from "@monica-companion/types";
 import { trace } from "@opentelemetry/api";
 import { Hono } from "hono";
 import type Redis from "ioredis";
+import { z } from "zod/v4";
+import { clearHistory, getHistory, saveHistory } from "./agent/history-repository.js";
+import { createLlmClient } from "./agent/llm-client.js";
+import { runAgentLoop } from "./agent/loop.js";
 import type { Config } from "./config.js";
 import { contactResolutionRoutes } from "./contact-resolution/routes.js";
 import type { Database } from "./db/connection.js";
-import { getRecentTurns, insertTurnSummary } from "./db/turn-repository.js";
-import { createConversationGraph } from "./graph/index.js";
 import { createDeliveryClient } from "./lib/delivery-client.js";
 import { createSchedulerClient } from "./lib/scheduler-client.js";
 import { createUserManagementClient } from "./lib/user-management-client.js";
-import {
-	clearNarrowingContext,
-	clearUnresolvedContactRef,
-	createPendingCommand,
-	getActivePendingCommandForUser,
-	getPendingCommand,
-	setUnresolvedContactRef,
-	transitionStatus,
-	updateDraftPayload,
-	updateNarrowingContext,
-	updatePendingPayload,
-} from "./pending-command/repository.js";
 import { retentionRoutes } from "./retention/routes.js";
 import { userPurgeRoutes } from "./retention/user-purge-routes.js";
 
@@ -61,41 +50,23 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 		baseUrl: config.userManagementUrl,
 	});
 
-	const monicaIntegrationServiceClient = createServiceClient({
-		issuer: "ai-router",
-		audience: "monica-integration",
-		secret: jwtSecret,
-		baseUrl: config.monicaIntegrationUrl,
-	});
-
 	const deliveryClient = createDeliveryClient(deliveryServiceClient);
 	const schedulerClient = createSchedulerClient(schedulerServiceClient);
 	const userManagementClient = createUserManagementClient(userManagementServiceClient);
 
-	const graph = createConversationGraph({
-		openaiApiKey: config.openaiApiKey,
-		db,
-		maxConversationTurns: config.maxConversationTurns,
-		pendingCommandTtlMinutes: config.pendingCommandTtlMinutes,
-		autoConfirmConfidenceThreshold: config.autoConfirmConfidenceThreshold,
-		getRecentTurns,
-		getActivePendingCommandForUser,
-		insertTurnSummary,
-		redactString,
-		createPendingCommand,
-		transitionStatus,
-		getPendingCommand,
-		updateDraftPayload,
-		updateNarrowingContext,
-		clearNarrowingContext,
-		updatePendingPayload,
-		setUnresolvedContactRef,
-		clearUnresolvedContactRef,
-		schedulerClient,
-		deliveryClient,
-		userManagementClient,
-		monicaIntegrationClient: monicaIntegrationServiceClient,
+	// Create LLM client for agent loop
+	const llmClient = createLlmClient({
+		baseUrl: config.llmBaseUrl,
+		apiKey: config.llmApiKey,
+		modelId: config.llmModelId,
 	});
+
+	const agentDeps = {
+		llmClient,
+		db,
+		getHistory,
+		saveHistory,
+	};
 
 	app.use(otelMiddleware());
 
@@ -149,56 +120,73 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 
 		const event = parsed.data;
 
-		try {
-			const startMs = performance.now();
+		const startMs = performance.now();
 
-			const result = await graph.invoke({
-				userId: event.userId,
-				correlationId: event.correlationId,
-				inboundEvent: event,
-			});
+		const result = await runAgentLoop(agentDeps, event.userId, event, event.correlationId);
 
-			const durationMs = Math.round(performance.now() - startMs);
+		const durationMs = Math.round(performance.now() - startMs);
 
-			// Record graph total duration as a span attribute on the active span
-			const activeSpan = trace.getActiveSpan();
-			if (activeSpan) {
-				activeSpan.setAttribute("graph.total_duration_ms", durationMs);
-			}
-
-			processLogger.info("Graph invocation complete", {
-				correlationId: event.correlationId,
-				userId: event.userId,
-				eventType: event.type,
-				durationMs,
-				responseType: result.response?.type,
-			});
-
-			if (!result.response) {
-				return c.json({ type: "error", text: "No response generated" }, 500);
-			}
-
-			return c.json(result.response);
-		} catch (err) {
-			const errMsg = err instanceof Error ? err.message : "unknown error";
-			processLogger.error("Graph invocation failed", {
-				correlationId: event.correlationId,
-				userId: event.userId,
-				eventType: event.type,
-				error: errMsg,
-			});
-			return c.json({ type: "error", text: "Failed to process event" }, 500);
+		// Record duration as a span attribute on the active span
+		const activeSpan = trace.getActiveSpan();
+		if (activeSpan) {
+			activeSpan.setAttribute("agent.total_duration_ms", durationMs);
 		}
+
+		processLogger.info("Agent loop complete", {
+			correlationId: event.correlationId,
+			userId: event.userId,
+			eventType: event.type,
+			durationMs,
+			responseType: result.type,
+		});
+
+		return c.json(result);
 	});
+
+	// 3. Clear history endpoint (caller: telegram-bridge only)
+	const clearHistorySchema = z.object({ userId: z.string().uuid() });
+
+	internal.use(
+		"/clear-history",
+		serviceAuth({
+			audience: "ai-router",
+			secrets: config.auth.jwtSecrets,
+			allowedCallers: ["telegram-bridge"],
+		}),
+	);
+
+	internal.post("/clear-history", async (c) => {
+		let body: unknown;
+		try {
+			body = await c.req.json();
+		} catch {
+			return c.json({ error: "Invalid request body" }, 400);
+		}
+
+		const parsed = clearHistorySchema.safeParse(body);
+		if (!parsed.success) {
+			return c.json({ error: "Invalid request body" }, 400);
+		}
+
+		const count = await clearHistory(db, parsed.data.userId);
+
+		processLogger.info("Conversation history cleared", {
+			userId: parsed.data.userId,
+			deletedRows: count,
+		});
+
+		return c.json({ cleared: true, deletedRows: count });
+	});
+
 	app.route("/internal", internal);
 
-	// 3. Contact resolution routes (own per-endpoint auth, no LLM guardrails needed)
+	// 4. Contact resolution routes (own per-endpoint auth, no LLM guardrails needed)
 	app.route("/internal", contactResolutionRoutes(config));
 
-	// 4. Retention cleanup routes (own per-endpoint auth, caller: scheduler only)
+	// 5. Retention cleanup routes (own per-endpoint auth, caller: scheduler only)
 	app.route("/internal", retentionRoutes(config, db));
 
-	// 5. User data purge routes (own per-endpoint auth, caller: user-management only)
+	// 6. User data purge routes (own per-endpoint auth, caller: user-management only)
 	app.route("/internal", userPurgeRoutes(config, db));
 
 	return app;

@@ -40,6 +40,7 @@ describe("setupBot", () => {
 				tokenId: "token-id",
 				expiresAt: "2026-01-01T00:00:00Z",
 			})),
+			clearHistory: vi.fn(async () => ({ cleared: true })),
 		};
 
 		setupBot(mockBot as never, deps);
@@ -47,10 +48,11 @@ describe("setupBot", () => {
 		// Should register 2 middleware: privateChatOnly and userResolver
 		expect(use).toHaveBeenCalledTimes(2);
 
-		// Should register 2 commands: start and disconnect
-		expect(command).toHaveBeenCalledTimes(2);
+		// Should register 3 commands: start, disconnect, and clear
+		expect(command).toHaveBeenCalledTimes(3);
 		expect(command.mock.calls[0][0]).toBe("start");
 		expect(command.mock.calls[1][0]).toBe("disconnect");
+		expect(command.mock.calls[2][0]).toBe("clear");
 
 		// Should register 3 handlers: text message, voice message, callback query
 		expect(on).toHaveBeenCalledTimes(3);
@@ -71,5 +73,6 @@ describe("setupBot", () => {
 		expect(callOrder[1]).toBe("command:start"); // /start before userResolver
 		expect(callOrder[2]).toBe("use"); // userResolver
 		expect(callOrder[3]).toBe("command:disconnect");
+		expect(callOrder[4]).toBe("command:clear");
 	});
 });

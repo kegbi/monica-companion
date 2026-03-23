@@ -23,6 +23,7 @@ vi.mock("@monica-companion/guardrails", () => ({
 vi.mock("../retention/cleanup.js", () => ({
 	purgeExpiredConversationTurns: vi.fn().mockResolvedValue(5),
 	purgeExpiredPendingCommands: vi.fn().mockResolvedValue(3),
+	purgeExpiredConversationHistory: vi.fn().mockResolvedValue(2),
 }));
 
 import { retentionRoutes } from "../retention/routes.js";
@@ -67,6 +68,7 @@ describe("POST /internal/retention-cleanup (ai-router)", () => {
 		expect(body.purged).toEqual({
 			conversationTurns: 5,
 			pendingCommands: 3,
+			conversationHistory: 2,
 		});
 	});
 

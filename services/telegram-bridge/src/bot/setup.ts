@@ -2,6 +2,7 @@ import type { Bot } from "grammy";
 import type { BotContext } from "./context";
 import { createErrorHandler } from "./error-handler";
 import { createCallbackQueryHandler } from "./handlers/callback-query";
+import { type ClearHistoryFn, createClearHandler } from "./handlers/clear";
 import { createDisconnectHandler, type DisconnectFn } from "./handlers/disconnect-command";
 import { createStartHandler, type IssueSetupTokenFn } from "./handlers/start-command";
 import { createTextMessageHandler, type ForwardEventFn } from "./handlers/text-message";
@@ -21,6 +22,7 @@ export interface SetupDeps {
 	transcribe: TranscribeFn;
 	disconnect: DisconnectFn;
 	issueSetupToken: IssueSetupTokenFn;
+	clearHistory: ClearHistoryFn;
 	getLanguagePreference?: GetLanguagePreferenceFn;
 }
 
@@ -30,10 +32,11 @@ export interface SetupDeps {
  * 2. /start command (before user resolver so unregistered users can onboard)
  * 3. User resolver middleware (blocks unregistered users from other handlers)
  * 4. /disconnect command
- * 5. Text message handler
- * 6. Voice message handler
- * 7. Callback query handler
- * 8. Error handler (bot.catch)
+ * 5. /clear command
+ * 6. Text message handler
+ * 7. Voice message handler
+ * 8. Callback query handler
+ * 9. Error handler (bot.catch)
  */
 export function setupBot(bot: Bot<BotContext>, deps: SetupDeps): void {
 	// Middleware (order matters)
@@ -46,6 +49,7 @@ export function setupBot(bot: Bot<BotContext>, deps: SetupDeps): void {
 
 	// Commands (must be registered before generic message handlers)
 	bot.command("disconnect", createDisconnectHandler(deps.disconnect));
+	bot.command("clear", createClearHandler(deps.clearHistory));
 
 	// Handlers
 	bot.on("message:text", createTextMessageHandler(deps.forwardEvent));

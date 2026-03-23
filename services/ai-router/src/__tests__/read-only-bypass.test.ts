@@ -27,6 +27,7 @@ const baseEnv = {
 	USER_MANAGEMENT_URL: "http://user-management:3007",
 	REDIS_URL: "redis://localhost:6379",
 	OPENAI_API_KEY: "sk-test-key-for-bypass",
+	LLM_API_KEY: "sk-test-llm-key-for-bypass",
 };
 
 describe("read-only bypass verification", () => {

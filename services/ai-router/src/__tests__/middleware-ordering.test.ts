@@ -45,6 +45,34 @@ vi.mock("@langchain/openai", () => ({
 	}),
 }));
 
+// Mock openai SDK for agent loop
+vi.mock("openai", () => ({
+	default: class MockOpenAI {
+		constructor() {}
+		chat = {
+			completions: {
+				create: vi.fn().mockResolvedValue({
+					choices: [
+						{
+							message: { role: "assistant", content: "Hello!" },
+							finish_reason: "stop",
+						},
+					],
+				}),
+			},
+		};
+	},
+}));
+
+// Mock history repository
+vi.mock("../agent/history-repository.js", () => ({
+	getHistory: vi.fn().mockResolvedValue(null),
+	saveHistory: vi.fn().mockResolvedValue(undefined),
+	clearHistory: vi.fn().mockResolvedValue(0),
+	clearStaleHistories: vi.fn().mockResolvedValue(0),
+	SLIDING_WINDOW_SIZE: 40,
+}));
+
 vi.mock("@monica-companion/redaction", () => ({
 	redactString: vi.fn().mockImplementation((s: string) => s),
 }));
@@ -167,6 +195,10 @@ const mockConfig = {
 	openaiApiKey: "sk-test-key-for-ordering",
 	maxConversationTurns: 10,
 	autoConfirmConfidenceThreshold: 0.95,
+	llmBaseUrl: "https://openrouter.ai/api/v1",
+	llmApiKey: "sk-test-llm-key",
+	llmModelId: "qwen/qwen3-235b-a22b",
+	historyInactivitySweepIntervalMs: 3600000,
 	inboundAllowedCallers: ["telegram-bridge"],
 	auth: {
 		serviceName: "ai-router" as const,

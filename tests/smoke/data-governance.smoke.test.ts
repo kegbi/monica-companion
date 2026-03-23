@@ -30,6 +30,7 @@ describe("retention cleanup endpoints", () => {
 		const purged = (body as { purged: Record<string, number> }).purged;
 		expect(purged).toHaveProperty("conversationTurns");
 		expect(purged).toHaveProperty("pendingCommands");
+		expect(purged).toHaveProperty("conversationHistory");
 	});
 
 	it("delivery POST /internal/retention-cleanup returns 200", async () => {
@@ -143,7 +144,7 @@ describe("data governance auth enforcement", () => {
 describe("user data purge endpoints", () => {
 	const testUserId = randomUUID();
 
-	it("ai-router user purge returns 200 with zero counts", async () => {
+	it("ai-router user purge returns 200 with zero counts including conversationHistory", async () => {
 		const { status, body } = await authedRequest(
 			config.AI_ROUTER_URL + "/internal/users/" + testUserId + "/data",
 			"ai-router",
@@ -154,6 +155,7 @@ describe("user data purge endpoints", () => {
 		const purged = (body as { purged: Record<string, number> }).purged;
 		expect(purged.conversationTurns).toBe(0);
 		expect(purged.pendingCommands).toBe(0);
+		expect(purged.conversationHistory).toBe(0);
 	});
 
 	it("scheduler user purge returns 200 with zero counts", async () => {

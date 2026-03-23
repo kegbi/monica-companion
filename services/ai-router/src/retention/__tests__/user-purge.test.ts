@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { purgeUserConversationTurns, purgeUserPendingCommands } from "../user-purge.js";
+import {
+	purgeUserConversationHistory,
+	purgeUserConversationTurns,
+	purgeUserPendingCommands,
+} from "../user-purge.js";
 
 function createMockDb(deleteResult: { count: number }) {
 	const mockWhere = vi.fn().mockResolvedValue(deleteResult);
@@ -24,6 +28,15 @@ describe("purgeUserPendingCommands", () => {
 		const db = createMockDb({ count: 4 });
 		const count = await purgeUserPendingCommands(db as never, "user-uuid-1");
 		expect(count).toBe(4);
+		expect(db.delete).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("purgeUserConversationHistory", () => {
+	it("returns the count of purged rows for a user", async () => {
+		const db = createMockDb({ count: 1 });
+		const count = await purgeUserConversationHistory(db as never, "user-uuid-1");
+		expect(count).toBe(1);
 		expect(db.delete).toHaveBeenCalledTimes(1);
 	});
 });

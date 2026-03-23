@@ -29,6 +29,7 @@
 		"drizzle-orm": "catalog:",
 		"hono": "catalog:",
 		"ioredis": "catalog:",
+		"openai": "catalog:",
 		"postgres": "catalog:",
 		"zod": "catalog:"
 	},

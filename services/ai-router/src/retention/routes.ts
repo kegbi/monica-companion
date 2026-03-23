@@ -4,7 +4,11 @@ import { AiRouterRetentionCleanupRequestSchema } from "@monica-companion/types";
 import { Hono } from "hono";
 import type { Config } from "../config.js";
 import type { Database } from "../db/connection.js";
-import { purgeExpiredConversationTurns, purgeExpiredPendingCommands } from "./cleanup.js";
+import {
+	purgeExpiredConversationHistory,
+	purgeExpiredConversationTurns,
+	purgeExpiredPendingCommands,
+} from "./cleanup.js";
 
 const logger = createLogger("ai-router");
 
@@ -42,13 +46,15 @@ export function retentionRoutes(config: Config, db: Database) {
 
 		const conversationTurns = await purgeExpiredConversationTurns(db, conversationTurnsCutoff);
 		const pendingCommands = await purgeExpiredPendingCommands(db, pendingCommandsCutoff);
+		const conversationHistory = await purgeExpiredConversationHistory(db, conversationTurnsCutoff);
 
 		logger.info("Retention cleanup completed", {
 			conversationTurnsPurged: conversationTurns,
 			pendingCommandsPurged: pendingCommands,
+			conversationHistoryPurged: conversationHistory,
 		});
 
-		return c.json({ purged: { conversationTurns, pendingCommands } });
+		return c.json({ purged: { conversationTurns, pendingCommands, conversationHistory } });
 	});
 
 	return routes;

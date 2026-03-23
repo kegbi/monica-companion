@@ -1,0 +1,12 @@
+{
+	"taskId": "agent-loop-foundation",
+	"taskGroup": "Stage 1: Agent Loop Foundation",
+	"phase": "completed",
+	"planAttempts": 2,
+	"codeAttempts": 1,
+	"smokeAttempts": 1,
+	"status": "completed",
+	"mode": "auto",
+	"startedAt": "2026-03-23T00:00:00.000Z",
+	"completedAt": "2026-03-23T12:00:00.000Z"
+}

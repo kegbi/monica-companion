@@ -21,6 +21,23 @@ vi.mock("@langchain/openai", () => ({
 	}),
 }));
 
+// Mock openai SDK for agent loop
+vi.mock("openai", () => ({
+	default: class MockOpenAI {
+		constructor() {}
+		chat = { completions: { create: vi.fn() } };
+	},
+}));
+
+// Mock history repository
+vi.mock("../../agent/history-repository.js", () => ({
+	getHistory: vi.fn().mockResolvedValue(null),
+	saveHistory: vi.fn().mockResolvedValue(undefined),
+	clearHistory: vi.fn().mockResolvedValue(0),
+	clearStaleHistories: vi.fn().mockResolvedValue(0),
+	SLIDING_WINDOW_SIZE: 40,
+}));
+
 // Mock guardrails so middleware passes through without Redis
 vi.mock("@monica-companion/guardrails", () => ({
 	guardrailMiddleware: () => async (_c: unknown, next: () => Promise<void>) => {
@@ -36,6 +53,29 @@ vi.mock("@monica-companion/guardrails", () => ({
 		updateKillSwitch: vi.fn(),
 		recordKillSwitchRejection: vi.fn(),
 		recordRequestAllowed: vi.fn(),
+	}),
+}));
+
+vi.mock("../../lib/delivery-client.js", () => ({
+	createDeliveryClient: vi.fn().mockReturnValue({
+		deliver: vi.fn().mockResolvedValue({ deliveryId: "del-1", status: "delivered" }),
+	}),
+}));
+
+vi.mock("../../lib/scheduler-client.js", () => ({
+	createSchedulerClient: vi.fn().mockReturnValue({
+		execute: vi.fn().mockResolvedValue({ executionId: "exec-1", status: "queued" }),
+	}),
+}));
+
+vi.mock("../../lib/user-management-client.js", () => ({
+	createUserManagementClient: vi.fn().mockReturnValue({
+		getDeliveryRouting: vi
+			.fn()
+			.mockResolvedValue({ connectorType: "telegram", connectorRoutingId: "chat-1" }),
+		getPreferences: vi
+			.fn()
+			.mockResolvedValue({ language: "en", confirmationMode: "explicit", timezone: "UTC" }),
 	}),
 }));
 
@@ -63,7 +103,16 @@ const testConfig: Config = {
 	pendingCommandTtlMinutes: 30,
 	expirySweepIntervalMs: 60000,
 	monicaIntegrationUrl: "http://monica-integration:3004",
+	deliveryUrl: "http://delivery:3006",
+	schedulerUrl: "http://scheduler:3005",
+	userManagementUrl: "http://user-management:3007",
 	openaiApiKey: "sk-test-key-for-routes",
+	maxConversationTurns: 10,
+	autoConfirmConfidenceThreshold: 0.95,
+	llmBaseUrl: "https://openrouter.ai/api/v1",
+	llmApiKey: "sk-test-llm-key",
+	llmModelId: "qwen/qwen3-235b-a22b",
+	historyInactivitySweepIntervalMs: 3600000,
 	inboundAllowedCallers: ["telegram-bridge"],
 	auth: {
 		serviceName: "ai-router",

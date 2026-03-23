@@ -547,3 +547,59 @@ describe("scheduler /internal/execute", () => {
 		expect(body).toHaveProperty("error");
 	});
 });
+
+// ---------------------------------------------------------------------------
+// 9. ai-router /internal/clear-history (Stage 1: Agent Loop Foundation)
+// ---------------------------------------------------------------------------
+describe("ai-router /internal/clear-history", () => {
+	const url = `${config.AI_ROUTER_URL}/internal/clear-history`;
+
+	it("rejects requests without auth (401)", async () => {
+		const { status } = await smokeRequest(url, {
+			method: "POST",
+			body: { userId: randomUUID() },
+		});
+		expect(status).toBe(401);
+	});
+
+	it("rejects requests from wrong caller (403)", async () => {
+		// scheduler is not in clear-history's allowed callers (telegram-bridge only)
+		const { status } = await authedRequest(url, "ai-router", {
+			method: "POST",
+			issuer: "scheduler",
+			body: { userId: randomUUID() },
+		});
+		expect(status).toBe(403);
+	});
+
+	it("accepts valid auth from telegram-bridge and returns cleared status", async () => {
+		const userId = randomUUID();
+		const { status, body } = await authedRequest(url, "ai-router", {
+			method: "POST",
+			issuer: "telegram-bridge",
+			body: { userId },
+		});
+		expect(status).toBe(200);
+		expect(body).toHaveProperty("cleared", true);
+		expect(body).toHaveProperty("deletedRows");
+		expect((body as { deletedRows: number }).deletedRows).toBe(0);
+	});
+
+	it("returns 400 for invalid userId (not a UUID)", async () => {
+		const { status } = await authedRequest(url, "ai-router", {
+			method: "POST",
+			issuer: "telegram-bridge",
+			body: { userId: "not-a-uuid" },
+		});
+		expect(status).toBe(400);
+	});
+
+	it("returns 400 for missing body", async () => {
+		const { status } = await authedRequest(url, "ai-router", {
+			method: "POST",
+			issuer: "telegram-bridge",
+			body: {},
+		});
+		expect(status).toBe(400);
+	});
+});

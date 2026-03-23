@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@opentelemetry/api", () => {
 	const mockSpan = { setAttribute: () => {}, setStatus: () => {}, end: () => {} };
@@ -14,21 +14,18 @@ vi.mock("@opentelemetry/api", () => {
 	};
 });
 
-const mockLlmInvoke = vi.fn();
-
-// Mock @langchain/openai to avoid real LLM calls (still needed for graph code in src/)
+// Mock @langchain/openai to avoid real LLM calls
 vi.mock("@langchain/openai", () => ({
 	ChatOpenAI: vi.fn().mockImplementation(function (this: any) {
-		this.withStructuredOutput = vi.fn().mockReturnValue({ invoke: mockLlmInvoke });
+		this.withStructuredOutput = vi.fn().mockReturnValue({ invoke: vi.fn() });
 	}),
 }));
 
-// Mock openai SDK for the agent loop
-const mockChatCompletion = vi.fn();
+// Mock openai SDK
 vi.mock("openai", () => ({
 	default: class MockOpenAI {
 		constructor() {}
-		chat = { completions: { create: mockChatCompletion } };
+		chat = { completions: { create: vi.fn() } };
 	},
 }));
 
@@ -60,7 +57,6 @@ vi.mock("@monica-companion/guardrails", () => ({
 	}),
 }));
 
-// Mock serviceAuth to pass through (for testing agent invocation)
 const { serviceAuthSpy } = vi.hoisted(() => {
 	const serviceAuthSpy = vi.fn().mockReturnValue(async (_c: any, next: any) => {
 		await next();
@@ -91,29 +87,8 @@ vi.mock("../db/turn-repository.js", () => ({
 vi.mock("../pending-command/repository.js", () => ({
 	getActivePendingCommandForUser: vi.fn().mockResolvedValue(null),
 	updateDraftPayload: vi.fn().mockResolvedValue(null),
-	createPendingCommand: vi.fn().mockResolvedValue({
-		id: "cmd-mock",
-		userId: "test",
-		commandType: "create_note",
-		payload: { type: "create_note", body: "test" },
-		status: "draft",
-		version: 1,
-		sourceMessageRef: "tg:msg:1",
-		correlationId: "corr-1",
-		expiresAt: new Date(),
-		confirmedAt: null,
-		executedAt: null,
-		terminalAt: null,
-		executionResult: null,
-		createdAt: new Date(),
-		updatedAt: new Date(),
-	}),
-	transitionStatus: vi.fn().mockResolvedValue({
-		id: "cmd-mock",
-		status: "pending_confirmation",
-		version: 2,
-		commandType: "create_note",
-	}),
+	createPendingCommand: vi.fn().mockResolvedValue({ id: "cmd-mock" }),
+	transitionStatus: vi.fn().mockResolvedValue({ id: "cmd-mock" }),
 	getPendingCommand: vi.fn().mockResolvedValue(null),
 	updateNarrowingContext: vi.fn().mockResolvedValue({}),
 	clearNarrowingContext: vi.fn().mockResolvedValue({}),
@@ -145,7 +120,6 @@ vi.mock("../lib/user-management-client.js", () => ({
 	}),
 }));
 
-// Mock history repository (used by agent loop)
 vi.mock("../agent/history-repository.js", () => ({
 	getHistory: vi.fn().mockResolvedValue(null),
 	saveHistory: vi.fn().mockResolvedValue(undefined),
@@ -165,7 +139,7 @@ const mockConfig = {
 	deliveryUrl: "http://delivery:3006",
 	schedulerUrl: "http://scheduler:3005",
 	userManagementUrl: "http://user-management:3007",
-	openaiApiKey: "sk-test-key-for-process",
+	openaiApiKey: "sk-test-key",
 	maxConversationTurns: 10,
 	autoConfirmConfidenceThreshold: 0.95,
 	llmBaseUrl: "https://openrouter.ai/api/v1",
@@ -191,54 +165,43 @@ const mockConfig = {
 const mockDb = {} as any;
 const mockRedis = {} as any;
 
-const validTextEvent = {
-	type: "text_message",
-	userId: "550e8400-e29b-41d4-a716-446655440000",
-	sourceRef: "telegram:msg:123",
-	correlationId: "corr-456",
-	text: "Hello bot",
-};
-
-describe("POST /internal/process", () => {
-	beforeEach(() => {
-		mockChatCompletion.mockReset();
-		mockLlmInvoke.mockReset();
-	});
-
-	it("returns text response for text_message via agent loop", async () => {
-		mockChatCompletion.mockResolvedValueOnce({
-			choices: [
-				{
-					message: { role: "assistant", content: "Hello! How can I help you today?" },
-					finish_reason: "stop",
-				},
-			],
-		});
+describe("POST /internal/clear-history", () => {
+	it("returns 200 with cleared: true for valid userId", async () => {
 		const app = createApp(mockConfig, mockDb, mockRedis);
-		const res = await app.request("/internal/process", {
+		const res = await app.request("/internal/clear-history", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(validTextEvent),
+			body: JSON.stringify({ userId: "550e8400-e29b-41d4-a716-446655440000" }),
 		});
 		expect(res.status).toBe(200);
 		const body = await res.json();
-		expect(body).toHaveProperty("type", "text");
-		expect(body).toHaveProperty("text", "Hello! How can I help you today?");
+		expect(body.cleared).toBe(true);
+		expect(body.deletedRows).toBe(1);
 	});
 
-	it("returns 400 for invalid payload", async () => {
+	it("returns 400 for invalid userId format", async () => {
 		const app = createApp(mockConfig, mockDb, mockRedis);
-		const res = await app.request("/internal/process", {
+		const res = await app.request("/internal/clear-history", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ invalid: true }),
+			body: JSON.stringify({ userId: "not-a-uuid" }),
+		});
+		expect(res.status).toBe(400);
+	});
+
+	it("returns 400 for missing userId", async () => {
+		const app = createApp(mockConfig, mockDb, mockRedis);
+		const res = await app.request("/internal/clear-history", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({}),
 		});
 		expect(res.status).toBe(400);
 	});
 
 	it("returns 400 for non-JSON body", async () => {
 		const app = createApp(mockConfig, mockDb, mockRedis);
-		const res = await app.request("/internal/process", {
+		const res = await app.request("/internal/clear-history", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: "not json",
@@ -246,67 +209,13 @@ describe("POST /internal/process", () => {
 		expect(res.status).toBe(400);
 	});
 
-	it("processes voice_message events", async () => {
-		mockChatCompletion.mockResolvedValueOnce({
-			choices: [
-				{
-					message: { role: "assistant", content: "I heard your voice message." },
-					finish_reason: "stop",
-				},
-			],
-		});
-		const app = createApp(mockConfig, mockDb, mockRedis);
-		const res = await app.request("/internal/process", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				type: "voice_message",
-				userId: "550e8400-e29b-41d4-a716-446655440000",
-				sourceRef: "telegram:msg:789",
-				correlationId: "corr-789",
-				transcribedText: "Remind me about Jane",
-			}),
-		});
-		expect(res.status).toBe(200);
-		const body = await res.json();
-		expect(body.type).toBe("text");
-		expect(body.text).toBeTruthy();
-	});
-
-	it("processes callback_action without pending tool call as text response", async () => {
-		const app = createApp(mockConfig, mockDb, mockRedis);
-		const res = await app.request("/internal/process", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				type: "callback_action",
-				userId: "550e8400-e29b-41d4-a716-446655440000",
-				sourceRef: "telegram:msg:101",
-				correlationId: "corr-101",
-				action: "confirm",
-				data: "cmd-123:1",
-			}),
-		});
-		expect(res.status).toBe(200);
-		const body = await res.json();
-		// Without a pending tool call, callback produces a text response
-		expect(body.type).toBe("text");
-		expect(body.text).toBeTruthy();
-		// LLM should not have been called
-		expect(mockChatCompletion).not.toHaveBeenCalled();
-	});
-
-	it("returns graceful fallback when LLM fails", async () => {
-		mockChatCompletion.mockRejectedValueOnce(new Error("LLM timeout"));
-		const app = createApp(mockConfig, mockDb, mockRedis);
-		const res = await app.request("/internal/process", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(validTextEvent),
-		});
-		expect(res.status).toBe(200);
-		const body = await res.json();
-		expect(body.type).toBe("error");
-		expect(body.text).toBeTruthy();
+	it("registers serviceAuth with allowedCallers: telegram-bridge", () => {
+		createApp(mockConfig, mockDb, mockRedis);
+		// The serviceAuth mock should have been called with telegram-bridge for clear-history
+		const clearHistoryCall = serviceAuthSpy.mock.calls.find(
+			(call: any[]) =>
+				call[0]?.allowedCallers?.includes("telegram-bridge") && call[0]?.audience === "ai-router",
+		);
+		expect(clearHistoryCall).toBeDefined();
 	});
 });

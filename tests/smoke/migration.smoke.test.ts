@@ -14,14 +14,18 @@ const config = loadSmokeConfig();
 describe("database auto-migration", () => {
 	const sql = postgres(config.POSTGRES_URL, { max: 1 });
 
-	it("ai-router tables exist (conversation_turns, pending_commands)", async () => {
+	it("ai-router tables exist (conversation_turns, pending_commands, conversation_history)", async () => {
 		const tables = await sql`
 			SELECT table_name FROM information_schema.tables
 			WHERE table_schema = 'public'
-			AND table_name IN ('conversation_turns', 'pending_commands')
+			AND table_name IN ('conversation_turns', 'pending_commands', 'conversation_history')
 			ORDER BY table_name
 		`;
-		expect(tables.map((r) => r.table_name)).toEqual(["conversation_turns", "pending_commands"]);
+		expect(tables.map((r) => r.table_name)).toEqual([
+			"conversation_history",
+			"conversation_turns",
+			"pending_commands",
+		]);
 	});
 
 	it("user-management tables exist (users, setup_tokens, user_preferences)", async () => {
@@ -55,6 +59,45 @@ describe("database auto-migration", () => {
 		const names = indexes.map((r) => r.indexname);
 		expect(names).toContain("idx_conversation_turns_user_created");
 		expect(names).toContain("idx_conversation_turns_created_at");
+	});
+
+	it("conversation_history has expected columns and constraints", async () => {
+		const columns = await sql`
+			SELECT column_name, data_type, is_nullable
+			FROM information_schema.columns
+			WHERE table_name = 'conversation_history'
+			ORDER BY column_name
+		`;
+		const colMap = Object.fromEntries(columns.map((r) => [r.column_name, r]));
+		expect(colMap.id).toBeDefined();
+		expect(colMap.user_id).toBeDefined();
+		expect(colMap.user_id.data_type).toBe("uuid");
+		expect(colMap.messages).toBeDefined();
+		expect(colMap.messages.data_type).toBe("jsonb");
+		expect(colMap.pending_tool_call).toBeDefined();
+		expect(colMap.pending_tool_call.data_type).toBe("jsonb");
+		expect(colMap.pending_tool_call.is_nullable).toBe("YES");
+		expect(colMap.updated_at).toBeDefined();
+	});
+
+	it("conversation_history has updated_at index", async () => {
+		const indexes = await sql`
+			SELECT indexname FROM pg_indexes
+			WHERE tablename = 'conversation_history'
+			ORDER BY indexname
+		`;
+		const names = indexes.map((r) => r.indexname);
+		expect(names).toContain("idx_conversation_history_updated_at");
+	});
+
+	it("conversation_history has unique constraint on user_id", async () => {
+		const constraints = await sql`
+			SELECT constraint_name FROM information_schema.table_constraints
+			WHERE table_name = 'conversation_history'
+			AND constraint_type = 'UNIQUE'
+		`;
+		const names = constraints.map((r) => r.constraint_name);
+		expect(names).toContain("uq_conversation_history_user_id");
 	});
 
 	it("pending_commands has narrowing_context column (progressive narrowing migration)", async () => {

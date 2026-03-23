@@ -23,6 +23,7 @@ vi.mock("@monica-companion/guardrails", () => ({
 vi.mock("../retention/user-purge.js", () => ({
 	purgeUserConversationTurns: vi.fn().mockResolvedValue(10),
 	purgeUserPendingCommands: vi.fn().mockResolvedValue(3),
+	purgeUserConversationHistory: vi.fn().mockResolvedValue(1),
 }));
 
 import { userPurgeRoutes } from "../retention/user-purge-routes.js";
@@ -56,6 +57,7 @@ describe("DELETE /internal/users/:userId/data (ai-router)", () => {
 		expect(body.purged).toEqual({
 			conversationTurns: 10,
 			pendingCommands: 3,
+			conversationHistory: 1,
 		});
 	});
 

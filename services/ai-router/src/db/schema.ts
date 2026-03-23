@@ -6,7 +6,7 @@
  */
 
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 /**
  * Conversation turns table.
@@ -84,5 +84,29 @@ export const pendingCommands = pgTable(
 	(table) => [
 		index("idx_pending_commands_user_status").on(table.userId, table.status),
 		index("idx_pending_commands_expires_at").on(table.expiresAt),
+	],
+);
+
+/**
+ * Conversation history table for the agent loop.
+ * Stores the full OpenAI-format message array per user as JSONB,
+ * plus an optional pending tool call for confirmation guardrails.
+ * One row per user (upserted on each agent loop invocation).
+ *
+ * user_id references users in user-management's table but has no FK constraint
+ * because it is a cross-service reference. Application-level validation suffices for V1.
+ */
+export const conversationHistory = pgTable(
+	"conversation_history",
+	{
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		userId: uuid("user_id").notNull(),
+		messages: jsonb("messages").notNull().default(sql`'[]'::jsonb`),
+		pendingToolCall: jsonb("pending_tool_call"),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [
+		unique("uq_conversation_history_user_id").on(table.userId),
+		index("idx_conversation_history_updated_at").on(table.updatedAt),
 	],
 );

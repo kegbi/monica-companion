@@ -14,6 +14,8 @@ export default defineConfig({
 			"hono/http-exception": pkg("hono", "dist/http-exception.js"),
 			hono: pkg("hono", "dist/index.js"),
 			jose: pkg("jose"),
+			ioredis: pkg("ioredis"),
+			openai: pkg("openai"),
 			"@langchain/core/messages": pkg("@langchain/core", "messages.js"),
 			...otelAliases(),
 			"@monica-companion/auth": workspace("@monica-companion/auth"),

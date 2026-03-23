@@ -11,6 +11,7 @@ const baseEnv = {
 	USER_MANAGEMENT_URL: "http://user-management:3007",
 	REDIS_URL: "redis://localhost:6379",
 	OPENAI_API_KEY: "sk-test-key-for-config",
+	LLM_API_KEY: "sk-test-llm-key",
 };
 
 describe("loadConfig", () => {
@@ -173,5 +174,47 @@ describe("loadConfig", () => {
 	it("coerces AUTO_CONFIRM_CONFIDENCE_THRESHOLD correctly", () => {
 		const config = loadConfig({ ...baseEnv, AUTO_CONFIRM_CONFIDENCE_THRESHOLD: "0.8" });
 		expect(config.autoConfirmConfidenceThreshold).toBe(0.8);
+	});
+
+	// --- LLM config vars ---
+
+	it("applies default LLM_BASE_URL of https://openrouter.ai/api/v1", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.llmBaseUrl).toBe("https://openrouter.ai/api/v1");
+	});
+
+	it("parses custom LLM_BASE_URL", () => {
+		const config = loadConfig({ ...baseEnv, LLM_BASE_URL: "http://localhost:11434/v1" });
+		expect(config.llmBaseUrl).toBe("http://localhost:11434/v1");
+	});
+
+	it("throws when LLM_API_KEY is missing", () => {
+		const { LLM_API_KEY, ...env } = baseEnv;
+		expect(() => loadConfig(env)).toThrow();
+	});
+
+	it("parses LLM_API_KEY when provided", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.llmApiKey).toBe("sk-test-llm-key");
+	});
+
+	it("applies default LLM_MODEL_ID of qwen/qwen3-235b-a22b", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.llmModelId).toBe("qwen/qwen3-235b-a22b");
+	});
+
+	it("parses custom LLM_MODEL_ID", () => {
+		const config = loadConfig({ ...baseEnv, LLM_MODEL_ID: "openai/gpt-4o" });
+		expect(config.llmModelId).toBe("openai/gpt-4o");
+	});
+
+	it("applies default HISTORY_INACTIVITY_SWEEP_INTERVAL_MS of 3600000", () => {
+		const config = loadConfig(baseEnv);
+		expect(config.historyInactivitySweepIntervalMs).toBe(3600000);
+	});
+
+	it("coerces HISTORY_INACTIVITY_SWEEP_INTERVAL_MS correctly", () => {
+		const config = loadConfig({ ...baseEnv, HISTORY_INACTIVITY_SWEEP_INTERVAL_MS: "1800000" });
+		expect(config.historyInactivitySweepIntervalMs).toBe(1800000);
 	});
 });

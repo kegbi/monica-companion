@@ -15,6 +15,10 @@ const configSchema = z.object({
 	OPENAI_API_KEY: z.string().min(1),
 	MAX_CONVERSATION_TURNS: z.coerce.number().int().positive().default(10),
 	AUTO_CONFIRM_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.95),
+	LLM_BASE_URL: z.string().min(1).default("https://openrouter.ai/api/v1"),
+	LLM_API_KEY: z.string().min(1),
+	LLM_MODEL_ID: z.string().min(1).default("qwen/qwen3-235b-a22b"),
+	HISTORY_INACTIVITY_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(3600000),
 });
 
 export interface Config {
@@ -29,6 +33,10 @@ export interface Config {
 	openaiApiKey: string;
 	maxConversationTurns: number;
 	autoConfirmConfidenceThreshold: number;
+	llmBaseUrl: string;
+	llmApiKey: string;
+	llmModelId: string;
+	historyInactivitySweepIntervalMs: number;
 	auth: AuthConfig;
 	guardrails: GuardrailConfig;
 	inboundAllowedCallers: string[];
@@ -62,6 +70,10 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 		openaiApiKey: parsed.OPENAI_API_KEY,
 		maxConversationTurns: parsed.MAX_CONVERSATION_TURNS,
 		autoConfirmConfidenceThreshold: parsed.AUTO_CONFIRM_CONFIDENCE_THRESHOLD,
+		llmBaseUrl: parsed.LLM_BASE_URL,
+		llmApiKey: parsed.LLM_API_KEY,
+		llmModelId: parsed.LLM_MODEL_ID,
+		historyInactivitySweepIntervalMs: parsed.HISTORY_INACTIVITY_SWEEP_INTERVAL_MS,
 		auth,
 		guardrails,
 		inboundAllowedCallers: parseAllowedCallers(parsed.INBOUND_ALLOWED_CALLERS),
