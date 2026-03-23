@@ -53,4 +53,15 @@ describe("buildAgentSystemPrompt", () => {
 		const prompt = buildAgentSystemPrompt();
 		expect(prompt).toContain("override");
 	});
+
+	it("includes confirmation behavior instructions", () => {
+		const prompt = buildAgentSystemPrompt();
+		expect(prompt).toContain("confirmation");
+		expect(prompt).toContain("intercepted");
+	});
+
+	it("includes abandoned action instructions", () => {
+		const prompt = buildAgentSystemPrompt();
+		expect(prompt).toContain("abandoned");
+	});
 });

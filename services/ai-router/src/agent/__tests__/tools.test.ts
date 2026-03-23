@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MUTATING_TOOLS, READ_ONLY_TOOLS, TOOL_DEFINITIONS } from "../tools.js";
+import {
+	generateActionDescription,
+	MUTATING_TOOLS,
+	READ_ONLY_TOOLS,
+	TOOL_ARG_SCHEMAS,
+	TOOL_DEFINITIONS,
+} from "../tools.js";
 
 describe("tool definitions", () => {
 	it("exports 11 tool definitions", () => {
@@ -59,5 +65,163 @@ describe("tool definitions", () => {
 
 	it("total of MUTATING_TOOLS + READ_ONLY_TOOLS equals 11", () => {
 		expect(MUTATING_TOOLS.size + READ_ONLY_TOOLS.size).toBe(11);
+	});
+});
+
+describe("TOOL_ARG_SCHEMAS", () => {
+	it("has an entry for every mutating tool", () => {
+		for (const name of MUTATING_TOOLS) {
+			expect(TOOL_ARG_SCHEMAS).toHaveProperty(name);
+		}
+	});
+
+	it("has no entries for read-only tools", () => {
+		for (const name of READ_ONLY_TOOLS) {
+			expect(TOOL_ARG_SCHEMAS).not.toHaveProperty(name);
+		}
+	});
+
+	it("validates valid create_note args", () => {
+		const result = TOOL_ARG_SCHEMAS.create_note.safeParse({
+			contact_id: 1,
+			body: "Test note",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects create_note args missing required body", () => {
+		const result = TOOL_ARG_SCHEMAS.create_note.safeParse({
+			contact_id: 1,
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("validates valid create_contact args", () => {
+		const result = TOOL_ARG_SCHEMAS.create_contact.safeParse({
+			first_name: "Jane",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("validates create_contact with optional fields", () => {
+		const result = TOOL_ARG_SCHEMAS.create_contact.safeParse({
+			first_name: "Jane",
+			last_name: "Doe",
+			gender_id: 2,
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("validates valid create_activity args", () => {
+		const result = TOOL_ARG_SCHEMAS.create_activity.safeParse({
+			contact_ids: [1, 2],
+			description: "Lunch meeting",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("validates valid update_contact_birthday args", () => {
+		const result = TOOL_ARG_SCHEMAS.update_contact_birthday.safeParse({
+			contact_id: 1,
+			date: "1990-05-15",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("validates valid update_contact_phone args", () => {
+		const result = TOOL_ARG_SCHEMAS.update_contact_phone.safeParse({
+			contact_id: 1,
+			phone_number: "+1-555-1234",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("validates valid update_contact_email args", () => {
+		const result = TOOL_ARG_SCHEMAS.update_contact_email.safeParse({
+			contact_id: 1,
+			email: "jane@example.com",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("validates valid update_contact_address args", () => {
+		const result = TOOL_ARG_SCHEMAS.update_contact_address.safeParse({
+			contact_id: 1,
+			city: "Portland",
+		});
+		expect(result.success).toBe(true);
+	});
+});
+
+describe("generateActionDescription", () => {
+	it("generates description for create_note", () => {
+		const desc = generateActionDescription("create_note", {
+			contact_id: 42,
+			body: "Had coffee with them today",
+		});
+		expect(desc).toContain("Create a note");
+		expect(desc).toContain("contact 42");
+	});
+
+	it("generates description for create_contact", () => {
+		const desc = generateActionDescription("create_contact", {
+			first_name: "Jane",
+			last_name: "Doe",
+		});
+		expect(desc).toContain("Create");
+		expect(desc).toContain("contact");
+		expect(desc).toContain("Jane Doe");
+	});
+
+	it("generates description for create_activity", () => {
+		const desc = generateActionDescription("create_activity", {
+			contact_ids: [1, 2],
+			description: "Had lunch",
+		});
+		expect(desc).toContain("Log");
+		expect(desc).toContain("activity");
+	});
+
+	it("generates description for update_contact_birthday", () => {
+		const desc = generateActionDescription("update_contact_birthday", {
+			contact_id: 5,
+			date: "1990-01-15",
+		});
+		expect(desc).toContain("birthday");
+		expect(desc).toContain("contact 5");
+		expect(desc).toContain("1990-01-15");
+	});
+
+	it("generates description for update_contact_phone", () => {
+		const desc = generateActionDescription("update_contact_phone", {
+			contact_id: 3,
+			phone_number: "+1-555-0100",
+		});
+		expect(desc).toContain("phone");
+		expect(desc).toContain("contact 3");
+	});
+
+	it("generates description for update_contact_email", () => {
+		const desc = generateActionDescription("update_contact_email", {
+			contact_id: 7,
+			email: "jane@example.com",
+		});
+		expect(desc).toContain("email");
+		expect(desc).toContain("contact 7");
+	});
+
+	it("generates description for update_contact_address", () => {
+		const desc = generateActionDescription("update_contact_address", {
+			contact_id: 9,
+			city: "Portland",
+			country: "US",
+		});
+		expect(desc).toContain("address");
+		expect(desc).toContain("contact 9");
+	});
+
+	it("returns a fallback for unknown tool names", () => {
+		const desc = generateActionDescription("unknown_tool", { foo: "bar" });
+		expect(desc).toContain("unknown_tool");
 	});
 });

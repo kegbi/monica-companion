@@ -66,6 +66,7 @@ export function createApp(config: Config, db: Database, redis: Redis) {
 		db,
 		getHistory,
 		saveHistory,
+		pendingCommandTtlMinutes: config.pendingCommandTtlMinutes,
 	};
 
 	app.use(otelMiddleware());

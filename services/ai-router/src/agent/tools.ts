@@ -1,4 +1,5 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
+import { z } from "zod/v4";
 
 /**
  * Tool names that perform read-only operations.
@@ -285,3 +286,91 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
 		},
 	},
 ];
+
+// --- Zod argument schemas for mutating tools ---
+
+const CreateNoteArgsSchema = z.object({
+	contact_id: z.number().int(),
+	body: z.string().min(1),
+});
+
+const CreateContactArgsSchema = z.object({
+	first_name: z.string().min(1),
+	last_name: z.string().optional(),
+	gender_id: z.number().int().optional(),
+});
+
+const CreateActivityArgsSchema = z.object({
+	contact_ids: z.array(z.number().int()).min(1),
+	description: z.string().min(1),
+	activity_type: z.string().optional(),
+	date: z.string().optional(),
+});
+
+const UpdateContactBirthdayArgsSchema = z.object({
+	contact_id: z.number().int(),
+	date: z.string().min(1),
+	is_age_based: z.boolean().optional(),
+});
+
+const UpdateContactPhoneArgsSchema = z.object({
+	contact_id: z.number().int(),
+	phone_number: z.string().min(1),
+});
+
+const UpdateContactEmailArgsSchema = z.object({
+	contact_id: z.number().int(),
+	email: z.string().min(1),
+});
+
+const UpdateContactAddressArgsSchema = z.object({
+	contact_id: z.number().int(),
+	street: z.string().optional(),
+	city: z.string().optional(),
+	province: z.string().optional(),
+	postal_code: z.string().optional(),
+	country: z.string().optional(),
+});
+
+/**
+ * Map of mutating tool names to their Zod argument schemas.
+ * Used to validate tool arguments before serialization into pendingToolCall.
+ */
+export const TOOL_ARG_SCHEMAS: Record<string, z.ZodType> = {
+	create_note: CreateNoteArgsSchema,
+	create_contact: CreateContactArgsSchema,
+	create_activity: CreateActivityArgsSchema,
+	update_contact_birthday: UpdateContactBirthdayArgsSchema,
+	update_contact_phone: UpdateContactPhoneArgsSchema,
+	update_contact_email: UpdateContactEmailArgsSchema,
+	update_contact_address: UpdateContactAddressArgsSchema,
+};
+
+/**
+ * Generate a human-readable description of a tool action for the confirmation prompt.
+ * Avoids including sensitive data — uses tool name and key identifiers only.
+ */
+export function generateActionDescription(toolName: string, args: Record<string, unknown>): string {
+	switch (toolName) {
+		case "create_note":
+			return `Create a note for contact ${args.contact_id}`;
+		case "create_contact": {
+			const name = [args.first_name, args.last_name].filter(Boolean).join(" ");
+			return `Create a new contact: ${name}`;
+		}
+		case "create_activity": {
+			const ids = Array.isArray(args.contact_ids) ? args.contact_ids.join(", ") : "unknown";
+			return `Log an activity with contact(s) ${ids}`;
+		}
+		case "update_contact_birthday":
+			return `Update birthday for contact ${args.contact_id} to ${args.date}`;
+		case "update_contact_phone":
+			return `Update phone number for contact ${args.contact_id}`;
+		case "update_contact_email":
+			return `Update email for contact ${args.contact_id}`;
+		case "update_contact_address":
+			return `Update address for contact ${args.contact_id}`;
+		default:
+			return `Execute ${toolName}`;
+	}
+}
