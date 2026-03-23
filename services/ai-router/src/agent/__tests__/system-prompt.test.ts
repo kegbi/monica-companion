@@ -64,4 +64,32 @@ describe("buildAgentSystemPrompt", () => {
 		const prompt = buildAgentSystemPrompt();
 		expect(prompt).toContain("abandoned");
 	});
+
+	it("includes a dedicated Contact Resolution Rules section", () => {
+		const prompt = buildAgentSystemPrompt();
+		expect(prompt).toContain("## Contact Resolution Rules");
+	});
+
+	it("instructs to call search_contacts before any tool requiring contactId", () => {
+		const prompt = buildAgentSystemPrompt();
+		expect(prompt).toContain("search_contacts");
+		expect(prompt).toContain("contactId");
+	});
+
+	it("instructs to never guess or fabricate a contactId", () => {
+		const prompt = buildAgentSystemPrompt();
+		expect(prompt).toContain("Never guess or fabricate a contactId");
+	});
+
+	it("instructs to present multiple results for disambiguation", () => {
+		const prompt = buildAgentSystemPrompt();
+		expect(prompt).toContain("multiple results");
+		expect(prompt).toContain("ask which one");
+	});
+
+	it("instructs to ask user to clarify on zero results", () => {
+		const prompt = buildAgentSystemPrompt();
+		expect(prompt).toContain("zero results");
+		expect(prompt).toContain("clarify");
+	});
 });

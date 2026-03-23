@@ -1,16 +1,29 @@
+import type { ServiceClient } from "@monica-companion/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentLoopDeps } from "../loop.js";
 
 // Mock openai to avoid import issues
 vi.mock("openai", () => ({
 	default: class MockOpenAI {
-		constructor() {}
 		chat = { completions: { create: vi.fn() } };
 	},
 }));
 
-import type { GraphResponse } from "../../graph/state.js";
+// Mock the search_contacts handler
+vi.mock("../tool-handlers/search-contacts.js", () => ({
+	handleSearchContacts: vi.fn(),
+}));
+
 import { runAgentLoop } from "../loop.js";
+import { handleSearchContacts } from "../tool-handlers/search-contacts.js";
+
+const mockedHandleSearchContacts = vi.mocked(handleSearchContacts);
+
+function createMockServiceClient(): ServiceClient {
+	return {
+		fetch: vi.fn(),
+	};
+}
 
 function createMockDeps(overrides?: Partial<AgentLoopDeps>): AgentLoopDeps {
 	return {
@@ -32,6 +45,7 @@ function createMockDeps(overrides?: Partial<AgentLoopDeps>): AgentLoopDeps {
 		getHistory: vi.fn().mockResolvedValue(null),
 		saveHistory: vi.fn().mockResolvedValue(undefined),
 		pendingCommandTtlMinutes: 30,
+		monicaServiceClient: createMockServiceClient(),
 		...overrides,
 	};
 }
@@ -40,6 +54,10 @@ const userId = "550e8400-e29b-41d4-a716-446655440000";
 const correlationId = "corr-test-1";
 
 describe("runAgentLoop", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
 	it("returns a text response for a simple text_message", async () => {
 		const deps = createMockDeps();
 		const event = {
@@ -137,7 +155,21 @@ describe("runAgentLoop", () => {
 		expect(deps.saveHistory).toHaveBeenCalledTimes(1);
 	});
 
-	it("handles read-only tool calls by providing stub results and continuing the loop", async () => {
+	it("invokes search_contacts handler and returns results to LLM", async () => {
+		mockedHandleSearchContacts.mockResolvedValue({
+			status: "ok",
+			contacts: [
+				{
+					contactId: 1,
+					displayName: "Jane Doe",
+					aliases: ["Jane", "Doe"],
+					relationshipLabels: ["friend"],
+					birthdate: "1990-05-15",
+					matchReason: "exact_display_name",
+				},
+			],
+		});
+
 		const chatCompletion = vi
 			.fn()
 			.mockResolvedValueOnce({
@@ -166,7 +198,7 @@ describe("runAgentLoop", () => {
 					{
 						message: {
 							role: "assistant",
-							content: "I found Jane for you!",
+							content: "I found Jane Doe for you!",
 							tool_calls: undefined,
 						},
 						finish_reason: "stop",
@@ -188,8 +220,146 @@ describe("runAgentLoop", () => {
 
 		const result = await runAgentLoop(deps, userId, event, correlationId);
 		expect(result.type).toBe("text");
-		expect(result.text).toBe("I found Jane for you!");
+		expect(result.text).toBe("I found Jane Doe for you!");
 		expect(chatCompletion).toHaveBeenCalledTimes(2);
+
+		// Verify the handler was called with correct parameters
+		expect(mockedHandleSearchContacts).toHaveBeenCalledWith({
+			query: "Jane",
+			serviceClient: deps.monicaServiceClient,
+			userId,
+			correlationId,
+		});
+
+		// Verify the tool result was passed to the second LLM call
+		const secondCall = chatCompletion.mock.calls[1];
+		const messages = secondCall[0];
+		const toolResultMsg = messages.find(
+			(m: { role: string; tool_call_id?: string }) =>
+				m.role === "tool" && m.tool_call_id === "call_1",
+		);
+		expect(toolResultMsg).toBeTruthy();
+		expect(toolResultMsg.content).toContain("Jane Doe");
+	});
+
+	it("returns validation error to LLM when search_contacts args are invalid", async () => {
+		const chatCompletion = vi
+			.fn()
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_bad",
+									type: "function",
+									function: {
+										name: "search_contacts",
+										arguments: '{"query": ""}',
+									},
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+			})
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: "Please provide a search term.",
+							tool_calls: undefined,
+						},
+						finish_reason: "stop",
+					},
+				],
+			});
+
+		const deps = createMockDeps({
+			llmClient: { chatCompletion },
+		});
+
+		const event = {
+			type: "text_message" as const,
+			userId,
+			sourceRef: "telegram:msg:6b",
+			correlationId,
+			text: "Search for...",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("text");
+		expect(chatCompletion).toHaveBeenCalledTimes(2);
+		// Handler should NOT have been called due to validation failure
+		expect(mockedHandleSearchContacts).not.toHaveBeenCalled();
+	});
+
+	it("still provides stub results for other read-only tools", async () => {
+		const chatCompletion = vi
+			.fn()
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_qb",
+									type: "function",
+									function: {
+										name: "query_birthday",
+										arguments: '{"contact_id": 1}',
+									},
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+			})
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: "That feature is not yet available.",
+							tool_calls: undefined,
+						},
+						finish_reason: "stop",
+					},
+				],
+			});
+
+		const deps = createMockDeps({
+			llmClient: { chatCompletion },
+		});
+
+		const event = {
+			type: "text_message" as const,
+			userId,
+			sourceRef: "telegram:msg:6c",
+			correlationId,
+			text: "What is Jane's birthday?",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("text");
+		expect(chatCompletion).toHaveBeenCalledTimes(2);
+
+		// Verify stub result was sent for query_birthday
+		const secondCall = chatCompletion.mock.calls[1];
+		const messages = secondCall[0];
+		const toolResultMsg = messages.find(
+			(m: { role: string; tool_call_id?: string }) =>
+				m.role === "tool" && m.tool_call_id === "call_qb",
+		);
+		expect(toolResultMsg).toBeTruthy();
+		expect(toolResultMsg.content).toContain("not_implemented");
 	});
 
 	it("caps at 5 iterations and returns graceful fallback", async () => {

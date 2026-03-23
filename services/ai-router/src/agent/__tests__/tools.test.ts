@@ -75,10 +75,34 @@ describe("TOOL_ARG_SCHEMAS", () => {
 		}
 	});
 
-	it("has no entries for read-only tools", () => {
+	it("has no entries for read-only tools except search_contacts", () => {
 		for (const name of READ_ONLY_TOOLS) {
+			if (name === "search_contacts") continue;
 			expect(TOOL_ARG_SCHEMAS).not.toHaveProperty(name);
 		}
+	});
+
+	it("has an entry for search_contacts", () => {
+		expect(TOOL_ARG_SCHEMAS).toHaveProperty("search_contacts");
+	});
+
+	it("validates valid search_contacts args", () => {
+		const result = TOOL_ARG_SCHEMAS.search_contacts.safeParse({
+			query: "mom",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects search_contacts with empty query", () => {
+		const result = TOOL_ARG_SCHEMAS.search_contacts.safeParse({
+			query: "",
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects search_contacts with missing query", () => {
+		const result = TOOL_ARG_SCHEMAS.search_contacts.safeParse({});
+		expect(result.success).toBe(false);
 	});
 
 	it("validates valid create_note args", () => {

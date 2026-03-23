@@ -7,6 +7,7 @@
  */
 
 import crypto from "node:crypto";
+import type { ServiceClient } from "@monica-companion/auth";
 import { createLogger } from "@monica-companion/observability";
 import type { InboundEvent } from "@monica-companion/types";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
@@ -17,9 +18,11 @@ import type { LlmClient } from "./llm-client.js";
 import type { PendingToolCall } from "./pending-tool-call.js";
 import { isPendingToolCallExpired, PendingToolCallSchema } from "./pending-tool-call.js";
 import { buildAgentSystemPrompt } from "./system-prompt.js";
+import { handleSearchContacts } from "./tool-handlers/search-contacts.js";
 import {
 	generateActionDescription,
 	MUTATING_TOOLS,
+	SearchContactsArgsSchema,
 	TOOL_ARG_SCHEMAS,
 	TOOL_DEFINITIONS,
 } from "./tools.js";
@@ -43,6 +46,7 @@ export interface AgentLoopDeps {
 		pendingToolCall: unknown,
 	) => Promise<void>;
 	pendingCommandTtlMinutes: number;
+	monicaServiceClient: ServiceClient;
 }
 
 /**
@@ -468,8 +472,50 @@ export async function runAgentLoop(
 					// Valid mutating tool call — intercept it
 					interceptedMutatingTool = { toolCall, parsedArgs };
 					hasIntercepted = true;
+				} else if (toolName === "search_contacts") {
+					// search_contacts: validate args, call handler
+					let parsedSearchArgs: Record<string, unknown>;
+					try {
+						parsedSearchArgs = JSON.parse(toolCall.function.arguments);
+					} catch {
+						toolResults.push({
+							role: "tool",
+							tool_call_id: toolCall.id,
+							content: JSON.stringify({
+								status: "error",
+								message: `Invalid JSON arguments for "${toolName}".`,
+							}),
+						});
+						continue;
+					}
+
+					const searchValidation = SearchContactsArgsSchema.safeParse(parsedSearchArgs);
+					if (!searchValidation.success) {
+						toolResults.push({
+							role: "tool",
+							tool_call_id: toolCall.id,
+							content: JSON.stringify({
+								status: "error",
+								message: `Invalid arguments for "${toolName}": ${searchValidation.error.issues.map((i: { message: string }) => i.message).join(", ")}`,
+							}),
+						});
+						continue;
+					}
+
+					const searchResult = await handleSearchContacts({
+						query: searchValidation.data.query,
+						serviceClient: deps.monicaServiceClient,
+						userId,
+						correlationId,
+					});
+
+					toolResults.push({
+						role: "tool",
+						tool_call_id: toolCall.id,
+						content: JSON.stringify(searchResult),
+					});
 				} else {
-					// Read-only tool: provide stub result (Stage 1 behavior)
+					// Other read-only tools: provide stub result (Stage 4)
 					toolResults.push({
 						role: "tool",
 						tool_call_id: toolCall.id,

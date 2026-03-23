@@ -38,13 +38,14 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
 		function: {
 			name: "search_contacts",
 			description:
-				"Search for contacts by name or other criteria. Returns a list of matching contacts with their IDs and basic info.",
+				"Search for contacts by name, nickname, or relationship term (e.g. 'mom', 'brother'). Returns matching contacts with contactId, displayName, aliases, relationship labels, birthdate, and match reason. Call this before any tool that requires a contactId.",
 			parameters: {
 				type: "object",
 				properties: {
 					query: {
 						type: "string",
-						description: "The search query (name, nickname, or other identifier)",
+						description:
+							"The search query: a name, nickname, or relationship term (e.g. 'Jane', 'mom', 'brother')",
 					},
 				},
 				required: ["query"],
@@ -287,6 +288,12 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
 	},
 ];
 
+// --- Zod argument schemas for read-only tools that require validation ---
+
+export const SearchContactsArgsSchema = z.object({
+	query: z.string().min(1),
+});
+
 // --- Zod argument schemas for mutating tools ---
 
 const CreateNoteArgsSchema = z.object({
@@ -337,6 +344,7 @@ const UpdateContactAddressArgsSchema = z.object({
  * Used to validate tool arguments before serialization into pendingToolCall.
  */
 export const TOOL_ARG_SCHEMAS: Record<string, z.ZodType> = {
+	search_contacts: SearchContactsArgsSchema,
 	create_note: CreateNoteArgsSchema,
 	create_contact: CreateContactArgsSchema,
 	create_activity: CreateActivityArgsSchema,
