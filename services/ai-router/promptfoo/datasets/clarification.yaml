@@ -395,3 +395,54 @@
       value: "JSON.parse(output).intent === 'clarification_response'"
     - type: javascript
       value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('elena'))"
+
+# ========================================================================
+# Narrowing with active pending command context (cl-031 to cl-033)
+# These cases verify the LLM produces contactRef during narrowing when
+# there is an active create_note draft — the scenario where the note body
+# was previously captured and only the contact needs disambiguation.
+# ========================================================================
+- description: "Name-only narrowing response with active create_note draft"
+  vars:
+    utterance: "Yelena"
+    recentTurns: '[{"role":"user","summary":"User asked to add a note to mum: she called me today","createdAt":"2026-03-22T22:10:00Z","correlationId":"corr-cl031"},{"role":"assistant","summary":"Found 8 contacts matching mum. Asked user to provide name to narrow it down.","createdAt":"2026-03-22T22:10:05Z","correlationId":"corr-cl031"}]'
+    activePendingCommand: '{"pendingCommandId":"cmd-cl031","version":3,"status":"draft","commandType":"create_note"}'
+  metadata:
+    id: "cl-031"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yelena'))"
+
+- description: "Voice-style name during narrowing with active create_note draft"
+  vars:
+    utterance: "its yelena my mum"
+    recentTurns: '[{"role":"user","summary":"User asked to add a note to mum about going to the park","createdAt":"2026-03-22T22:10:00Z","correlationId":"corr-cl032"},{"role":"assistant","summary":"Found 8 contacts matching mum. Asked for name to narrow down.","createdAt":"2026-03-22T22:10:05Z","correlationId":"corr-cl032"}]'
+    activePendingCommand: '{"pendingCommandId":"cmd-cl032","version":3,"status":"draft","commandType":"create_note"}'
+  metadata:
+    id: "cl-032"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yelena'))"
+
+- description: "Name narrowing during active update_contact_birthday draft"
+  vars:
+    utterance: "David Chen"
+    recentTurns: '[{"role":"user","summary":"User asked to update dad birthday to March 15","createdAt":"2026-03-22T10:00:00Z","correlationId":"corr-cl033"},{"role":"assistant","summary":"Found 6 contacts matching dad. Asked for name to narrow down.","createdAt":"2026-03-22T10:00:05Z","correlationId":"corr-cl033"}]'
+    activePendingCommand: '{"pendingCommandId":"cmd-cl033","version":2,"status":"draft","commandType":"update_contact_birthday"}'
+  metadata:
+    id: "cl-033"
+    category: "clarification"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: "JSON.parse(output).intent === 'clarification_response'"
+    - type: javascript
+      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david chen'))"

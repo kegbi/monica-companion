@@ -290,6 +290,44 @@ async function handleMutatingCommand(state: State, deps: ExecuteActionDeps): Pro
 async function handleClarificationResponse(state: State, deps: ExecuteActionDeps): Promise<Update> {
 	const { intentClassification, activePendingCommand } = state;
 
+	// --- Contact resolution merge path ---
+	// When contactResolution resolved a contact (via narrowing or direct resolution)
+	// and there is an active draft, merge the contactId into the EXISTING DB payload.
+	// This handles cases where the LLM didn't reproduce the full commandPayload for
+	// name-only clarifications (e.g., user said "Yelena" during narrowing).
+	if (
+		state.contactResolution?.outcome === "resolved" &&
+		state.contactResolution.resolved &&
+		activePendingCommand &&
+		activePendingCommand.status === "draft"
+	) {
+		const command = await deps.getPendingCommand(deps.db, activePendingCommand.pendingCommandId);
+		if (command) {
+			const existingPayload = command.payload as Record<string, unknown>;
+			const mergedPayload = {
+				...existingPayload,
+				contactId: state.contactResolution.resolved.contactId,
+			} as MutatingCommandPayload;
+
+			const validated = MutatingCommandPayloadSchema.safeParse(mergedPayload);
+			if (validated.success) {
+				const updatedRow = await deps.updateDraftPayload(
+					deps.db,
+					command.id,
+					command.version,
+					mergedPayload,
+					deps.pendingCommandTtlMinutes,
+				);
+				if (updatedRow) {
+					if (state.narrowingContext) {
+						await deps.clearNarrowingContext(deps.db, updatedRow.id);
+					}
+					return transitionToConfirmationAndCheckAutoConfirm(state, deps, updatedRow);
+				}
+			}
+		}
+	}
+
 	// MEDIUM-1 fix: Persist narrowing context independently BEFORE the existing handler logic.
 	// During narrowing, short replies like "Elena" may not produce commandType/commandPayload
 	// from the LLM, which would cause the passthrough guard below to fire.
@@ -691,6 +729,19 @@ async function handleConfirm(
 						reason: "Could not transition command for disambiguation.",
 					} as ActionOutcome,
 				};
+			}
+
+			// Persist narrowingContext to DB so the next invocation can continue
+			// the progressive narrowing flow. Without this, the narrowingContext
+			// set by resolveDeferredContact in graph state would be lost between
+			// invocations, breaking multi-turn narrowing after confirm-then-resolve.
+			if (state.narrowingContext) {
+				await deps.updateNarrowingContext(
+					deps.db,
+					draftRow.id,
+					draftRow.version,
+					state.narrowingContext as unknown as Record<string, unknown>,
+				);
 			}
 
 			return {

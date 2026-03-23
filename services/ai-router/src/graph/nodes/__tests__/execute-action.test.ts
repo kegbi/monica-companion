@@ -1940,6 +1940,278 @@ describe("executeActionNode", () => {
 		expect(mockSchedulerExecute).not.toHaveBeenCalled();
 	});
 
+	// --- Bug fix: Persist narrowingContext in handleConfirm's ambiguous path ---
+
+	it("persists narrowingContext to DB when handleConfirm deferred resolution is ambiguous (>5 candidates)", async () => {
+		const activePendingCommand: PendingCommandRef = {
+			pendingCommandId: "cmd-narrow-persist",
+			version: 2,
+			status: "pending_confirmation",
+			commandType: "create_note",
+		};
+
+		const confirmClassification: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: 'I found 8 contacts matching "mom". Can you tell me their name?',
+			commandType: "create_note",
+			contactRef: null,
+			commandPayload: null,
+			confidence: 1.0,
+			needsClarification: true,
+			clarificationReason: "ambiguous_contact",
+		};
+
+		const pendingRow = {
+			id: "cmd-narrow-persist",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "she called me today" },
+			status: "pending_confirmation",
+			version: 2,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			unresolvedContactRef: "mom",
+		};
+		mockGetPendingCommand.mockResolvedValue(pendingRow);
+
+		const draftRow = {
+			...pendingRow,
+			status: "draft",
+			version: 3,
+		};
+		mockTransitionStatus.mockResolvedValue(draftRow);
+		mockUpdateNarrowingContext.mockResolvedValue({ ...draftRow, version: 4 });
+
+		const narrowingContext = {
+			originalContactRef: "mom",
+			clarifications: [],
+			round: 0,
+			narrowingCandidateIds: [1, 2, 3, 4, 5, 6, 7, 8],
+		};
+
+		const node = createExecuteActionNode(makeDeps());
+		const update = await node(
+			makeState(confirmClassification, {
+				activePendingCommand,
+				narrowingContext,
+				contactResolution: {
+					outcome: "ambiguous",
+					resolved: null,
+					candidates: Array.from({ length: 5 }, (_, i) => ({
+						contactId: i + 1,
+						displayName: `Contact ${i + 1}`,
+						score: 0.5,
+					})),
+					query: "mom",
+				},
+				inboundEvent: {
+					type: "callback_action" as const,
+					userId: "550e8400-e29b-41d4-a716-446655440000",
+					sourceRef: "tg:cb:789",
+					correlationId: "corr-123",
+					action: "confirm",
+					data: "cmd-narrow-persist:2",
+				},
+			}),
+		);
+
+		expect(update.actionOutcome?.type).toBe("edit_draft");
+		// CRITICAL: narrowingContext must be persisted to DB so the next invocation can continue narrowing
+		expect(mockUpdateNarrowingContext).toHaveBeenCalledWith(
+			expect.anything(),
+			"cmd-narrow-persist",
+			3,
+			narrowingContext,
+		);
+	});
+
+	// --- Bug fix: contactId merged into DB draft when narrowing resolves contact ---
+
+	it("merges resolved contactId into existing DB draft payload during clarification_response (LLM commandType null)", async () => {
+		// Scenario: narrowing resolved a single contact, but LLM only produced contactRef "Yelena"
+		// with commandType null (common for name-only clarifications). The contactId must be merged
+		// into the EXISTING DB draft payload, preserving the original note body.
+		const clarificationResponse: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Thanks — what note would you like me to add for Yelena?",
+			commandType: null,
+			contactRef: "Yelena",
+			commandPayload: null,
+			confidence: 0.8,
+			needsClarification: false,
+		};
+
+		const activePendingCommand: PendingCommandRef = {
+			pendingCommandId: "cmd-merge-1",
+			version: 2,
+			status: "draft",
+			commandType: "create_note",
+		};
+
+		// DB draft has the original payload with body but no contactId
+		const dbDraftRow = {
+			id: "cmd-merge-1",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "she called me today" },
+			status: "draft",
+			version: 2,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		mockGetPendingCommand.mockResolvedValue(dbDraftRow);
+
+		const updatedRow = {
+			...dbDraftRow,
+			payload: { type: "create_note", contactId: 42, body: "she called me today" },
+			version: 3,
+		};
+		mockUpdateDraftPayload.mockResolvedValue(updatedRow);
+		mockTransitionStatus.mockResolvedValue({
+			...updatedRow,
+			status: "pending_confirmation",
+			version: 4,
+		});
+
+		const node = createExecuteActionNode(makeDeps());
+		const update = await node(
+			makeState(clarificationResponse, {
+				activePendingCommand,
+				contactResolution: {
+					outcome: "resolved",
+					resolved: {
+						contactId: 42,
+						displayName: "Yelena Yuryevna",
+						aliases: ["Yelena"],
+						relationshipLabels: ["parent"],
+						importantDates: [],
+						lastInteractionAt: null,
+					},
+					candidates: [],
+					query: "mom",
+				},
+			}),
+		);
+
+		// Must merge contactId into the EXISTING DB payload, preserving body
+		expect(mockUpdateDraftPayload).toHaveBeenCalledWith(
+			expect.anything(),
+			"cmd-merge-1",
+			2,
+			expect.objectContaining({
+				type: "create_note",
+				contactId: 42,
+				body: "she called me today",
+			}),
+			30,
+		);
+		// Must transition to pending_confirmation, not passthrough
+		expect(update.actionOutcome?.type).toBe("pending_created");
+		expect(mockTransitionStatus).toHaveBeenCalled();
+	});
+
+	it("merges resolved contactId into DB draft when LLM provides commandType but no body", async () => {
+		// LLM reproduced commandType but not the body — system must use DB payload as base
+		const clarificationResponse: IntentClassificationResult = {
+			intent: "clarification_response",
+			detectedLanguage: "en",
+			userFacingText: "Got it, adding note to Yelena.",
+			commandType: "create_note",
+			contactRef: "Yelena",
+			commandPayload: { contactId: 42 }, // LLM has contactId but lost the body
+			confidence: 0.8,
+			needsClarification: false,
+		};
+
+		const activePendingCommand: PendingCommandRef = {
+			pendingCommandId: "cmd-merge-2",
+			version: 2,
+			status: "draft",
+			commandType: "create_note",
+		};
+
+		const dbDraftRow = {
+			id: "cmd-merge-2",
+			userId: "550e8400-e29b-41d4-a716-446655440000",
+			commandType: "create_note",
+			payload: { type: "create_note", body: "she called me today" },
+			status: "draft",
+			version: 2,
+			sourceMessageRef: "tg:msg:456",
+			correlationId: "corr-123",
+			expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+			confirmedAt: null,
+			executedAt: null,
+			terminalAt: null,
+			executionResult: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		mockGetPendingCommand.mockResolvedValue(dbDraftRow);
+
+		const updatedRow = {
+			...dbDraftRow,
+			payload: { type: "create_note", contactId: 42, body: "she called me today" },
+			version: 3,
+		};
+		mockUpdateDraftPayload.mockResolvedValue(updatedRow);
+		mockTransitionStatus.mockResolvedValue({
+			...updatedRow,
+			status: "pending_confirmation",
+			version: 4,
+		});
+
+		const node = createExecuteActionNode(makeDeps());
+		const update = await node(
+			makeState(clarificationResponse, {
+				activePendingCommand,
+				contactResolution: {
+					outcome: "resolved",
+					resolved: {
+						contactId: 42,
+						displayName: "Yelena Yuryevna",
+						aliases: ["Yelena"],
+						relationshipLabels: ["parent"],
+						importantDates: [],
+						lastInteractionAt: null,
+					},
+					candidates: [],
+					query: "mom",
+				},
+			}),
+		);
+
+		// Must use DB payload as base, not LLM's commandPayload
+		expect(mockUpdateDraftPayload).toHaveBeenCalledWith(
+			expect.anything(),
+			"cmd-merge-2",
+			2,
+			expect.objectContaining({
+				type: "create_note",
+				contactId: 42,
+				body: "she called me today",
+			}),
+			30,
+		);
+		expect(update.actionOutcome?.type).toBe("pending_created");
+	});
+
 	it("does NOT skip auto-confirm when unresolvedContactRef is set", async () => {
 		mockGetPreferences.mockResolvedValue({
 			language: "en",

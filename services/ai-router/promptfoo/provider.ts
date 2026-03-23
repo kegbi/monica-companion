@@ -19,7 +19,7 @@
 
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { createIntentClassifier } from "../src/graph/llm.js";
-import type { TurnSummary } from "../src/graph/state.js";
+import type { PendingCommandRef, TurnSummary } from "../src/graph/state.js";
 import { buildSystemPrompt } from "../src/graph/system-prompt.js";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
@@ -54,7 +54,13 @@ export default class IntentClassifierProvider {
 			recentTurns = JSON.parse(rawTurns) as TurnSummary[];
 		}
 
-		const systemPrompt = buildSystemPrompt({ recentTurns });
+		let activePendingCommand: PendingCommandRef | undefined;
+		const rawPending = context?.vars?.activePendingCommand;
+		if (typeof rawPending === "string" && rawPending.length > 0) {
+			activePendingCommand = JSON.parse(rawPending) as PendingCommandRef;
+		}
+
+		const systemPrompt = buildSystemPrompt({ recentTurns, activePendingCommand });
 		const messages = [new SystemMessage(systemPrompt), new HumanMessage(prompt)];
 		const result = await classifier.invoke(messages);
 		return { output: JSON.stringify(result) };
