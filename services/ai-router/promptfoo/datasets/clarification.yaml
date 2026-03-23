@@ -1,16 +1,23 @@
 # ALL DATA IN THIS FILE IS SYNTHETIC. No real user data, API keys,
 # credentials, or PII is used.
 #
-# Clarification turn benchmark fixtures: 25 cases total
+# Clarification turn benchmark fixtures: 33 cases total
 # - Disambiguation questions (cl-001 to cl-005)
 # - Disambiguation answers (cl-006 to cl-010)
 # - Confirmations (cl-011 to cl-015)
 # - Negations (cl-016 to cl-019)
 # - Edits / corrections (cl-020 to cl-022)
 # - Provide missing info (cl-023 to cl-025)
+# - Kinship narrowing & contact disambiguation regressions (cl-026 to cl-030)
+# - Narrowing with active pending command context (cl-031 to cl-033)
+#
+# Groups:
+# - Group A: No-context cases (standalone utterances)
+# - Group B: Cases with conversationHistory (migrated from recentTurns)
+# - Group C: Cases with conversationHistory including pending command context
 
 # ========================================================================
-# Disambiguation questions (cl-001 to cl-005)
+# Disambiguation questions
 # ========================================================================
 - description: "Disambiguation question - which Sherry"
   vars:
@@ -21,7 +28,14 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Disambiguation question - which Alex"
   vars:
@@ -32,7 +46,14 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Voice-style disambiguation - which David"
   vars:
@@ -43,7 +64,14 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Disambiguation question in Spanish"
   vars:
@@ -54,7 +82,14 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Disambiguation question - asking for options"
   vars:
@@ -65,24 +100,47 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 # ========================================================================
-# Disambiguation answers (cl-006 to cl-010)
+# Disambiguation answers
 # ========================================================================
 - description: "Disambiguation answer - the one from work (with prior ambiguity context)"
   vars:
     utterance: "The one from work"
-    recentTurns: '[{"role":"user","summary":"User asked to add a note to Alex","createdAt":"2026-03-22T10:00:00Z","correlationId":"corr-cl006"},{"role":"assistant","summary":"Which Alex? Alex Torres from work or Alex Kim from school?","createdAt":"2026-03-22T10:00:05Z","correlationId":"corr-cl006"}]'
+    conversationHistory: "[{\"role\":\"user\",\"content\":\"Add a note to Alex\"},{\"role\":\"assistant\",\"content\":\"Which Alex? Alex Torres from work or Alex Kim from school?\"}]"
   metadata:
     id: "cl-006"
     category: "clarification"
+    expectedContactRef: "alex torres"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex torres'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        if (calls.length === 0) return parsed.text != null;
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return false;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex torres')
+      metric: contactResolution
 
 - description: "Disambiguation answer - the friend"
   vars:
@@ -90,12 +148,18 @@
   metadata:
     id: "cl-007"
     category: "clarification"
+    expectedContactRef: "friend"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('friend'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Voice-style disambiguation answer with full name"
   vars:
@@ -103,12 +167,18 @@
   metadata:
     id: "cl-008"
     category: "clarification"
+    expectedContactRef: "alex torres"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex torres'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Disambiguation answer with last name"
   vars:
@@ -116,12 +186,18 @@
   metadata:
     id: "cl-009"
     category: "clarification"
+    expectedContactRef: "david chen"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david chen'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Disambiguation answer - my husband"
   vars:
@@ -129,15 +205,21 @@
   metadata:
     id: "cl-010"
     category: "clarification"
+    expectedContactRef: "husband"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
-    - type: javascript
-      value: "JSON.parse(output).contactRef && (JSON.parse(output).contactRef.toLowerCase().includes('husband') || JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 # ========================================================================
-# Confirmations (cl-011 to cl-015)
+# Confirmations
 # ========================================================================
 - description: "Simple confirmation - yes"
   vars:
@@ -148,7 +230,14 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Voice-style confirmation"
   vars:
@@ -159,7 +248,14 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Confirmation - correct"
   vars:
@@ -170,7 +266,14 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Confirmation in French"
   vars:
@@ -181,7 +284,14 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Confirmation with emphasis"
   vars:
@@ -192,10 +302,17 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 # ========================================================================
-# Negations (cl-016 to cl-019)
+# Negations
 # ========================================================================
 - description: "Simple negation"
   vars:
@@ -206,7 +323,14 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Voice-style negation with correction"
   vars:
@@ -217,7 +341,14 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Negation with cancellation"
   vars:
@@ -228,7 +359,14 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Negation in German"
   vars:
@@ -239,10 +377,17 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 # ========================================================================
-# Edits / corrections (cl-020 to cl-022)
+# Edits / corrections
 # ========================================================================
 - description: "Edit - change the name"
   vars:
@@ -250,12 +395,18 @@
   metadata:
     id: "cl-020"
     category: "clarification"
+    expectedContactRef: "david park"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david park'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Voice-style edit with correction"
   vars:
@@ -263,41 +414,70 @@
   metadata:
     id: "cl-021"
     category: "clarification"
+    expectedContactRef: "sherry chen"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sherry chen'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Edit with partial correction (with prior turn context)"
   vars:
     utterance: "Change that to Alex Kim instead"
-    recentTurns: '[{"role":"user","summary":"User asked to add a note to Alex Torres about the project","createdAt":"2026-03-22T10:00:00Z","correlationId":"corr-cl022"},{"role":"assistant","summary":"Proposed creating a note for Alex Torres about the project, waiting for confirmation","createdAt":"2026-03-22T10:00:05Z","correlationId":"corr-cl022"}]'
+    conversationHistory: "[{\"role\":\"user\",\"content\":\"Add a note to Alex Torres about the project\"},{\"role\":\"assistant\",\"content\":\"I'll create a note for Alex Torres about the project. Please confirm.\"}]"
   metadata:
     id: "cl-022"
     category: "clarification"
+    expectedContactRef: "alex kim"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex kim'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        if (calls.length === 0) return parsed.text != null;
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return false;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex kim')
+      metric: contactResolution
 
 # ========================================================================
-# Provide missing info (cl-023 to cl-025)
+# Provide missing info
 # ========================================================================
 - description: "Provide missing date info (with prior turn asking for date)"
   vars:
     utterance: "The date is March 15th"
-    recentTurns: '[{"role":"user","summary":"User asked to update Sarah birthday","createdAt":"2026-03-22T10:00:00Z","correlationId":"corr-cl023"},{"role":"assistant","summary":"Asked user what date Sarah birthday should be updated to","createdAt":"2026-03-22T10:00:05Z","correlationId":"corr-cl023"}]'
+    conversationHistory: "[{\"role\":\"user\",\"content\":\"Update Sarah's birthday\"},{\"role\":\"assistant\",\"content\":\"What date should I set Sarah's birthday to?\"}]"
   metadata:
     id: "cl-023"
     category: "clarification"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Voice-style provide missing phone number"
   vars:
@@ -308,7 +488,14 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 - description: "Provide missing email in Portuguese"
   vars:
@@ -319,130 +506,257 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
 
 # ========================================================================
-# Kinship narrowing & contact disambiguation regressions (cl-026 to cl-030)
+# Kinship narrowing & contact disambiguation regressions
 # ========================================================================
 - description: "Narrowing response - single name after kinship ambiguity"
   vars:
     utterance: "Elena"
-    recentTurns: '[{"role":"user","summary":"User asked to add a note to mum about going to the artillery park","createdAt":"2026-03-22T18:52:00Z","correlationId":"corr-cl026"},{"role":"assistant","summary":"Found 8 contacts matching mum, asked user to provide the name to narrow it down","createdAt":"2026-03-22T18:53:00Z","correlationId":"corr-cl026"}]'
+    conversationHistory: "[{\"role\":\"user\",\"content\":\"Add a note to mum about going to the artillery park\"},{\"role\":\"assistant\",\"content\":\"I found 8 contacts matching mum. What is your mom's name so I can narrow it down?\"}]"
   metadata:
     id: "cl-026"
     category: "clarification"
+    expectedContactRef: "elena"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('elena'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        if (calls.length === 0) return parsed.text != null;
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return false;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('elena')
+      metric: contactResolution
 
 - description: "Language switch with name correction during disambiguation"
   vars:
     utterance: "Speak english. The name is elena"
-    recentTurns: '[{"role":"user","summary":"User asked to add a note to mum","createdAt":"2026-03-22T18:52:00Z","correlationId":"corr-cl027"},{"role":"assistant","summary":"Found 8 contacts matching mum, asked for name","createdAt":"2026-03-22T18:53:00Z","correlationId":"corr-cl027"},{"role":"assistant","summary":"Responded in Serbian asking about Jelena","createdAt":"2026-03-22T18:53:45Z","correlationId":"corr-cl027"}]'
+    conversationHistory: "[{\"role\":\"user\",\"content\":\"Add a note to mum\"},{\"role\":\"assistant\",\"content\":\"I found 8 contacts matching mum. What is your mom's name?\"},{\"role\":\"assistant\",\"content\":\"Da li mislite na Jelenu?\"}]"
   metadata:
     id: "cl-027"
     category: "clarification"
+    expectedContactRef: "elena"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).detectedLanguage === 'en'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('elena'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        if (calls.length === 0) return parsed.text != null;
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return false;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('elena')
+      metric: contactResolution
 
 - description: "Voice-style narrowing with kinship and first name"
   vars:
     utterance: "its my mum elena"
-    recentTurns: '[{"role":"user","summary":"User asked to add a note to mum","createdAt":"2026-03-22T18:52:00Z","correlationId":"corr-cl028"},{"role":"assistant","summary":"Found 8 contacts matching mum, asked for name","createdAt":"2026-03-22T18:53:00Z","correlationId":"corr-cl028"}]'
+    conversationHistory: "[{\"role\":\"user\",\"content\":\"Add a note to mum\"},{\"role\":\"assistant\",\"content\":\"I found 8 contacts matching mum. What is your mom's name?\"}]"
   metadata:
     id: "cl-028"
     category: "clarification"
+    expectedContactRef: "elena"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('elena'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        if (calls.length === 0) return parsed.text != null;
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return false;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('elena')
+      metric: contactResolution
 
 - description: "Short single-word name response during contact disambiguation"
   vars:
     utterance: "David"
-    recentTurns: '[{"role":"user","summary":"User asked to add a note to dad","createdAt":"2026-03-22T10:00:00Z","correlationId":"corr-cl029"},{"role":"assistant","summary":"Found 6 contacts matching dad, asked for name to narrow it down","createdAt":"2026-03-22T10:00:05Z","correlationId":"corr-cl029"}]'
+    conversationHistory: "[{\"role\":\"user\",\"content\":\"Add a note to dad\"},{\"role\":\"assistant\",\"content\":\"I found 6 contacts matching dad. What is your dad's name?\"}]"
   metadata:
     id: "cl-029"
     category: "clarification"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        if (calls.length === 0) return parsed.text != null;
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return false;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Full name response to narrow kinship-based ambiguity"
   vars:
     utterance: "Elena Yuryevna"
-    recentTurns: '[{"role":"user","summary":"User asked to create a note for mum about the artillery park visit","createdAt":"2026-03-22T18:52:00Z","correlationId":"corr-cl030"},{"role":"assistant","summary":"Found 8 contacts matching mum via kinship. Asked user to provide name to narrow down.","createdAt":"2026-03-22T18:53:00Z","correlationId":"corr-cl030"}]'
+    conversationHistory: "[{\"role\":\"user\",\"content\":\"Create a note for mum about the artillery park visit\"},{\"role\":\"assistant\",\"content\":\"I found 8 contacts matching mum. What is your mom's name so I can narrow it down?\"}]"
   metadata:
     id: "cl-030"
     category: "clarification"
+    expectedContactRef: "elena"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('elena'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        if (calls.length === 0) return parsed.text != null;
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return false;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('elena')
+      metric: contactResolution
 
 # ========================================================================
-# Narrowing with active pending command context (cl-031 to cl-033)
-# These cases verify the LLM produces contactRef during narrowing when
-# there is an active create_note draft — the scenario where the note body
-# was previously captured and only the contact needs disambiguation.
+# Narrowing with active pending command context
 # ========================================================================
 - description: "Name-only narrowing response with active create_note draft"
   vars:
     utterance: "Yelena"
-    recentTurns: '[{"role":"user","summary":"User asked to add a note to mum: she called me today","createdAt":"2026-03-22T22:10:00Z","correlationId":"corr-cl031"},{"role":"assistant","summary":"Found 8 contacts matching mum. Asked user to provide name to narrow it down.","createdAt":"2026-03-22T22:10:05Z","correlationId":"corr-cl031"}]'
-    activePendingCommand: '{"pendingCommandId":"cmd-cl031","version":3,"status":"draft","commandType":"create_note"}'
+    conversationHistory: "[{\"role\":\"user\",\"content\":\"Add a note to mum: she called me today\"},{\"role\":\"assistant\",\"content\":\"I found 8 contacts matching mum. What is your mom's name so I can narrow it down?\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"pending-1\",\"type\":\"function\",\"function\":{\"name\":\"search_contacts\",\"arguments\":\"{\\\"query\\\":\\\"mum\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"pending-1\",\"content\":\"{\\\"status\\\":\\\"ok\\\",\\\"contacts\\\":[{\\\"contactId\\\":1,\\\"displayName\\\":\\\"Contact 1\\\"},{\\\"contactId\\\":2,\\\"displayName\\\":\\\"Contact 2\\\"},{\\\"contactId\\\":3,\\\"displayName\\\":\\\"Contact 3\\\"},{\\\"contactId\\\":4,\\\"displayName\\\":\\\"Contact 4\\\"},{\\\"contactId\\\":5,\\\"displayName\\\":\\\"Contact 5\\\"},{\\\"contactId\\\":6,\\\"displayName\\\":\\\"Contact 6\\\"},{\\\"contactId\\\":7,\\\"displayName\\\":\\\"Contact 7\\\"},{\\\"contactId\\\":8,\\\"displayName\\\":\\\"Contact 8\\\"}]}\"}]"
   metadata:
     id: "cl-031"
     category: "clarification"
+    expectedContactRef: "yelena"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yelena'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        if (calls.length === 0) return parsed.text != null;
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return false;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yelena')
+      metric: contactResolution
 
 - description: "Voice-style name during narrowing with active create_note draft"
   vars:
     utterance: "its yelena my mum"
-    recentTurns: '[{"role":"user","summary":"User asked to add a note to mum about going to the park","createdAt":"2026-03-22T22:10:00Z","correlationId":"corr-cl032"},{"role":"assistant","summary":"Found 8 contacts matching mum. Asked for name to narrow down.","createdAt":"2026-03-22T22:10:05Z","correlationId":"corr-cl032"}]'
-    activePendingCommand: '{"pendingCommandId":"cmd-cl032","version":3,"status":"draft","commandType":"create_note"}'
+    conversationHistory: "[{\"role\":\"user\",\"content\":\"Add a note to mum about going to the park\"},{\"role\":\"assistant\",\"content\":\"I found 8 contacts matching mum. What is your mom's name?\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"pending-1\",\"type\":\"function\",\"function\":{\"name\":\"search_contacts\",\"arguments\":\"{\\\"query\\\":\\\"mum\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"pending-1\",\"content\":\"{\\\"status\\\":\\\"ok\\\",\\\"contacts\\\":[{\\\"contactId\\\":1,\\\"displayName\\\":\\\"Contact 1\\\"},{\\\"contactId\\\":2,\\\"displayName\\\":\\\"Contact 2\\\"},{\\\"contactId\\\":3,\\\"displayName\\\":\\\"Contact 3\\\"},{\\\"contactId\\\":4,\\\"displayName\\\":\\\"Contact 4\\\"},{\\\"contactId\\\":5,\\\"displayName\\\":\\\"Contact 5\\\"},{\\\"contactId\\\":6,\\\"displayName\\\":\\\"Contact 6\\\"},{\\\"contactId\\\":7,\\\"displayName\\\":\\\"Contact 7\\\"},{\\\"contactId\\\":8,\\\"displayName\\\":\\\"Contact 8\\\"}]}\"}]"
   metadata:
     id: "cl-032"
     category: "clarification"
+    expectedContactRef: "yelena"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yelena'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        if (calls.length === 0) return parsed.text != null;
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return false;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yelena')
+      metric: contactResolution
 
 - description: "Name narrowing during active update_contact_birthday draft"
   vars:
     utterance: "David Chen"
-    recentTurns: '[{"role":"user","summary":"User asked to update dad birthday to March 15","createdAt":"2026-03-22T10:00:00Z","correlationId":"corr-cl033"},{"role":"assistant","summary":"Found 6 contacts matching dad. Asked for name to narrow down.","createdAt":"2026-03-22T10:00:05Z","correlationId":"corr-cl033"}]'
-    activePendingCommand: '{"pendingCommandId":"cmd-cl033","version":2,"status":"draft","commandType":"update_contact_birthday"}'
+    conversationHistory: "[{\"role\":\"user\",\"content\":\"Update dad's birthday to March 15\"},{\"role\":\"assistant\",\"content\":\"I found 6 contacts matching dad. What is your dad's name?\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"pending-1\",\"type\":\"function\",\"function\":{\"name\":\"search_contacts\",\"arguments\":\"{\\\"query\\\":\\\"dad\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"pending-1\",\"content\":\"{\\\"status\\\":\\\"ok\\\",\\\"contacts\\\":[{\\\"contactId\\\":1,\\\"displayName\\\":\\\"Contact 1\\\"},{\\\"contactId\\\":2,\\\"displayName\\\":\\\"Contact 2\\\"},{\\\"contactId\\\":3,\\\"displayName\\\":\\\"Contact 3\\\"},{\\\"contactId\\\":4,\\\"displayName\\\":\\\"Contact 4\\\"},{\\\"contactId\\\":5,\\\"displayName\\\":\\\"Contact 5\\\"},{\\\"contactId\\\":6,\\\"displayName\\\":\\\"Contact 6\\\"}]}\"}]"
   metadata:
     id: "cl-033"
     category: "clarification"
+    expectedContactRef: "david chen"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'clarification_response'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david chen'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        if (calls.length === 0) return parsed.text != null;
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return false;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david chen')
+      metric: contactResolution

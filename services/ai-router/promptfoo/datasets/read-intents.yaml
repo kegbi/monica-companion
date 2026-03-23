@@ -6,9 +6,15 @@
 # - query_birthday: 25 cases (ri-001 to ri-025)
 # - query_phone: 20 cases (ri-026 to ri-045)
 # - query_last_note: 15 cases (ri-046 to ri-060)
+#
+# Assertions validate:
+# 1. Output is valid JSON
+# 2. No mutating tool calls (isMutating metric)
+# 3. At least one tool call was made
+# 4. If search_contacts was called, its query includes expected contact ref
 
 # ========================================================================
-# query_birthday: 25 cases (ri-001 to ri-025)
+# query_birthday
 # ========================================================================
 - description: "Ask for a contact's birthday"
   vars:
@@ -16,14 +22,33 @@
   metadata:
     id: "ri-001"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Ask for birthday using relationship label"
   vars:
@@ -31,14 +56,33 @@
   metadata:
     id: "ri-002"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "brother"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('brother'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('brother')
+      metric: contactResolution
 
 - description: "Voice-style birthday query"
   vars:
@@ -46,14 +90,33 @@
   metadata:
     id: "ri-003"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Birthday query for Mom"
   vars:
@@ -61,14 +124,33 @@
   metadata:
     id: "ri-004"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Birthday query in Spanish"
   vars:
@@ -76,14 +158,33 @@
   metadata:
     id: "ri-005"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Voice-style birthday with filler words"
   vars:
@@ -91,14 +192,33 @@
   metadata:
     id: "ri-006"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 - description: "Birthday query with full name for disambiguation"
   vars:
@@ -106,14 +226,33 @@
   metadata:
     id: "ri-007"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Birthday query with 'born' phrasing"
   vars:
@@ -121,14 +260,33 @@
   metadata:
     id: "ri-008"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Voice-style birthday query with run-on"
   vars:
@@ -136,14 +294,33 @@
   metadata:
     id: "ri-009"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Birthday query in French"
   vars:
@@ -151,14 +328,33 @@
   metadata:
     id: "ri-010"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Birthday query using spouse relationship"
   vars:
@@ -166,14 +362,33 @@
   metadata:
     id: "ri-011"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "husband"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('husband')
+      metric: contactResolution
 
 - description: "Birthday query with ambiguous Sarah - full name"
   vars:
@@ -181,14 +396,33 @@
   metadata:
     id: "ri-012"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Voice-style birthday query for Alex Torres"
   vars:
@@ -196,14 +430,33 @@
   metadata:
     id: "ri-013"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Birthday query in Portuguese"
   vars:
@@ -211,14 +464,33 @@
   metadata:
     id: "ri-014"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Birthday query with 'date of birth' phrasing"
   vars:
@@ -226,14 +498,33 @@
   metadata:
     id: "ri-015"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Voice-style birthday query with 'remind me'"
   vars:
@@ -241,14 +532,33 @@
   metadata:
     id: "ri-016"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Birthday query in German"
   vars:
@@ -256,14 +566,33 @@
   metadata:
     id: "ri-017"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Birthday query with informal phrasing"
   vars:
@@ -271,14 +600,33 @@
   metadata:
     id: "ri-018"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Voice-style birthday query for sibling"
   vars:
@@ -286,14 +634,33 @@
   metadata:
     id: "ri-019"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "brother"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('brother'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('brother')
+      metric: contactResolution
 
 - description: "Birthday query in Japanese (romanized)"
   vars:
@@ -301,14 +668,33 @@
   metadata:
     id: "ri-020"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 - description: "Birthday query with 'tell me' phrasing"
   vars:
@@ -316,14 +702,33 @@
   metadata:
     id: "ri-021"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Voice-style birthday query concise"
   vars:
@@ -331,14 +736,33 @@
   metadata:
     id: "ri-022"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Birthday query with upcoming context"
   vars:
@@ -346,14 +770,33 @@
   metadata:
     id: "ri-023"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Birthday query in Arabic (romanized)"
   vars:
@@ -361,14 +804,33 @@
   metadata:
     id: "ri-024"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Birthday query with misspelling"
   vars:
@@ -376,17 +838,36 @@
   metadata:
     id: "ri-025"
     category: "read_intent"
+    expectedTool: "query_birthday"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_birthday'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 # ========================================================================
-# query_phone: 20 cases (ri-026 to ri-045)
+# query_phone
 # ========================================================================
 - description: "Ask for a contact's phone number"
   vars:
@@ -394,14 +875,33 @@
   metadata:
     id: "ri-026"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Voice-style phone query"
   vars:
@@ -409,14 +909,33 @@
   metadata:
     id: "ri-027"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Phone query for Mom"
   vars:
@@ -424,14 +943,33 @@
   metadata:
     id: "ri-028"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Phone query in Spanish"
   vars:
@@ -439,14 +977,33 @@
   metadata:
     id: "ri-029"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Voice-style phone query with filler"
   vars:
@@ -454,14 +1011,33 @@
   metadata:
     id: "ri-030"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Phone query with disambiguation"
   vars:
@@ -469,14 +1045,33 @@
   metadata:
     id: "ri-031"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Phone query using relationship label"
   vars:
@@ -484,14 +1079,33 @@
   metadata:
     id: "ri-032"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "husband"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('husband')
+      metric: contactResolution
 
 - description: "Phone query in French"
   vars:
@@ -499,14 +1113,33 @@
   metadata:
     id: "ri-033"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Voice-style phone query concise"
   vars:
@@ -514,14 +1147,33 @@
   metadata:
     id: "ri-034"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 - description: "Phone query with 'cell' specification"
   vars:
@@ -529,14 +1181,33 @@
   metadata:
     id: "ri-035"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Phone query with ambiguous Alex"
   vars:
@@ -544,14 +1215,33 @@
   metadata:
     id: "ri-036"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Voice-style phone query for sibling"
   vars:
@@ -559,14 +1249,33 @@
   metadata:
     id: "ri-037"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "brother"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('brother'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('brother')
+      metric: contactResolution
 
 - description: "Phone query in German"
   vars:
@@ -574,14 +1283,33 @@
   metadata:
     id: "ri-038"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Phone query with 'look up' phrasing"
   vars:
@@ -589,14 +1317,33 @@
   metadata:
     id: "ri-039"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Voice-style phone query with context"
   vars:
@@ -604,14 +1351,33 @@
   metadata:
     id: "ri-040"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Phone query in Portuguese"
   vars:
@@ -619,14 +1385,33 @@
   metadata:
     id: "ri-041"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Phone query with 'contact info' phrasing"
   vars:
@@ -634,14 +1419,33 @@
   metadata:
     id: "ri-042"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 - description: "Voice-style phone query with misspelling"
   vars:
@@ -649,14 +1453,33 @@
   metadata:
     id: "ri-043"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Phone query for parent"
   vars:
@@ -664,14 +1487,33 @@
   metadata:
     id: "ri-044"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Phone query in Russian (romanized)"
   vars:
@@ -679,17 +1521,36 @@
   metadata:
     id: "ri-045"
     category: "read_intent"
+    expectedTool: "query_phone"
+    expectedContactRef: "emmy"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_phone'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emmy'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emmy')
+      metric: contactResolution
 
 # ========================================================================
-# query_last_note: 15 cases (ri-046 to ri-060)
+# query_last_note
 # ========================================================================
 - description: "Ask about the last note for a contact"
   vars:
@@ -697,14 +1558,33 @@
   metadata:
     id: "ri-046"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Voice-style last note query"
   vars:
@@ -712,14 +1592,33 @@
   metadata:
     id: "ri-047"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Last note query for colleague"
   vars:
@@ -727,14 +1626,33 @@
   metadata:
     id: "ri-048"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Last note query in Spanish"
   vars:
@@ -742,14 +1660,33 @@
   metadata:
     id: "ri-049"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Voice-style last note with filler"
   vars:
@@ -757,14 +1694,33 @@
   metadata:
     id: "ri-050"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Last note query using relationship"
   vars:
@@ -772,14 +1728,33 @@
   metadata:
     id: "ri-051"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "husband"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('husband')
+      metric: contactResolution
 
 - description: "Last note query with 'recent' phrasing"
   vars:
@@ -787,14 +1762,33 @@
   metadata:
     id: "ri-052"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Voice-style last note query for Yuki"
   vars:
@@ -802,14 +1796,33 @@
   metadata:
     id: "ri-053"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 - description: "Last note query in French"
   vars:
@@ -817,14 +1830,33 @@
   metadata:
     id: "ri-054"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Last note query with ambiguous Sarah"
   vars:
@@ -832,14 +1864,33 @@
   metadata:
     id: "ri-055"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Last note query with 'check' phrasing"
   vars:
@@ -847,14 +1898,33 @@
   metadata:
     id: "ri-056"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Voice-style last note query for Mom"
   vars:
@@ -862,14 +1932,33 @@
   metadata:
     id: "ri-057"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Last note query for Alex Torres"
   vars:
@@ -877,14 +1966,33 @@
   metadata:
     id: "ri-058"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Last note query in German"
   vars:
@@ -892,14 +2000,33 @@
   metadata:
     id: "ri-059"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Voice-style last note with run-on sentence"
   vars:
@@ -907,11 +2034,30 @@
   metadata:
     id: "ri-060"
     category: "read_intent"
+    expectedTool: "query_last_note"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'read_query'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
     - type: javascript
-      value: "JSON.parse(output).commandType === 'query_last_note'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution

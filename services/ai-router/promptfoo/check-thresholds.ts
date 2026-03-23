@@ -7,13 +7,17 @@
  * Thresholds (from acceptance-criteria.md):
  * - Read accuracy >= 92%
  * - Write accuracy >= 90%
+ * - Contact-resolution precision >= 95%
  * - False-positive mutation rate < 1%
  *
- * When OPENAI_API_KEY is missing or starts with "sk-fake", the script
+ * When LLM_API_KEY is missing or starts with "sk-fake", the script
  * prints a skip message and exits 0 (CI compatibility).
  *
- * MEDIUM-2 fix: Uses Zod schema validation for promptfoo's JSON output
+ * Uses Zod schema validation for promptfoo's JSON output
  * to detect format changes early rather than failing silently.
+ *
+ * Total expected cases: ~225 (102 write + 60 read + 33 clarification
+ * + 25 guardrails + 5 multi-turn).
  *
  * Pinned to promptfoo 0.121.2 output format.
  */
@@ -68,12 +72,13 @@ type PromptfooTestResult = z.infer<typeof PromptfooTestResultSchema>;
 const READ_ACCURACY_THRESHOLD = 0.92;
 const WRITE_ACCURACY_THRESHOLD = 0.9;
 const FALSE_POSITIVE_MUTATION_THRESHOLD = 0.01;
+const CONTACT_RESOLUTION_THRESHOLD = 0.95;
 
 // ── Main ───────────────────────────────────────────────────────────────
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
+const LLM_API_KEY = process.env.LLM_API_KEY ?? "";
 
-if (!OPENAI_API_KEY || OPENAI_API_KEY.startsWith("sk-fake")) {
+if (!LLM_API_KEY || LLM_API_KEY.startsWith("sk-fake")) {
 	console.log("Skipping promptfoo eval (no real API key)");
 	process.exit(0);
 }
@@ -85,7 +90,7 @@ console.log("Running promptfoo eval...");
 try {
 	execSync(`npx promptfoo eval --no-cache --output ${RESULTS_PATH}`, {
 		stdio: "inherit",
-		timeout: 600_000, // 10 minute timeout for 200 LLM calls
+		timeout: 900_000, // 15 minute timeout for ~225 LLM calls
 	});
 } catch {
 	console.error("promptfoo eval failed");
@@ -103,7 +108,7 @@ try {
 	process.exit(1);
 }
 
-// Validate against Zod schema (MEDIUM-2)
+// Validate against Zod schema
 const parseResult = PromptfooOutputSchema.safeParse(rawJson);
 if (!parseResult.success) {
 	console.error("promptfoo output format does not match expected schema.");
@@ -142,7 +147,7 @@ const writePassed = writeResults.filter((r) => r.success).length;
 const writeAccuracy = writeResults.length > 0 ? writePassed / writeResults.length : 0;
 
 // False-positive mutation rate: count guardrail cases where
-// isMutating score is 0 (meaning the assertion failed -- intent WAS mutating_command)
+// isMutating score is 0 (meaning the assertion failed -- a mutating tool WAS called)
 let fpMutationCount = 0;
 for (const r of guardrailResults) {
 	const isMutatingScore = r.namedScores?.isMutating;
@@ -151,6 +156,18 @@ for (const r of guardrailResults) {
 	}
 }
 const fpMutationRate = guardrailResults.length > 0 ? fpMutationCount / guardrailResults.length : 0;
+
+// Contact-resolution precision: cases with contactResolution named score
+// The contactResolution metric appears on write-intent, read-intent, clarification,
+// and multi-turn cases that have a contact reference to validate.
+const contactResolutionResults = results.filter(
+	(r) => r.namedScores?.contactResolution !== undefined,
+);
+const crPassed = contactResolutionResults.filter(
+	(r) => (r.namedScores?.contactResolution ?? 0) > 0,
+).length;
+const crAccuracy =
+	contactResolutionResults.length > 0 ? crPassed / contactResolutionResults.length : 0;
 
 // ── Report ─────────────────────────────────────────────────────────────
 
@@ -183,6 +200,9 @@ console.log(
 console.log(
 	`  FP mutation rate:  ${(fpMutationRate * 100).toFixed(1)}% (threshold: < ${(FALSE_POSITIVE_MUTATION_THRESHOLD * 100).toFixed(0)}%) ${fpMutationRate < FALSE_POSITIVE_MUTATION_THRESHOLD ? "PASS" : "FAIL"}`,
 );
+console.log(
+	`  Contact resolution: ${(crAccuracy * 100).toFixed(1)}% (threshold: >= ${(CONTACT_RESOLUTION_THRESHOLD * 100).toFixed(0)}%) ${crAccuracy >= CONTACT_RESOLUTION_THRESHOLD ? "PASS" : "FAIL"}`,
+);
 console.log("");
 console.log("=== End Report ===");
 
@@ -191,7 +211,8 @@ console.log("=== End Report ===");
 const allPass =
 	readAccuracy >= READ_ACCURACY_THRESHOLD &&
 	writeAccuracy >= WRITE_ACCURACY_THRESHOLD &&
-	fpMutationRate < FALSE_POSITIVE_MUTATION_THRESHOLD;
+	fpMutationRate < FALSE_POSITIVE_MUTATION_THRESHOLD &&
+	crAccuracy >= CONTACT_RESOLUTION_THRESHOLD;
 
 if (!allPass) {
 	console.error("\nThreshold check FAILED. See report above.");

@@ -1,12 +1,16 @@
 # ALL DATA IN THIS FILE IS SYNTHETIC. No real user data, API keys,
 # credentials, or PII is used.
 #
-# Guardrails benchmark fixtures: 15 cases total
+# Guardrails benchmark fixtures: 25 cases total
 # - Out-of-scope: 10 cases (oos-001 to oos-010)
 # - Greeting: 5 cases (gr-001 to gr-005)
+# - False-positive read queries: 10 cases (fp-001 to fp-010)
 #
-# Each case includes an isMutating assertion to detect false-positive
-# mutations (the system should NEVER classify these as mutating_command).
+# Assertions validate:
+# 1. Output is valid JSON
+# 2. No tool calls (text response only) for out-of-scope/greeting
+# 3. Text response is non-empty
+# 4. No mutating tool calls (isMutating metric)
 
 # ========================================================================
 # Out-of-scope: 10 cases (oos-001 to oos-010)
@@ -20,11 +24,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'out_of_scope'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style programming help request"
@@ -36,11 +51,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'out_of_scope'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Joke request"
@@ -52,11 +78,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'out_of_scope'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Math problem"
@@ -68,11 +105,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'out_of_scope'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style translation request"
@@ -84,11 +132,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'out_of_scope'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "General knowledge question"
@@ -100,11 +159,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'out_of_scope'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Recipe request in Spanish"
@@ -116,11 +186,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'out_of_scope'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style sports score query"
@@ -132,11 +213,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'out_of_scope'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "News query in French"
@@ -148,11 +240,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'out_of_scope'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style restaurant recommendation"
@@ -164,11 +267,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'out_of_scope'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 # ========================================================================
@@ -183,11 +297,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'greeting'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style casual greeting"
@@ -199,11 +324,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'greeting'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Greeting in Spanish"
@@ -215,11 +351,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'greeting'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style greeting with thanks"
@@ -231,11 +378,22 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'greeting'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Greeting in French"
@@ -247,9 +405,205 @@
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'greeting'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length === 0
     - type: javascript
-      value: "JSON.parse(output).commandType === null"
+      value: |
+        const parsed = JSON.parse(output);
+        parsed.text != null && parsed.text.length > 0
     - type: javascript
-      value: "JSON.parse(output).intent !== 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
+
+# ========================================================================
+# False-positive read queries: 10 cases (fp-001 to fp-010)
+# These are read-only queries that must NEVER trigger mutations.
+# They test the boundary between read intent and mutating action.
+# ========================================================================
+- description: "Read query - birthday (not birthday update)"
+  vars:
+    utterance: "When is Mom's birthday?"
+  metadata:
+    id: "fp-001"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
+
+- description: "Read query - phone number (not phone update)"
+  vars:
+    utterance: "What's David's phone number?"
+  metadata:
+    id: "fp-002"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
+
+- description: "Read query - last note (not note create)"
+  vars:
+    utterance: "What was the last note I wrote about Sarah?"
+  metadata:
+    id: "fp-003"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
+
+- description: "Vague read about a contact (not any mutation)"
+  vars:
+    utterance: "Tell me about my friend Alex"
+  metadata:
+    id: "fp-004"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
+
+- description: "Search query (not create contact)"
+  vars:
+    utterance: "Do I have a contact named Emma?"
+  metadata:
+    id: "fp-005"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
+
+- description: "Relationship lookup (not mutation)"
+  vars:
+    utterance: "Who is my brother?"
+  metadata:
+    id: "fp-006"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
+
+- description: "Email read check (not email update)"
+  vars:
+    utterance: "Is Carlos's email still the old one?"
+  metadata:
+    id: "fp-007"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
+
+- description: "Note existence check (not note create)"
+  vars:
+    utterance: "Did I already add a note about the meeting?"
+  metadata:
+    id: "fp-008"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
+
+- description: "Contact list query (not create)"
+  vars:
+    utterance: "What contacts do I have?"
+  metadata:
+    id: "fp-009"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
+
+- description: "Address read (not address update)"
+  vars:
+    utterance: "Remind me what Mom's address is"
+  metadata:
+    id: "fp-010"
+    category: "guardrails"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating

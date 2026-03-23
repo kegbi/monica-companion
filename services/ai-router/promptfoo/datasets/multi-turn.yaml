@@ -1,0 +1,127 @@
+# ALL DATA IN THIS FILE IS SYNTHETIC. No real user data, API keys,
+# credentials, or PII is used.
+#
+# Multi-turn eval cases: 5 cases (mt-001 to mt-005)
+# These cases use the conversationHistory var to inject prior conversation
+# context and validate the LLM's behavior across turns.
+
+# ========================================================================
+# mt-001: Search-then-create-note (Artillery Park regression)
+# ========================================================================
+- description: "Disambiguation narrowing preserves note body across turns"
+  vars:
+    utterance: "Elena"
+    conversationHistory: '[{"role":"user","content":"Add a note to mum: today we went to Artillery Park"},{"role":"assistant","content":null,"tool_calls":[{"id":"sc1","type":"function","function":{"name":"search_contacts","arguments":"{\"query\":\"mum\"}"}}]},{"role":"tool","tool_call_id":"sc1","content":"{\"status\":\"ok\",\"contacts\":[{\"contactId\":1,\"displayName\":\"Elena Y\"},{\"contactId\":2,\"displayName\":\"Marya K\"}]}"},{"role":"assistant","content":"I found 2 contacts matching mum: Elena Y and Marya K. Which one?"}]'
+  metadata:
+    id: "mt-001"
+    category: "multi_turn"
+    expectedTool: "create_note"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (search) {
+          const args = JSON.parse(search.function.arguments || '{}');
+          return args.query && args.query.toLowerCase().includes('elena');
+        }
+        const note = calls.find(c => c.function?.name === 'create_note');
+        if (note) {
+          const args = JSON.parse(note.function.arguments || '{}');
+          return args.body && args.body.toLowerCase().includes('artillery park');
+        }
+        return false
+      metric: contactResolution
+
+# ========================================================================
+# mt-002: Read query after search
+# ========================================================================
+- description: "Birthday query after prior contact search"
+  vars:
+    utterance: "What's her birthday?"
+    conversationHistory: '[{"role":"user","content":"Find Sarah"},{"role":"assistant","content":null,"tool_calls":[{"id":"sc1","type":"function","function":{"name":"search_contacts","arguments":"{\"query\":\"Sarah\"}"}}]},{"role":"tool","tool_call_id":"sc1","content":"{\"status\":\"ok\",\"contacts\":[{\"contactId\":42,\"displayName\":\"Sarah Chen\"}]}"},{"role":"assistant","content":"I found Sarah Chen (contact 42)."}]'
+  metadata:
+    id: "mt-002"
+    category: "multi_turn"
+    expectedTool: "query_birthday"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const mutating = ['create_note','create_contact','create_activity',
+          'update_contact_birthday','update_contact_phone',
+          'update_contact_email','update_contact_address'];
+        !calls.some(c => mutating.includes(c.function?.name))
+      metric: isMutating
+
+# ========================================================================
+# mt-003: Follow-up pronoun resolution
+# ========================================================================
+- description: "Follow-up phone update after prior contact context"
+  vars:
+    utterance: "Also update his phone to 555-1234"
+    conversationHistory: '[{"role":"user","content":"Find David Chen"},{"role":"assistant","content":null,"tool_calls":[{"id":"sc1","type":"function","function":{"name":"search_contacts","arguments":"{\"query\":\"David Chen\"}"}}]},{"role":"tool","tool_call_id":"sc1","content":"{\"status\":\"ok\",\"contacts\":[{\"contactId\":88,\"displayName\":\"David Chen\"}]}"},{"role":"assistant","content":"I found David Chen (contact 88). What would you like to do?"}]'
+  metadata:
+    id: "mt-003"
+    category: "multi_turn"
+    expectedTool: "update_contact_phone"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
+
+# ========================================================================
+# mt-004: Disambiguation with kinship narrowing
+# ========================================================================
+- description: "Name narrowing after kinship-based ambiguity with dad"
+  vars:
+    utterance: "David"
+    conversationHistory: '[{"role":"user","content":"Add a note to dad: he called me today"},{"role":"assistant","content":null,"tool_calls":[{"id":"sc1","type":"function","function":{"name":"search_contacts","arguments":"{\"query\":\"dad\"}"}}]},{"role":"tool","tool_call_id":"sc1","content":"{\"status\":\"ok\",\"contacts\":[{\"contactId\":10,\"displayName\":\"David K\"},{\"contactId\":11,\"displayName\":\"Robert M\"},{\"contactId\":12,\"displayName\":\"James L\"},{\"contactId\":13,\"displayName\":\"Michael N\"},{\"contactId\":14,\"displayName\":\"William P\"},{\"contactId\":15,\"displayName\":\"Richard S\"}]}"},{"role":"assistant","content":"I found 6 contacts matching dad. Which one did you mean?"}]'
+  metadata:
+    id: "mt-004"
+    category: "multi_turn"
+    expectedTool: "create_note"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (search) {
+          const args = JSON.parse(search.function.arguments || '{}');
+          return args.query && args.query.toLowerCase().includes('david');
+        }
+        return calls.length > 0
+      metric: contactResolution
+
+# ========================================================================
+# mt-005: Context switch after prior action
+# ========================================================================
+- description: "New activity request after prior note creation"
+  vars:
+    utterance: "Now add an activity that we had lunch together"
+    conversationHistory: '[{"role":"user","content":"Add a note to Elena about the park visit"},{"role":"assistant","content":null,"tool_calls":[{"id":"sc1","type":"function","function":{"name":"search_contacts","arguments":"{\"query\":\"Elena\"}"}}]},{"role":"tool","tool_call_id":"sc1","content":"{\"status\":\"ok\",\"contacts\":[{\"contactId\":682023,\"displayName\":\"Elena Y\"}]}"},{"role":"assistant","content":null,"tool_calls":[{"id":"cn1","type":"function","function":{"name":"create_note","arguments":"{\"contact_id\":682023,\"body\":\"Park visit\"}"}}]},{"role":"tool","tool_call_id":"cn1","content":"{\"status\":\"success\",\"executionId\":\"exec-1\",\"message\":\"Note created.\"}"},{"role":"assistant","content":"Done! I added the note about the park visit to Elena Y."}]'
+  metadata:
+    id: "mt-005"
+    category: "multi_turn"
+    expectedTool: "create_activity"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0

@@ -32,6 +32,7 @@ function createMockDb() {
 		_mockResultRows: mockResultRows,
 		_mockDeleteResult: mockDeleteResult,
 		_mockLimit: mockLimit,
+		_mockInsertValues: mockInsertValues,
 		_mockOnConflict: mockOnConflict,
 		_mockDeleteWhere: mockDeleteWhere,
 	};
@@ -90,6 +91,55 @@ describe("history-repository", () => {
 			// Verify the inserted values contain truncated messages
 			const insertCall = db.insert.mock.calls[0];
 			expect(insertCall).toBeDefined();
+		});
+
+		it("insert 50 messages, verify values call receives only the last 40", async () => {
+			const db = createMockDb();
+			const messages = Array.from({ length: 50 }, (_, i) => ({
+				role: "user",
+				content: `Message ${i}`,
+			}));
+
+			await saveHistory(db as never, "user-uuid-1", messages, null);
+
+			// Capture the values passed to insert().values()
+			const valuesArg = db._mockInsertValues.mock.calls[0][0];
+			const savedMessages = valuesArg.messages as Array<{ role: string; content: string }>;
+
+			expect(savedMessages).toHaveLength(SLIDING_WINDOW_SIZE);
+			// Should contain messages 10-49 (the last 40)
+			expect(savedMessages[0].content).toBe("Message 10");
+			expect(savedMessages[39].content).toBe("Message 49");
+		});
+
+		it("insert exactly 40 messages, verify all 40 preserved", async () => {
+			const db = createMockDb();
+			const messages = Array.from({ length: 40 }, (_, i) => ({
+				role: "user",
+				content: `Message ${i}`,
+			}));
+
+			await saveHistory(db as never, "user-uuid-1", messages, null);
+
+			const valuesArg = db._mockInsertValues.mock.calls[0][0];
+			const savedMessages = valuesArg.messages as Array<{ role: string; content: string }>;
+
+			expect(savedMessages).toHaveLength(40);
+			expect(savedMessages[0].content).toBe("Message 0");
+			expect(savedMessages[39].content).toBe("Message 39");
+		});
+
+		it("insert 1 message, verify it survives", async () => {
+			const db = createMockDb();
+			const messages = [{ role: "user", content: "Single message" }];
+
+			await saveHistory(db as never, "user-uuid-1", messages, null);
+
+			const valuesArg = db._mockInsertValues.mock.calls[0][0];
+			const savedMessages = valuesArg.messages as Array<{ role: string; content: string }>;
+
+			expect(savedMessages).toHaveLength(1);
+			expect(savedMessages[0].content).toBe("Single message");
 		});
 	});
 

@@ -453,6 +453,269 @@ describe("runAgentLoop", () => {
 		expect(mockedHandleQueryBirthday).not.toHaveBeenCalled();
 	});
 
+	it("dispatches query_phone to the handler", async () => {
+		mockedHandleQueryPhone.mockResolvedValue({
+			status: "ok",
+			phones: [{ value: "+1-555-0142", typeName: "mobile" }],
+			contactId: 42,
+		});
+
+		const chatCompletion = vi
+			.fn()
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_qp",
+									type: "function",
+									function: {
+										name: "query_phone",
+										arguments: '{"contact_id": 42}',
+									},
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+			})
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: "The phone number is +1-555-0142.",
+							tool_calls: undefined,
+						},
+						finish_reason: "stop",
+					},
+				],
+			});
+
+		const deps = createMockDeps({
+			llmClient: { chatCompletion },
+		});
+
+		const event = {
+			type: "text_message" as const,
+			userId,
+			sourceRef: "telegram:msg:6f",
+			correlationId,
+			text: "What is contact 42's phone number?",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("text");
+		expect(chatCompletion).toHaveBeenCalledTimes(2);
+		expect(mockedHandleQueryPhone).toHaveBeenCalledWith({
+			contactId: 42,
+			serviceClient: deps.monicaServiceClient,
+			userId,
+			correlationId,
+		});
+
+		// Verify handler result was sent to LLM
+		const secondCall = chatCompletion.mock.calls[1];
+		const messages = secondCall[0];
+		const toolResultMsg = messages.find(
+			(m: { role: string; tool_call_id?: string }) =>
+				m.role === "tool" && m.tool_call_id === "call_qp",
+		);
+		expect(toolResultMsg).toBeTruthy();
+		expect(toolResultMsg.content).toContain("+1-555-0142");
+		expect(toolResultMsg.content).not.toContain("not_implemented");
+	});
+
+	it("dispatches query_last_note to the handler", async () => {
+		mockedHandleQueryLastNote.mockResolvedValue({
+			status: "ok",
+			note: {
+				body: "Had lunch with Sarah at the new restaurant.",
+				createdAt: "2026-03-20T12:00:00Z",
+			},
+			contactId: 77,
+		});
+
+		const chatCompletion = vi
+			.fn()
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_qln",
+									type: "function",
+									function: {
+										name: "query_last_note",
+										arguments: '{"contact_id": 77}',
+									},
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+			})
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: "The last note was about having lunch at a restaurant.",
+							tool_calls: undefined,
+						},
+						finish_reason: "stop",
+					},
+				],
+			});
+
+		const deps = createMockDeps({
+			llmClient: { chatCompletion },
+		});
+
+		const event = {
+			type: "text_message" as const,
+			userId,
+			sourceRef: "telegram:msg:6g",
+			correlationId,
+			text: "What is the last note for contact 77?",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("text");
+		expect(chatCompletion).toHaveBeenCalledTimes(2);
+		expect(mockedHandleQueryLastNote).toHaveBeenCalledWith({
+			contactId: 77,
+			serviceClient: deps.monicaServiceClient,
+			userId,
+			correlationId,
+		});
+
+		// Verify handler result was sent to LLM
+		const secondCall = chatCompletion.mock.calls[1];
+		const messages = secondCall[0];
+		const toolResultMsg = messages.find(
+			(m: { role: string; tool_call_id?: string }) =>
+				m.role === "tool" && m.tool_call_id === "call_qln",
+		);
+		expect(toolResultMsg).toBeTruthy();
+		expect(toolResultMsg.content).toContain("Had lunch with Sarah");
+		expect(toolResultMsg.content).not.toContain("not_implemented");
+	});
+
+	it("returns validation error to LLM when query_phone args are invalid", async () => {
+		const chatCompletion = vi
+			.fn()
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_qp_bad",
+									type: "function",
+									function: {
+										name: "query_phone",
+										arguments: '{"contact_id": -1}',
+									},
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+			})
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: "Please provide a valid contact ID.",
+							tool_calls: undefined,
+						},
+						finish_reason: "stop",
+					},
+				],
+			});
+
+		const deps = createMockDeps({ llmClient: { chatCompletion } });
+
+		const event = {
+			type: "text_message" as const,
+			userId,
+			sourceRef: "telegram:msg:6h",
+			correlationId,
+			text: "What is the phone for invalid contact?",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("text");
+		expect(chatCompletion).toHaveBeenCalledTimes(2);
+		expect(mockedHandleQueryPhone).not.toHaveBeenCalled();
+	});
+
+	it("returns validation error to LLM when query_last_note args are invalid", async () => {
+		const chatCompletion = vi
+			.fn()
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_qln_bad",
+									type: "function",
+									function: {
+										name: "query_last_note",
+										arguments: "{}",
+									},
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+			})
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: "I need a valid contact ID to look up notes.",
+							tool_calls: undefined,
+						},
+						finish_reason: "stop",
+					},
+				],
+			});
+
+		const deps = createMockDeps({ llmClient: { chatCompletion } });
+
+		const event = {
+			type: "text_message" as const,
+			userId,
+			sourceRef: "telegram:msg:6i",
+			correlationId,
+			text: "What is the last note?",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("text");
+		expect(chatCompletion).toHaveBeenCalledTimes(2);
+		expect(mockedHandleQueryLastNote).not.toHaveBeenCalled();
+	});
+
 	it("returns error for truly unknown tools", async () => {
 		const chatCompletion = vi
 			.fn()

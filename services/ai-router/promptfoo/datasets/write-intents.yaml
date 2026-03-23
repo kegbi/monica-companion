@@ -2,17 +2,22 @@
 # credentials, or PII is used. Names, dates, and relationships are
 # fabricated for testing purposes only.
 #
-# Write intent benchmark fixtures: 100 cases total
-# - create_note: 25 cases (wi-001 to wi-025)
+# Write intent benchmark fixtures: 102 cases total
+# - create_note: 27 cases (wi-001 to wi-025, wi-101, wi-102)
 # - create_contact: 15 cases (wi-026 to wi-040)
 # - create_activity: 20 cases (wi-041 to wi-060)
 # - update_contact_birthday: 10 cases (wi-061 to wi-070)
 # - update_contact_phone: 10 cases (wi-071 to wi-080)
 # - update_contact_email: 10 cases (wi-081 to wi-090)
 # - update_contact_address: 10 cases (wi-091 to wi-100)
+#
+# Assertions use tool-call format. Each case validates:
+# 1. Output is valid JSON
+# 2. At least one tool call was made
+# 3. If search_contacts was called, its query includes the expected contact reference
 
 # ========================================================================
-# create_note: 25 cases (wi-001 to wi-025)
+# create_note
 # ========================================================================
 - description: "Add a note to a contact by relationship label"
   vars:
@@ -20,14 +25,24 @@
   metadata:
     id: "wi-001"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Record a gift idea as a note"
   vars:
@@ -35,14 +50,24 @@
   metadata:
     id: "wi-002"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Record a conversation note"
   vars:
@@ -50,14 +75,24 @@
   metadata:
     id: "wi-003"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Voice-style note about a contact preference"
   vars:
@@ -65,14 +100,24 @@
   metadata:
     id: "wi-004"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Save a note about a medical appointment"
   vars:
@@ -80,14 +125,24 @@
   metadata:
     id: "wi-005"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Voice-style note with filler words"
   vars:
@@ -95,14 +150,24 @@
   metadata:
     id: "wi-006"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Note about a work project"
   vars:
@@ -110,14 +175,24 @@
   metadata:
     id: "wi-007"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Note in Spanish"
   vars:
@@ -125,14 +200,24 @@
   metadata:
     id: "wi-008"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Voice-style note about travel plans"
   vars:
@@ -140,14 +225,24 @@
   metadata:
     id: "wi-009"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 - description: "Note about dietary preferences"
   vars:
@@ -155,14 +250,24 @@
   metadata:
     id: "wi-010"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Note about an event with a contact"
   vars:
@@ -170,14 +275,24 @@
   metadata:
     id: "wi-011"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Note in French"
   vars:
@@ -185,14 +300,24 @@
   metadata:
     id: "wi-012"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Voice-style note with run-on sentence"
   vars:
@@ -200,14 +325,24 @@
   metadata:
     id: "wi-013"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "husband"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('husband')
+      metric: contactResolution
 
 - description: "Note about a pet"
   vars:
@@ -215,14 +350,24 @@
   metadata:
     id: "wi-014"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Voice-style ambiguous Sarah note"
   vars:
@@ -230,14 +375,24 @@
   metadata:
     id: "wi-015"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Note about a hobby"
   vars:
@@ -245,14 +400,24 @@
   metadata:
     id: "wi-016"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Note in German"
   vars:
@@ -260,14 +425,24 @@
   metadata:
     id: "wi-017"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Note with misspelling"
   vars:
@@ -275,14 +450,14 @@
   metadata:
     id: "wi-018"
     category: "write_intent"
+    expectedTool: "create_note"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
-    - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && /carlos|calros/i.test(JSON.parse(output).contactRef))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
 
 - description: "Voice-style verbose note"
   vars:
@@ -290,14 +465,24 @@
   metadata:
     id: "wi-019"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Note in Portuguese"
   vars:
@@ -305,14 +490,24 @@
   metadata:
     id: "wi-020"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Voice-style note about job change"
   vars:
@@ -320,14 +515,24 @@
   metadata:
     id: "wi-021"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Note using relationship reference (spouse)"
   vars:
@@ -335,14 +540,24 @@
   metadata:
     id: "wi-022"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "husband"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('husband')
+      metric: contactResolution
 
 - description: "Note in Japanese (romanized)"
   vars:
@@ -350,14 +565,24 @@
   metadata:
     id: "wi-023"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 - description: "Voice-style note with abbreviation"
   vars:
@@ -365,14 +590,24 @@
   metadata:
     id: "wi-024"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Note about a recommendation"
   vars:
@@ -380,17 +615,27 @@
   metadata:
     id: "wi-025"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 # ========================================================================
-# create_contact: 15 cases (wi-026 to wi-040)
+# create_contact
 # ========================================================================
 - description: "Create a new contact by full name"
   vars:
@@ -398,14 +643,24 @@
   metadata:
     id: "wi-026"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Add a new person to contacts"
   vars:
@@ -413,14 +668,24 @@
   metadata:
     id: "wi-027"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "james"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('james'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('james')
+      metric: contactResolution
 
 - description: "Voice-style create contact"
   vars:
@@ -428,14 +693,24 @@
   metadata:
     id: "wi-028"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "lisa"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('lisa'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('lisa')
+      metric: contactResolution
 
 - description: "Create contact in Spanish"
   vars:
@@ -443,14 +718,24 @@
   metadata:
     id: "wi-029"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "pedro"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('pedro'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('pedro')
+      metric: contactResolution
 
 - description: "Create contact with relationship context"
   vars:
@@ -458,14 +743,24 @@
   metadata:
     id: "wi-030"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "rachel"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('rachel'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('rachel')
+      metric: contactResolution
 
 - description: "Voice-style create contact with filler"
   vars:
@@ -473,14 +768,24 @@
   metadata:
     id: "wi-031"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "mike"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mike'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mike')
+      metric: contactResolution
 
 - description: "Create contact with first name only"
   vars:
@@ -488,14 +793,24 @@
   metadata:
     id: "wi-032"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "priya"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('priya'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('priya')
+      metric: contactResolution
 
 - description: "Create contact in French"
   vars:
@@ -503,14 +818,24 @@
   metadata:
     id: "wi-033"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "jean"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('jean'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('jean')
+      metric: contactResolution
 
 - description: "Compound command - create contact and add note (primary: create contact)"
   vars:
@@ -518,14 +843,24 @@
   metadata:
     id: "wi-034"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "natalie"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('natalie'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('natalie')
+      metric: contactResolution
 
 - description: "Voice-style create contact with spoken context"
   vars:
@@ -533,14 +868,24 @@
   metadata:
     id: "wi-035"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "aisha"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('aisha'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('aisha')
+      metric: contactResolution
 
 - description: "Create contact in German"
   vars:
@@ -548,14 +893,24 @@
   metadata:
     id: "wi-036"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "hans"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('hans'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('hans')
+      metric: contactResolution
 
 - description: "Create contact with informal phrasing"
   vars:
@@ -563,14 +918,24 @@
   metadata:
     id: "wi-037"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "ben"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('ben'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('ben')
+      metric: contactResolution
 
 - description: "Voice-style create contact with name spelling"
   vars:
@@ -578,14 +943,24 @@
   metadata:
     id: "wi-038"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "olivia"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('olivia'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('olivia')
+      metric: contactResolution
 
 - description: "Create contact in Russian (romanized)"
   vars:
@@ -593,14 +968,24 @@
   metadata:
     id: "wi-039"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "dmitrij"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('dmitrij'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('dmitrij')
+      metric: contactResolution
 
 - description: "Create contact with polite phrasing"
   vars:
@@ -608,17 +993,27 @@
   metadata:
     id: "wi-040"
     category: "write_intent"
+    expectedTool: "create_contact"
+    expectedContactRef: "fatima"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_contact'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('fatima'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('fatima')
+      metric: contactResolution
 
 # ========================================================================
-# create_activity: 20 cases (wi-041 to wi-060)
+# create_activity
 # ========================================================================
 - description: "Log a phone call activity"
   vars:
@@ -626,14 +1021,24 @@
   metadata:
     id: "wi-041"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Log a meeting activity"
   vars:
@@ -641,14 +1046,24 @@
   metadata:
     id: "wi-042"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Voice-style activity log"
   vars:
@@ -656,14 +1071,24 @@
   metadata:
     id: "wi-043"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Log coffee meetup"
   vars:
@@ -671,14 +1096,24 @@
   metadata:
     id: "wi-044"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Activity in Spanish"
   vars:
@@ -686,14 +1121,24 @@
   metadata:
     id: "wi-045"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Voice-style activity with filler words"
   vars:
@@ -701,14 +1146,24 @@
   metadata:
     id: "wi-046"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 - description: "Log a dinner activity"
   vars:
@@ -716,14 +1171,24 @@
   metadata:
     id: "wi-047"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Log a birthday party activity"
   vars:
@@ -731,14 +1196,24 @@
   metadata:
     id: "wi-048"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Voice-style activity with relationship reference"
   vars:
@@ -746,14 +1221,24 @@
   metadata:
     id: "wi-049"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "brother"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('brother'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('brother')
+      metric: contactResolution
 
 - description: "Log a work meeting"
   vars:
@@ -761,14 +1246,24 @@
   metadata:
     id: "wi-050"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Activity in French"
   vars:
@@ -776,14 +1271,24 @@
   metadata:
     id: "wi-051"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Compound command - activity plus note (primary: activity)"
   vars:
@@ -791,14 +1296,24 @@
   metadata:
     id: "wi-052"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Voice-style activity log about texting"
   vars:
@@ -806,14 +1321,24 @@
   metadata:
     id: "wi-053"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Log a gym session together"
   vars:
@@ -821,14 +1346,24 @@
   metadata:
     id: "wi-054"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Activity in Portuguese"
   vars:
@@ -836,14 +1371,24 @@
   metadata:
     id: "wi-055"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Voice-style activity with disambiguating David"
   vars:
@@ -851,14 +1396,24 @@
   metadata:
     id: "wi-056"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "['mutating_command','clarification_response'].includes(JSON.parse(output).intent)"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Log a virtual event attendance"
   vars:
@@ -866,14 +1421,24 @@
   metadata:
     id: "wi-057"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 - description: "Log a walk activity"
   vars:
@@ -881,14 +1446,24 @@
   metadata:
     id: "wi-058"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "spouse"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('spouse'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('spouse')
+      metric: contactResolution
 
 - description: "Voice-style activity log with spoken date"
   vars:
@@ -896,14 +1471,24 @@
   metadata:
     id: "wi-059"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Activity in Japanese (romanized)"
   vars:
@@ -911,17 +1496,27 @@
   metadata:
     id: "wi-060"
     category: "write_intent"
+    expectedTool: "create_activity"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_activity'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 # ========================================================================
-# update_contact_birthday: 10 cases (wi-061 to wi-070)
+# update_contact_birthday
 # ========================================================================
 - description: "Update a birthday for a specific contact"
   vars:
@@ -929,14 +1524,24 @@
   metadata:
     id: "wi-061"
     category: "write_intent"
+    expectedTool: "update_contact_birthday"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Set birthday with full date"
   vars:
@@ -944,14 +1549,24 @@
   metadata:
     id: "wi-062"
     category: "write_intent"
+    expectedTool: "update_contact_birthday"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Voice-style birthday update with spoken date"
   vars:
@@ -959,14 +1574,24 @@
   metadata:
     id: "wi-063"
     category: "write_intent"
+    expectedTool: "update_contact_birthday"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Birthday update using relationship label"
   vars:
@@ -974,14 +1599,24 @@
   metadata:
     id: "wi-064"
     category: "write_intent"
+    expectedTool: "update_contact_birthday"
+    expectedContactRef: "sister"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sister'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sister')
+      metric: contactResolution
 
 - description: "Birthday update in Spanish"
   vars:
@@ -989,14 +1624,24 @@
   metadata:
     id: "wi-065"
     category: "write_intent"
+    expectedTool: "update_contact_birthday"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Voice-style birthday with day-month format"
   vars:
@@ -1004,14 +1649,24 @@
   metadata:
     id: "wi-066"
     category: "write_intent"
+    expectedTool: "update_contact_birthday"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 - description: "Correct a birthday"
   vars:
@@ -1019,14 +1674,24 @@
   metadata:
     id: "wi-067"
     category: "write_intent"
+    expectedTool: "update_contact_birthday"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Birthday update with ambiguous David"
   vars:
@@ -1034,14 +1699,24 @@
   metadata:
     id: "wi-068"
     category: "write_intent"
+    expectedTool: "update_contact_birthday"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Birthday update for Mom"
   vars:
@@ -1049,14 +1724,24 @@
   metadata:
     id: "wi-069"
     category: "write_intent"
+    expectedTool: "update_contact_birthday"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Voice-style birthday update with filler"
   vars:
@@ -1064,17 +1749,27 @@
   metadata:
     id: "wi-070"
     category: "write_intent"
+    expectedTool: "update_contact_birthday"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_birthday'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 # ========================================================================
-# update_contact_phone: 10 cases (wi-071 to wi-080)
+# update_contact_phone
 # ========================================================================
 - description: "Update a phone number"
   vars:
@@ -1082,14 +1777,24 @@
   metadata:
     id: "wi-071"
     category: "write_intent"
+    expectedTool: "update_contact_phone"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_phone'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Voice-style phone update with spoken digits"
   vars:
@@ -1097,14 +1802,24 @@
   metadata:
     id: "wi-072"
     category: "write_intent"
+    expectedTool: "update_contact_phone"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_phone'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Change phone number with full format"
   vars:
@@ -1112,14 +1827,24 @@
   metadata:
     id: "wi-073"
     category: "write_intent"
+    expectedTool: "update_contact_phone"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_phone'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Phone update for Mom"
   vars:
@@ -1127,14 +1852,24 @@
   metadata:
     id: "wi-074"
     category: "write_intent"
+    expectedTool: "update_contact_phone"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_phone'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Voice-style phone update with context"
   vars:
@@ -1142,14 +1877,24 @@
   metadata:
     id: "wi-075"
     category: "write_intent"
+    expectedTool: "update_contact_phone"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_phone'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Phone update in French"
   vars:
@@ -1157,14 +1902,24 @@
   metadata:
     id: "wi-076"
     category: "write_intent"
+    expectedTool: "update_contact_phone"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_phone'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Phone update with specific number"
   vars:
@@ -1172,14 +1927,24 @@
   metadata:
     id: "wi-077"
     category: "write_intent"
+    expectedTool: "update_contact_phone"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_phone'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Phone update with cell specification"
   vars:
@@ -1187,14 +1952,24 @@
   metadata:
     id: "wi-078"
     category: "write_intent"
+    expectedTool: "update_contact_phone"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_phone'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 - description: "Voice-style phone with relationship reference"
   vars:
@@ -1202,14 +1977,24 @@
   metadata:
     id: "wi-079"
     category: "write_intent"
+    expectedTool: "update_contact_phone"
+    expectedContactRef: "husband"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_phone'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('husband')
+      metric: contactResolution
 
 - description: "Phone update with ambiguous Sarah"
   vars:
@@ -1217,17 +2002,27 @@
   metadata:
     id: "wi-080"
     category: "write_intent"
+    expectedTool: "update_contact_phone"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_phone'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 # ========================================================================
-# update_contact_email: 10 cases (wi-081 to wi-090)
+# update_contact_email
 # ========================================================================
 - description: "Update email address"
   vars:
@@ -1235,14 +2030,24 @@
   metadata:
     id: "wi-081"
     category: "write_intent"
+    expectedTool: "update_contact_email"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_email'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Voice-style email update with spoken address"
   vars:
@@ -1250,14 +2055,24 @@
   metadata:
     id: "wi-082"
     category: "write_intent"
+    expectedTool: "update_contact_email"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_email'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Change email with formal phrasing"
   vars:
@@ -1265,14 +2080,24 @@
   metadata:
     id: "wi-083"
     category: "write_intent"
+    expectedTool: "update_contact_email"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_email'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Email update for sibling"
   vars:
@@ -1280,14 +2105,24 @@
   metadata:
     id: "wi-084"
     category: "write_intent"
+    expectedTool: "update_contact_email"
+    expectedContactRef: "brother"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_email'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('brother'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('brother')
+      metric: contactResolution
 
 - description: "Email update in Spanish"
   vars:
@@ -1295,14 +2130,24 @@
   metadata:
     id: "wi-085"
     category: "write_intent"
+    expectedTool: "update_contact_email"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_email'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Voice-style email update with filler"
   vars:
@@ -1310,14 +2155,24 @@
   metadata:
     id: "wi-086"
     category: "write_intent"
+    expectedTool: "update_contact_email"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_email'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 - description: "Set work email address"
   vars:
@@ -1325,14 +2180,24 @@
   metadata:
     id: "wi-087"
     category: "write_intent"
+    expectedTool: "update_contact_email"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_email'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Email update with ambiguous Alex"
   vars:
@@ -1340,14 +2205,24 @@
   metadata:
     id: "wi-088"
     category: "write_intent"
+    expectedTool: "update_contact_email"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_email'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Email update for Mom"
   vars:
@@ -1355,14 +2230,24 @@
   metadata:
     id: "wi-089"
     category: "write_intent"
+    expectedTool: "update_contact_email"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_email'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Update email address with full value"
   vars:
@@ -1370,17 +2255,27 @@
   metadata:
     id: "wi-090"
     category: "write_intent"
+    expectedTool: "update_contact_email"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_email'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 # ========================================================================
-# update_contact_address: 10 cases (wi-091 to wi-100)
+# update_contact_address
 # ========================================================================
 - description: "Update home address"
   vars:
@@ -1388,14 +2283,24 @@
   metadata:
     id: "wi-091"
     category: "write_intent"
+    expectedTool: "update_contact_address"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_address'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Voice-style address update"
   vars:
@@ -1403,14 +2308,24 @@
   metadata:
     id: "wi-092"
     category: "write_intent"
+    expectedTool: "update_contact_address"
+    expectedContactRef: "sarah"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_address'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('sarah'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('sarah')
+      metric: contactResolution
 
 - description: "Change address with formal phrasing"
   vars:
@@ -1418,14 +2333,24 @@
   metadata:
     id: "wi-093"
     category: "write_intent"
+    expectedTool: "update_contact_address"
+    expectedContactRef: "carlos"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_address'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('carlos'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('carlos')
+      metric: contactResolution
 
 - description: "Address update for Mom"
   vars:
@@ -1433,14 +2358,24 @@
   metadata:
     id: "wi-094"
     category: "write_intent"
+    expectedTool: "update_contact_address"
+    expectedContactRef: "mom"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_address'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mom'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mom')
+      metric: contactResolution
 
 - description: "Voice-style address with spoken numbers"
   vars:
@@ -1448,14 +2383,24 @@
   metadata:
     id: "wi-095"
     category: "write_intent"
+    expectedTool: "update_contact_address"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_address'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 - description: "Address update in German"
   vars:
@@ -1463,14 +2408,24 @@
   metadata:
     id: "wi-096"
     category: "write_intent"
+    expectedTool: "update_contact_address"
+    expectedContactRef: "emma"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_address'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('emma'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('emma')
+      metric: contactResolution
 
 - description: "Address update with relationship reference"
   vars:
@@ -1478,14 +2433,24 @@
   metadata:
     id: "wi-097"
     category: "write_intent"
+    expectedTool: "update_contact_address"
+    expectedContactRef: "husband"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_address'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('husband'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('husband')
+      metric: contactResolution
 
 - description: "Address update with ambiguous David"
   vars:
@@ -1493,14 +2458,24 @@
   metadata:
     id: "wi-098"
     category: "write_intent"
+    expectedTool: "update_contact_address"
+    expectedContactRef: "david"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_address'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('david'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('david')
+      metric: contactResolution
 
 - description: "Voice-style address with run-on"
   vars:
@@ -1508,14 +2483,24 @@
   metadata:
     id: "wi-099"
     category: "write_intent"
+    expectedTool: "update_contact_address"
+    expectedContactRef: "yuki"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_address'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('yuki'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('yuki')
+      metric: contactResolution
 
 - description: "Update address with full value"
   vars:
@@ -1523,17 +2508,27 @@
   metadata:
     id: "wi-100"
     category: "write_intent"
+    expectedTool: "update_contact_address"
+    expectedContactRef: "alex"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'update_contact_address'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('alex'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('alex')
+      metric: contactResolution
 
 # ========================================================================
-# Kinship variant regression: "mum" (British English) (wi-101 to wi-102)
+# create_note
 # ========================================================================
 - description: "Voice-style create note for mum (British English kinship)"
   vars:
@@ -1541,14 +2536,24 @@
   metadata:
     id: "wi-101"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "mum"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mum'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mum')
+      metric: contactResolution
 
 - description: "Create note for mum with polite phrasing"
   vars:
@@ -1556,11 +2561,21 @@
   metadata:
     id: "wi-102"
     category: "write_intent"
+    expectedTool: "create_note"
+    expectedContactRef: "mum"
   assert:
     - type: is-json
     - type: javascript
-      value: "JSON.parse(output).intent === 'mutating_command'"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        calls.length > 0
     - type: javascript
-      value: "JSON.parse(output).commandType === 'create_note'"
-    - type: javascript
-      value: "Boolean(JSON.parse(output).contactRef && JSON.parse(output).contactRef.toLowerCase().includes('mum'))"
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const search = calls.find(c => c.function?.name === 'search_contacts');
+        if (!search) return true;
+        const args = JSON.parse(search.function.arguments || '{}');
+        args.query && args.query.toLowerCase().includes('mum')
+      metric: contactResolution
