@@ -302,9 +302,12 @@ _The tool-calling pattern (validated by OpenAI function calling, Claude tool use
   - [ ] Implement a simple agent loop in `ai-router` that replaces the LangGraph `StateGraph`. The loop: load conversation history → call LLM with tools → if tool call, execute or intercept for confirmation → if text, return to user → persist history.
   - [ ] Define tool schemas for all V1 operations: `search_contacts`, `create_note`, `create_contact`, `create_activity`, `update_contact_birthday`, `update_contact_phone`, `update_contact_email`, `update_contact_address`, `query_birthday`, `query_phone`, `query_last_note` (~10 tools total).
   - [ ] Write the system prompt for the agent: role definition, tool usage guidelines (always search_contacts before mutating), language mirroring, confirmation behavior, security rules.
-  - [ ] Implement conversation history persistence: store the full message array (user messages, assistant messages, tool calls, tool results) per user in PostgreSQL, replacing the compressed `conversation_turns` summaries. Add a context window pruning strategy (e.g., keep last 30 turns, summarize older ones).
+  - [ ] Implement conversation history persistence: store the full message array (user messages, assistant messages, tool calls, tool results) per user in PostgreSQL, replacing the compressed `conversation_turns` summaries. Sliding window of 40 messages — when the array exceeds 40, drop the oldest messages. No summarization needed; 40 messages covers ~5-10 recent command flows and is sufficient for follow-up references.
+  - [ ] Implement `/clear` command in `telegram-bridge`: wipes the user's conversation history and any pending tool call. Confirm to the user that context has been reset. Register the command alongside `/start` and `/disconnect` in bot setup.
+  - [ ] Hard-clear conversation history on 24-hour inactivity (no messages from user in 24h). The existing 30-day data governance retention policy still applies as the outer bound.
   - [ ] Wire `POST /internal/process` to invoke the agent loop instead of the LangGraph graph. Keep the existing guardrail middleware (rate limits, concurrency caps, budget tracking, kill switch).
   - [ ] Ensure the agent loop respects the existing service boundaries: tool handlers call `monica-integration` for contact operations, `user-management` for preferences, `scheduler` for confirmed commands.
+  - [ ] Support model-agnostic LLM provider via OpenAI-compatible API (OpenRouter, OpenAI, any provider exposing `/v1/chat/completions` with tool calling support). Model ID and base URL configurable via environment variables.
 
 - [ ] **Stage 2: Confirmation Guardrail**
   - [ ] Implement a framework-level confirmation gate: when the LLM emits a tool call for a mutating tool (`create_note`, `create_contact`, `create_activity`, `update_*`), intercept it before execution.
@@ -327,10 +330,13 @@ _The tool-calling pattern (validated by OpenAI function calling, Claude tool use
   - [ ] Read-only tools execute immediately in the agent loop (no confirmation gate). The LLM formats the result into a natural-language response.
   - [ ] Ensure read-only tool execution still bypasses `scheduler` as required by service boundary rules.
 
-- [ ] **Stage 5: Promptfoo Evals & Acceptance Parity**
-  - [ ] Adapt the existing promptfoo evaluation suite to test the tool-calling agent. Replace intent-classification assertions with tool-call assertions: verify the LLM calls the right tool with the right parameters for each test case.
-  - [ ] Add multi-turn eval cases that test context preservation across disambiguation: "Add a note to Elena about lunch" → search_contacts → multiple results → user clarifies → create_note called with correct contactId AND original body preserved.
-  - [ ] Add eval cases for the confirmation flow: verify mutating tools are never called without the confirmation gate.
+- [ ] **Stage 5: Testing & Acceptance Parity**
+  - [ ] **Vitest unit tests**: test each tool handler in isolation (input params → mock service client → return result). Test the confirmation guardrail (intercept, serialize/deserialize, Zod rejection of invalid tool args). Test conversation history sliding window (40-message cap, oldest-first eviction).
+  - [ ] **Vitest integration tests**: agent loop tests with a mocked LLM returning scripted tool-call sequences. Test multi-turn disambiguation end-to-end: user message → search_contacts → ambiguous → user clarifies → create_note with correct contactId AND original body preserved.
+  - [ ] **Promptfoo evals**: adapt the existing 200-case evaluation suite. Replace intent-classification assertions (`output.intent === 'mutating_command'`) with tool-call assertions (`output.tool_calls[0].function.name === 'create_note'`). Same YAML datasets, same promptfoo framework, different assertion shape.
+  - [ ] Add promptfoo multi-turn eval cases for context preservation across disambiguation and confirmation flows.
+  - [ ] Add promptfoo eval cases verifying mutating tools are never called directly (always intercepted by confirmation gate).
+  - [ ] **Smoke tests**: unchanged — same HTTP requests to `/internal/process`, same response type assertions. The HTTP contract does not change.
   - [ ] Verify acceptance criteria parity: read accuracy ≥ 92%, write accuracy ≥ 90%, contact-resolution precision ≥ 95%, false-positive mutation rate < 1%, latency targets (p95 ≤ 5s text, ≤ 12s voice).
   - [ ] Run the full benchmark suite and compare results against Phase 6/9 baselines.
 
