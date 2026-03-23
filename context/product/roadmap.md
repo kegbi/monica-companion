@@ -342,23 +342,23 @@ _The tool-calling pattern (validated by OpenAI function calling, Claude tool use
   - [x] **Zod schemas per tool**: define input validation schemas (e.g., `CreateNoteArgsSchema = z.object({ contactId: z.number().int().positive(), body: z.string().min(1).max(100000) })`). Validation runs before execution in the confirmation flow. On validation failure, the error is returned as a tool result so the LLM can self-correct.
   - [x] **Service boundary enforcement**: read-only tools call `monica-integration` directly (bypassing scheduler). Mutating tools go through `scheduler` via `SchedulerClient.execute()`. This matches the existing service boundary rule: "Read-only queries, clarification prompts, and other non-mutating conversational responses bypass scheduler."
 
-- [ ] **Stage 5: Testing & Acceptance Parity**
+- [x] **Stage 5: Testing & Acceptance Parity**
 
   _Three testing layers: Vitest unit/integration tests, promptfoo LLM evals, Docker Compose smoke tests._
 
-  - [ ] **Vitest unit tests** (`ai-router/src/agent/__tests__/`):
+  - [x] **Vitest unit tests** (`ai-router/src/agent/__tests__/`):
     - Tool handler tests: each handler tested with mocked `ServiceClient`/`SchedulerClient`. Assert correct endpoints called, correct payloads, correct error handling. ~10-15 tests per handler.
     - Confirmation guardrail tests: test interception (mutating tool call → serialized pendingToolCall → confirmation_prompt response), Zod validation rejection (invalid args → tool error result), confirm callback (deserialize → execute → LLM success message), cancel callback (clear → cancellation response), edit callback (clear → re-enter loop), stale TTL rejection.
     - History repository tests: 40-message sliding window (insert 50, verify only last 40 survive), clearHistory, clearStaleHistories with cutoff date.
     - Agent loop tests with mocked LLM: mock `openai.chat.completions.create` to return scripted responses. Test single-turn (user → tool call → result → text), multi-turn (search → disambiguate → create), loop cap (5 iterations), read-only bypass (no confirmation gate).
-  - [ ] **Vitest integration tests**: multi-turn disambiguation end-to-end with mocked LLM: "Add a note to mum about Artillery Park" → LLM calls search_contacts("mum") → 8 results → LLM asks "which one?" → user says "Elena" → LLM calls search_contacts("Elena mum") → 1 result → LLM calls create_note(contactId=682023, body="Today we went to Artillery Park") → confirmation gate intercepts → confirm callback → scheduler called → LLM generates success. Assert the note body "Artillery Park" is preserved across all turns (the exact bug that motivated this migration).
-  - [ ] **Promptfoo evals** (`ai-router/promptfoo/`):
+  - [x] **Vitest integration tests**: multi-turn disambiguation end-to-end with mocked LLM: "Add a note to mum about Artillery Park" → LLM calls search_contacts("mum") → 8 results → LLM asks "which one?" → user says "Elena" → LLM calls search_contacts("Elena mum") → 1 result → LLM calls create_note(contactId=682023, body="Today we went to Artillery Park") → confirmation gate intercepts → confirm callback → scheduler called → LLM generates success. Assert the note body "Artillery Park" is preserved across all turns (the exact bug that motivated this migration).
+  - [x] **Promptfoo evals** (`ai-router/promptfoo/`):
     - New provider (`promptfoo/provider.ts`): wraps one turn of the agent loop — calls `openai.chat.completions.create` with the system prompt + tools + utterance, returns `{ text, tool_calls }` as JSON.
     - Adapt the 200-case dataset: write-intents assertions change from `JSON.parse(output).intent === 'mutating_command'` to `JSON.parse(output).tool_calls?.[0]?.function?.name === 'create_note'`. Read-intents assertions check for `query_birthday`/`query_phone`/`query_last_note` tool calls. Clarification cases check that the LLM generates text (no tool call) when it needs more info. Guardrails cases check that out-of-scope messages produce NO tool calls.
     - New multi-turn eval cases: context preservation across search → disambiguate → mutate. Verify the `arguments` field of the final mutating tool call contains the original payload data (note body, date, etc.) from the first user message.
     - New false-positive eval cases: verify mutating tools are NEVER called for read-only queries or greetings.
-  - [ ] **Smoke tests** (`tests/smoke/`): unchanged. POST /internal/process still returns `GraphResponse` shape. Same HTTP assertions. The response contract does not change.
-  - [ ] **Acceptance criteria parity**: run the full benchmark. Thresholds: read accuracy ≥ 92%, write accuracy ≥ 90%, contact-resolution precision ≥ 95%, false-positive mutation rate < 1%, p95 latency ≤ 5s text / ≤ 12s voice. Compare against Phase 9 baselines.
+  - [x] **Smoke tests** (`tests/smoke/`): unchanged. POST /internal/process still returns `GraphResponse` shape. Same HTTP assertions. The response contract does not change.
+  - [x] **Acceptance criteria parity**: run the full benchmark. Thresholds: read accuracy ≥ 92%, write accuracy ≥ 90%, contact-resolution precision ≥ 95%, false-positive mutation rate < 1%, p95 latency ≤ 5s text / ≤ 12s voice. Compare against Phase 9 baselines.
 
 - [ ] **Stage 6: Dead Code Removal & Cleanup**
 
