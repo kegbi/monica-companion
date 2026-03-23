@@ -22,6 +22,7 @@ Execute roadmap tasks through a multi-agent pipeline with quality gates and feed
 - `mode`:
   - `--manual` (default): Pause for user approval after each pipeline phase
   - `--auto`: Run fully autonomously — moves through all tasks and phases, pauses only on repeated failures
+  - `--single-task`: Process exactly one task group, then stop. Designed for the external `orchestrate-runner` which re-invokes Claude with fresh context per task. Combine with `--auto`: `--auto --single-task`
 - `task-filter`: Optional task group name (e.g., "Setup-Link Authentication")
   - If omitted, picks the next unchecked task group from the roadmap
 
@@ -76,6 +77,7 @@ Follow precisely. Do not skip steps.
 7. Check `.claude-work/{task-id}/state.json`:
    - `"status": "in-progress"` → announce resumption, skip to recorded phase.
    - `"status": "completed"` → skip to next unchecked group.
+   - `"status": "failed"` → skip to next unchecked group.
    - Missing → create directory and initialize state.
 
 **State file** `.claude-work/{task-id}/state.json`:
@@ -202,7 +204,12 @@ Update state: increment `smokeAttempts`.
 
 ### Step 7: Next Task
 
-**`--auto` mode:**
+**`--auto --single-task` mode:**
+1. Report: "Completed: {task group}."
+2. STOP. Do not continue to the next task. The external `orchestrate-runner` handles re-invocation with fresh context.
+3. On failure: set `"status": "failed"`, report findings, and STOP.
+
+**`--auto` mode (without `--single-task`):**
 1. Report: "Completed: {task group}. Moving to next task."
 2. Go to Step 0. Pick the next unchecked task group (across ALL phases).
 3. Continue until all tasks complete or a task fails after max retries.
@@ -223,6 +230,7 @@ Update state: increment `smokeAttempts`.
 - **Infrastructure failure** (docker, npm): Report and stop. No auto-retry.
 - **`--manual`:** Always pause on failure for user decision.
 - **`--auto`:** On failure after max retries, skip task, continue to next. Report all failures at end.
+- **`--auto --single-task`:** On completion or failure, stop immediately. The external runner handles task sequencing with fresh context.
 
 ## Resumption
 

@@ -1,0 +1,14 @@
+{
+	"name": "orchestrate-runner",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "tsx run.ts",
+		"start:filter": "tsx run.ts --filter"
+	},
+	"devDependencies": {
+		"@types/node": "24.12.0",
+		"tsx": "4.21.0",
+		"typescript": "5.9.3"
+	}
+}
