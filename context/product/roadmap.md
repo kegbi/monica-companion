@@ -2,7 +2,7 @@
 
 _This roadmap is an execution plan for the selected V1 logical architecture and deployment profile documented in `context/product/adr-v1-deployment-profile.md`. It prioritizes security contracts and core behavior before future connector expansion or service refactoring._
 
-> **Current status:** Phases 1-7 complete. Phase 8 contains remaining V1-blocking gaps — see `context/product/v1-release-readiness-report.md` for details.
+> **Current status:** Phases 1-9 complete. Phase 10 replaces the custom LangGraph pipeline with a tool-calling agent architecture — see Stage descriptions below.
 
 ---
 
@@ -289,3 +289,58 @@ _Fix fundamental issues with kinship matching and disambiguation UX discovered d
   - [x] Add graph-level test: full round-trip for kinship disambiguation — initial message → action confirmation → clarification question ("What's your mom's name?") → user answers → buttons presented → user selects → command executed.
   - [x] Add graph-level test: confirm-then-resolve flow where user cancels at action confirmation step (contact resolution never runs).
   - [x] Add graph-level test: unambiguous contact with kinship term (only one "parent" candidate) → action confirmation → auto-resolve → execute.
+
+---
+
+### Phase 10: Architecture Migration — Tool-Calling Agent
+
+_Replace the custom LangGraph intent-classification pipeline with an LLM tool-calling agent loop. The current architecture uses the LLM as a structured data extractor feeding a hand-built state machine (~5,200 lines across execute-action, resolve-contact-ref, pending-command lifecycle, intent schemas, and format-response). This inverts the LLM's strengths: it's great at conversational reasoning and context threading, bad at consistently reproducing rigid JSON schemas across multi-turn flows. The state machine compensates for what the LLM is bad at while blocking what it's good at._
+
+_The tool-calling pattern (validated by OpenAI function calling, Claude tool use, Botpress Autonomous Nodes, and the Conversation Routines research paper) lets the LLM orchestrate via tool calls while thin guardrails handle confirmation and validation. Context preservation is automatic because the full conversation history stays in the LLM's context window — no narrowingContext, no unresolvedContactRef, no updateDraftPayload._
+
+- [ ] **Stage 1: Agent Loop Foundation**
+  - [ ] Implement a simple agent loop in `ai-router` that replaces the LangGraph `StateGraph`. The loop: load conversation history → call LLM with tools → if tool call, execute or intercept for confirmation → if text, return to user → persist history.
+  - [ ] Define tool schemas for all V1 operations: `search_contacts`, `create_note`, `create_contact`, `create_activity`, `update_contact_birthday`, `update_contact_phone`, `update_contact_email`, `update_contact_address`, `query_birthday`, `query_phone`, `query_last_note` (~10 tools total).
+  - [ ] Write the system prompt for the agent: role definition, tool usage guidelines (always search_contacts before mutating), language mirroring, confirmation behavior, security rules.
+  - [ ] Implement conversation history persistence: store the full message array (user messages, assistant messages, tool calls, tool results) per user in PostgreSQL, replacing the compressed `conversation_turns` summaries. Add a context window pruning strategy (e.g., keep last 30 turns, summarize older ones).
+  - [ ] Wire `POST /internal/process` to invoke the agent loop instead of the LangGraph graph. Keep the existing guardrail middleware (rate limits, concurrency caps, budget tracking, kill switch).
+  - [ ] Ensure the agent loop respects the existing service boundaries: tool handlers call `monica-integration` for contact operations, `user-management` for preferences, `scheduler` for confirmed commands.
+
+- [ ] **Stage 2: Confirmation Guardrail**
+  - [ ] Implement a framework-level confirmation gate: when the LLM emits a tool call for a mutating tool (`create_note`, `create_contact`, `create_activity`, `update_*`), intercept it before execution.
+  - [ ] Serialize the pending tool call (tool name, parameters, tool_call_id) into the conversation session. Return a confirmation prompt to the user with Confirm/Cancel/Edit buttons.
+  - [ ] On Confirm callback: deserialize the pending tool call, execute it via the appropriate service client, append the tool result to conversation history, call the LLM one more time to generate a success message.
+  - [ ] On Cancel callback: append a cancellation note to conversation history, let the LLM generate a cancellation acknowledgment.
+  - [ ] On Edit callback: append the edit request to conversation history as a user message, re-enter the agent loop so the LLM can adjust the tool call parameters.
+  - [ ] Validate all tool call parameters with Zod schemas before execution (prevents hallucinated parameters). Reject invalid calls with a tool error result so the LLM can self-correct.
+  - [ ] Replace the 6-status pending command state machine (`draft → pending_confirmation → confirmed → executed → expired → cancelled`) with a single serialized `pendingToolCall` in the conversation session.
+
+- [ ] **Stage 3: Contact Resolution via Tools**
+  - [ ] Implement `search_contacts` as a tool the LLM can call. The tool calls `monica-integration` `/internal/contacts/resolution-summaries`, runs the existing deterministic matcher, and returns a list of `{contactId, displayName, aliases, relationshipLabels, birthdate}`.
+  - [ ] Instruct the LLM in the system prompt: "Before any operation that needs a contactId, call search_contacts first. If multiple matches, ask the user which one they meant. If no matches, ask the user to clarify or offer to create a new contact."
+  - [ ] Multi-turn disambiguation happens naturally: the LLM asks "I found two Elenas — Elena Yuryevna or Elena Petrova?", the user replies, and the LLM has the full context (including the original note body) in its conversation history. No narrowingContext needed.
+  - [ ] Remove the standalone `resolve-contact-ref` graph node (797 lines), the `narrowingContext` state field, the `unresolvedContactRef` state field, the progressive narrowing logic, and the confirm-then-resolve flow.
+  - [ ] Keep the existing deterministic contact matcher (`contact-resolution/matcher.ts`) as the implementation backing the `search_contacts` tool — only the orchestration layer changes.
+
+- [ ] **Stage 4: Read-Only Query Tools**
+  - [ ] Implement read-only tools (`query_birthday`, `query_phone`, `query_last_note`) that call `monica-integration` directly and return structured results.
+  - [ ] Read-only tools execute immediately in the agent loop (no confirmation gate). The LLM formats the result into a natural-language response.
+  - [ ] Ensure read-only tool execution still bypasses `scheduler` as required by service boundary rules.
+
+- [ ] **Stage 5: Promptfoo Evals & Acceptance Parity**
+  - [ ] Adapt the existing promptfoo evaluation suite to test the tool-calling agent. Replace intent-classification assertions with tool-call assertions: verify the LLM calls the right tool with the right parameters for each test case.
+  - [ ] Add multi-turn eval cases that test context preservation across disambiguation: "Add a note to Elena about lunch" → search_contacts → multiple results → user clarifies → create_note called with correct contactId AND original body preserved.
+  - [ ] Add eval cases for the confirmation flow: verify mutating tools are never called without the confirmation gate.
+  - [ ] Verify acceptance criteria parity: read accuracy ≥ 92%, write accuracy ≥ 90%, contact-resolution precision ≥ 95%, false-positive mutation rate < 1%, latency targets (p95 ≤ 5s text, ≤ 12s voice).
+  - [ ] Run the full benchmark suite and compare results against Phase 6/9 baselines.
+
+- [ ] **Stage 6: Dead Code Removal & Cleanup**
+  - [ ] Remove `execute-action.ts` (~980 lines) and its 2,265-line test file.
+  - [ ] Remove `resolve-contact-ref.ts` (~797 lines) and its 1,408-line test file.
+  - [ ] Remove `format-response.ts` (~141 lines) and its test file.
+  - [ ] Remove `intent-schemas.ts` (77 lines) — tool definitions replace intent classification schemas.
+  - [ ] Remove the pending command state machine: `pending-command/repository.ts` (321 lines), state machine, confirm helpers.
+  - [ ] Remove the LangGraph graph definition (`graph.ts`), `ConversationAnnotation`, and `ConversationStateSchema` from `state.ts`.
+  - [ ] Remove `classify-intent.ts` and `system-prompt.ts` (replaced by the agent system prompt and tool definitions).
+  - [ ] Update `acceptance-criteria.md` to reflect the simplified command lifecycle (pending tool call + confirmed boolean replaces the 6-status state machine).
+  - [ ] Verify all remaining tests pass, run Docker Compose smoke tests against the live stack.
