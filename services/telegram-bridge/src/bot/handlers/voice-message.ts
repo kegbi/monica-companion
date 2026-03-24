@@ -1,6 +1,8 @@
 import { createLogger } from "@monica-companion/observability";
 import type { InboundEvent } from "@monica-companion/types";
-import type { BotContext } from "../context";
+import type { AiRouterResponse } from "../../lib/ai-router-client.js";
+import type { BotContext } from "../context.js";
+import { renderResponse } from "../render-response.js";
 
 const logger = createLogger("telegram-bridge:voice-handler");
 
@@ -17,7 +19,7 @@ export type TranscribeFn = (
 	userId: string,
 ) => Promise<{ success: boolean; text?: string; error?: string; correlationId: string }>;
 
-export type ForwardEventFn = (event: InboundEvent) => Promise<void>;
+export type ForwardEventFn = (event: InboundEvent) => Promise<AiRouterResponse>;
 
 export type GetLanguagePreferenceFn = (userId: string) => Promise<string | undefined>;
 
@@ -86,7 +88,8 @@ export function createVoiceMessageHandler(
 				correlationId: ctx.correlationId,
 			};
 
-			await forwardEvent(event);
+			const response = await forwardEvent(event);
+			await renderResponse(ctx, response);
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
 			logger.error("Failed to process voice message", {

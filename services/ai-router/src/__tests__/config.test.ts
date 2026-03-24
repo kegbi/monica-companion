@@ -10,7 +10,6 @@ const baseEnv = {
 	SCHEDULER_URL: "http://scheduler:3005",
 	USER_MANAGEMENT_URL: "http://user-management:3007",
 	REDIS_URL: "redis://localhost:6379",
-	OPENAI_API_KEY: "sk-test-key-for-config",
 	LLM_API_KEY: "sk-test-llm-key",
 };
 
@@ -100,16 +99,6 @@ describe("loadConfig", () => {
 			INBOUND_ALLOWED_CALLERS: "telegram-bridge,whatsapp-bridge",
 		});
 		expect(config.inboundAllowedCallers).toEqual(["telegram-bridge", "whatsapp-bridge"]);
-	});
-
-	it("throws when OPENAI_API_KEY is missing", () => {
-		const { OPENAI_API_KEY, ...env } = baseEnv;
-		expect(() => loadConfig(env)).toThrow();
-	});
-
-	it("parses OPENAI_API_KEY when provided", () => {
-		const config = loadConfig(baseEnv);
-		expect(config.openaiApiKey).toBe("sk-test-key-for-config");
 	});
 
 	it("applies default MAX_CONVERSATION_TURNS of 10", () => {

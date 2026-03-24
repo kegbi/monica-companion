@@ -11,7 +11,6 @@ const configSchema = z.object({
 	SCHEDULER_URL: z.string().min(1),
 	USER_MANAGEMENT_URL: z.string().min(1),
 	INBOUND_ALLOWED_CALLERS: z.string().optional(),
-	OPENAI_API_KEY: z.string().min(1),
 	MAX_CONVERSATION_TURNS: z.coerce.number().int().positive().default(10),
 	AUTO_CONFIRM_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.95),
 	LLM_BASE_URL: z.string().min(1).default("https://openrouter.ai/api/v1"),
@@ -28,7 +27,6 @@ export interface Config {
 	deliveryUrl: string;
 	schedulerUrl: string;
 	userManagementUrl: string;
-	openaiApiKey: string;
 	maxConversationTurns: number;
 	autoConfirmConfidenceThreshold: number;
 	llmBaseUrl: string;
@@ -64,7 +62,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 		deliveryUrl: parsed.DELIVERY_URL,
 		schedulerUrl: parsed.SCHEDULER_URL,
 		userManagementUrl: parsed.USER_MANAGEMENT_URL,
-		openaiApiKey: parsed.OPENAI_API_KEY,
 		maxConversationTurns: parsed.MAX_CONVERSATION_TURNS,
 		autoConfirmConfidenceThreshold: parsed.AUTO_CONFIRM_CONFIDENCE_THRESHOLD,
 		llmBaseUrl: parsed.LLM_BASE_URL,

@@ -1,14 +1,17 @@
 import { createLogger } from "@monica-companion/observability";
 import type { InboundEvent } from "@monica-companion/types";
-import type { BotContext } from "../context";
+import type { AiRouterResponse } from "../../lib/ai-router-client.js";
+import type { BotContext } from "../context.js";
+import { renderResponse } from "../render-response.js";
 
 const logger = createLogger("telegram-bridge:text-handler");
 
-export type ForwardEventFn = (event: InboundEvent) => Promise<void>;
+export type ForwardEventFn = (event: InboundEvent) => Promise<AiRouterResponse>;
 
 /**
  * Creates a handler for text messages.
- * Sends typing indicator, builds connector-neutral event, forwards to ai-router.
+ * Sends typing indicator, builds connector-neutral event, forwards to ai-router,
+ * and renders the response back to the user.
  */
 export function createTextMessageHandler(forwardEvent: ForwardEventFn) {
 	return async (ctx: BotContext): Promise<void> => {
@@ -23,7 +26,8 @@ export function createTextMessageHandler(forwardEvent: ForwardEventFn) {
 				correlationId: ctx.correlationId,
 			};
 
-			await forwardEvent(event);
+			const response = await forwardEvent(event);
+			await renderResponse(ctx, response);
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
 			logger.error("Failed to process text message", {

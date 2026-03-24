@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { createVoiceMessageHandler } from "../voice-message";
+import type { AiRouterResponse } from "../../../lib/ai-router-client.js";
+import { createVoiceMessageHandler } from "../voice-message.js";
+
+const TEXT_RESPONSE: AiRouterResponse = { type: "text", text: "Got it, noted." };
 
 function createMockCtx() {
 	return {
@@ -23,7 +26,7 @@ function createMockCtx() {
 }
 
 describe("voiceMessageHandler", () => {
-	it("downloads file, transcribes, and forwards to ai-router", async () => {
+	it("downloads file, transcribes, forwards to ai-router, and replies", async () => {
 		const mockDownload = vi.fn(async () => ({
 			buffer: new ArrayBuffer(10),
 		}));
@@ -32,7 +35,7 @@ describe("voiceMessageHandler", () => {
 			text: "Hello from voice",
 			correlationId: "corr-voice",
 		}));
-		const mockForward = vi.fn(async () => {});
+		const mockForward = vi.fn(async () => TEXT_RESPONSE);
 
 		const handler = createVoiceMessageHandler(mockDownload, mockTranscribe, mockForward);
 		const ctx = createMockCtx();
@@ -49,6 +52,7 @@ describe("voiceMessageHandler", () => {
 			transcribedText: "Hello from voice",
 			correlationId: "corr-voice",
 		});
+		expect(ctx.reply).toHaveBeenCalledWith("Got it, noted.", { parse_mode: "Markdown" });
 	});
 
 	it("passes userId to transcribe function for guardrail enforcement", async () => {
@@ -60,7 +64,7 @@ describe("voiceMessageHandler", () => {
 			text: "Hello from voice",
 			correlationId: "corr-voice",
 		}));
-		const mockForward = vi.fn(async () => {});
+		const mockForward = vi.fn(async () => TEXT_RESPONSE);
 
 		const handler = createVoiceMessageHandler(mockDownload, mockTranscribe, mockForward);
 		const ctx = createMockCtx();
@@ -88,7 +92,7 @@ describe("voiceMessageHandler", () => {
 			error: "Transcription failed",
 			correlationId: "corr-voice",
 		}));
-		const mockForward = vi.fn(async () => {});
+		const mockForward = vi.fn(async () => TEXT_RESPONSE);
 
 		const handler = createVoiceMessageHandler(mockDownload, mockTranscribe, mockForward);
 		const ctx = createMockCtx();
@@ -101,6 +105,29 @@ describe("voiceMessageHandler", () => {
 		expect(mockForward).not.toHaveBeenCalled();
 	});
 
+	it("renders error responses from ai-router", async () => {
+		const errorResponse: AiRouterResponse = {
+			type: "error",
+			text: "Sorry, I encountered an error processing your request. Please try again.",
+		};
+		const mockDownload = vi.fn(async () => ({
+			buffer: new ArrayBuffer(10),
+		}));
+		const mockTranscribe = vi.fn(async () => ({
+			success: true,
+			text: "Hello",
+			correlationId: "corr-voice",
+		}));
+		const mockForward = vi.fn(async () => errorResponse);
+
+		const handler = createVoiceMessageHandler(mockDownload, mockTranscribe, mockForward);
+		const ctx = createMockCtx();
+
+		await handler(ctx as never);
+
+		expect(ctx.reply).toHaveBeenCalledWith(errorResponse.text);
+	});
+
 	it("passes user language preference as languageHint in transcription metadata", async () => {
 		const mockDownload = vi.fn(async () => ({
 			buffer: new ArrayBuffer(10),
@@ -110,7 +137,7 @@ describe("voiceMessageHandler", () => {
 			text: "Elena",
 			correlationId: "corr-voice",
 		}));
-		const mockForward = vi.fn(async () => {});
+		const mockForward = vi.fn(async () => TEXT_RESPONSE);
 		const mockGetLanguagePreference = vi.fn(async () => "en");
 
 		const handler = createVoiceMessageHandler(
@@ -143,7 +170,7 @@ describe("voiceMessageHandler", () => {
 			text: "Hello",
 			correlationId: "corr-voice",
 		}));
-		const mockForward = vi.fn(async () => {});
+		const mockForward = vi.fn(async () => TEXT_RESPONSE);
 
 		const handler = createVoiceMessageHandler(mockDownload, mockTranscribe, mockForward);
 		const ctx = createMockCtx();
@@ -164,7 +191,7 @@ describe("voiceMessageHandler", () => {
 			text: "test",
 			correlationId: "corr",
 		}));
-		const mockForward = vi.fn(async () => {});
+		const mockForward = vi.fn(async () => TEXT_RESPONSE);
 
 		const handler = createVoiceMessageHandler(mockDownload, mockTranscribe, mockForward);
 		const ctx = createMockCtx();

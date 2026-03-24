@@ -1,6 +1,14 @@
 import { createServiceClient } from "@monica-companion/auth";
 import type { InboundEvent } from "@monica-companion/types";
 
+export interface AiRouterResponse {
+	type: "text" | "confirmation_prompt" | "disambiguation_prompt" | "error";
+	text: string;
+	pendingCommandId?: string;
+	version?: number;
+	options?: { label: string; value: string }[];
+}
+
 export interface AiRouterClientOptions {
 	baseUrl: string;
 	secret: string;
@@ -8,7 +16,7 @@ export interface AiRouterClientOptions {
 }
 
 export interface AiRouterClient {
-	forwardEvent(event: InboundEvent): Promise<void>;
+	forwardEvent(event: InboundEvent): Promise<AiRouterResponse>;
 	clearHistory(userId: string): Promise<{ cleared: boolean }>;
 }
 
@@ -21,7 +29,7 @@ export function createAiRouterClient(options: AiRouterClientOptions): AiRouterCl
 	});
 
 	return {
-		async forwardEvent(event: InboundEvent): Promise<void> {
+		async forwardEvent(event: InboundEvent): Promise<AiRouterResponse> {
 			const signal = AbortSignal.timeout(options.timeoutMs ?? 10_000);
 			const res = await client.fetch("/internal/process", {
 				method: "POST",
@@ -34,6 +42,7 @@ export function createAiRouterClient(options: AiRouterClientOptions): AiRouterCl
 			if (!res.ok) {
 				throw new Error(`ai-router returned ${res.status}`);
 			}
+			return (await res.json()) as AiRouterResponse;
 		},
 
 		async clearHistory(userId: string): Promise<{ cleared: boolean }> {

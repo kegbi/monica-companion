@@ -113,7 +113,6 @@ const mockConfig = {
 	deliveryUrl: "http://delivery:3006",
 	schedulerUrl: "http://scheduler:3005",
 	userManagementUrl: "http://user-management:3007",
-	openaiApiKey: "sk-test-key",
 	maxConversationTurns: 10,
 	autoConfirmConfidenceThreshold: 0.95,
 	llmBaseUrl: "https://openrouter.ai/api/v1",

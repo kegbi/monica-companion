@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { createCallbackQueryHandler } from "../callback-query";
+import type { AiRouterResponse } from "../../../lib/ai-router-client.js";
+import { createCallbackQueryHandler } from "../callback-query.js";
+
+const TEXT_RESPONSE: AiRouterResponse = { type: "text", text: "Action confirmed." };
 
 function createMockCtx(data: string) {
 	return {
@@ -21,8 +24,8 @@ function createMockCtx(data: string) {
 }
 
 describe("callbackQueryHandler", () => {
-	it("answers callback query, sends typing, and forwards to ai-router", async () => {
-		const mockForward = vi.fn(async () => {});
+	it("answers callback query, sends typing, forwards to ai-router, and replies", async () => {
+		const mockForward = vi.fn(async () => TEXT_RESPONSE);
 		const handler = createCallbackQueryHandler(mockForward);
 		const ctx = createMockCtx("confirm:cmd-id-123:1");
 
@@ -38,10 +41,11 @@ describe("callbackQueryHandler", () => {
 			data: "cmd-id-123:1",
 			correlationId: "corr-cb",
 		});
+		expect(ctx.reply).toHaveBeenCalledWith("Action confirmed.", { parse_mode: "Markdown" });
 	});
 
 	it("replies with error for invalid callback data", async () => {
-		const mockForward = vi.fn(async () => {});
+		const mockForward = vi.fn(async () => TEXT_RESPONSE);
 		const handler = createCallbackQueryHandler(mockForward);
 		const ctx = createMockCtx("invalid-data");
 
