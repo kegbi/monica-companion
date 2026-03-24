@@ -16,7 +16,6 @@ export default defineConfig({
 			jose: pkg("jose"),
 			ioredis: pkg("ioredis"),
 			openai: pkg("openai"),
-			"@langchain/core/messages": pkg("@langchain/core", "messages.js"),
 			...otelAliases(),
 			"@monica-companion/auth": workspace("@monica-companion/auth"),
 			"@monica-companion/guardrails": workspace("@monica-companion/guardrails"),

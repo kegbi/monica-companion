@@ -20,7 +20,7 @@
 - **Language & Runtime:** TypeScript on Node.js
 - **Package Manager:** pnpm with workspaces for the monorepo
 - **Monorepo Structure:** Shared packages (`types`, `utils`, `monica-api-lib`, `auth`, `idempotency`, `redaction`, `guardrails`, `observability`) plus logical service packages (`ai-router`, `telegram-bridge`, `voice-transcription`, `monica-integration`, `scheduler`, `delivery`, `user-management`, `web-ui`). The initial V1 deployment profile uses 8 application containers, one per service boundary.
-- **AI Framework:** LangGraph TS orchestrates LLM-powered command routing, disambiguation flows, and multi-turn conversation management.
+- **AI Framework:** A tool-calling agent loop orchestrates LLM-powered command routing, disambiguation flows, and multi-turn conversation management using the OpenAI chat completions API with function calling.
 - **LLM Provider:** OpenAI `gpt-5.4-mini` (400K context, structured outputs, reasoning tokens) handles intent parsing and command extraction with medium reasoning effort. V1 uses a shared operator-provided API key with per-user request-size limits, concurrency caps, budget alarms, and an operator kill switch.
 - **Speech-to-Text Boundary:** OpenAI `gpt-4o-transcribe` (default) or `whisper-1` (legacy fallback) transcribes voice messages in any supported language through a dedicated connector-neutral `voice-transcription` service using the `/v1/audio/transcriptions` endpoint with `json` response format. The contract is binary upload or short-lived fetch URL plus media metadata.
 - **Outbound Delivery Boundary:** Connector-neutral `delivery` routes outbound message intents to the correct connector while keeping platform formatting in the connector.
@@ -32,7 +32,7 @@
 
 ## 2. Data & Persistence
 
-- **Primary Database:** PostgreSQL stores user accounts, setup-token state, configurations, pending commands, conversation turn summaries (in `conversation_turns` table with 30-day retention), command logs, idempotency keys, and delivery audit records.
+- **Primary Database:** PostgreSQL stores user accounts, setup-token state, configurations, conversation history (in `conversation_history` table with 30-day retention), command logs, idempotency keys, and delivery audit records.
 - **ORM:** Drizzle ORM
 - **Job Queue & Caching:** Redis backs BullMQ queues and optional short-lived caches.
 - **Job Scheduler:** BullMQ runs confirmed mutating commands and scheduled reminder jobs. Read-only queries stay synchronous in `ai-router`. Scheduler owns job-level retries, backoff ceilings, dead-letter handling, and schedule-window dedupe. Edge clients own only quick transport retries.
@@ -40,8 +40,8 @@
 
 ### 2.1. Data Governance
 
-- **Conversation state:** Persist compressed turn summaries (not raw utterances or full LLM responses) in the `conversation_turns` PostgreSQL table, loaded into LangGraph state on each invocation (default: most recent 10 turns). Pending-command metadata is stored separately. Avoid storing raw Monica payloads or uncompressed LLM responses in persistent AI state.
-- **Retention:** Conversation summaries and pending-command records are retained for 30 days after completion. Command logs and delivery audits are retained for 90 days. Traces, logs, and dead-letter payloads are retained for 14 days unless security investigation policy requires a shorter emergency purge.
+- **Conversation state:** The agent loop stores OpenAI-format message arrays per user in the `conversation_history` PostgreSQL table, with a sliding window that retains the most recent messages. Pending tool calls awaiting confirmation are stored alongside the conversation history. Avoid storing raw Monica payloads or uncompressed LLM responses outside the managed conversation history.
+- **Retention:** Conversation history records are retained for 30 days after last activity. Command logs and delivery audits are retained for 90 days. Traces, logs, and dead-letter payloads are retained for 14 days unless security investigation policy requires a shorter emergency purge.
 - **Audio handling:** Voice audio is processed transiently for transcription and is not retained after transcription succeeds or fails, aside from minimal operational metadata.
 - **Deletion:** Disconnecting an account revokes setup tokens immediately, deletes Monica credentials immediately, and schedules user-specific conversational/audit data for purge within 30 days, excluding minimal security audit entries required for abuse or incident response.
 - **Redaction scope:** The same minimization and redaction policy applies to logs, traces, dead letters, queue payloads, and support tooling.

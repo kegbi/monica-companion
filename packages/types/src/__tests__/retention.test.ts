@@ -8,36 +8,24 @@ import {
 } from "../retention.js";
 
 describe("AiRouterRetentionCleanupRequestSchema", () => {
-	it("accepts valid payload with ISO date strings", () => {
+	it("accepts valid payload with ISO date string", () => {
 		const result = AiRouterRetentionCleanupRequestSchema.safeParse({
-			conversationTurnsCutoff: "2024-01-01T00:00:00.000Z",
-			pendingCommandsCutoff: "2024-01-15T00:00:00.000Z",
+			conversationHistoryCutoff: "2024-01-01T00:00:00.000Z",
 		});
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data.conversationTurnsCutoff).toBe("2024-01-01T00:00:00.000Z");
-			expect(result.data.pendingCommandsCutoff).toBe("2024-01-15T00:00:00.000Z");
+			expect(result.data.conversationHistoryCutoff).toBe("2024-01-01T00:00:00.000Z");
 		}
 	});
 
-	it("rejects missing conversationTurnsCutoff", () => {
-		const result = AiRouterRetentionCleanupRequestSchema.safeParse({
-			pendingCommandsCutoff: "2024-01-15T00:00:00.000Z",
-		});
-		expect(result.success).toBe(false);
-	});
-
-	it("rejects missing pendingCommandsCutoff", () => {
-		const result = AiRouterRetentionCleanupRequestSchema.safeParse({
-			conversationTurnsCutoff: "2024-01-01T00:00:00.000Z",
-		});
+	it("rejects missing conversationHistoryCutoff", () => {
+		const result = AiRouterRetentionCleanupRequestSchema.safeParse({});
 		expect(result.success).toBe(false);
 	});
 
 	it("rejects non-ISO date string", () => {
 		const result = AiRouterRetentionCleanupRequestSchema.safeParse({
-			conversationTurnsCutoff: "not-a-date",
-			pendingCommandsCutoff: "2024-01-15T00:00:00.000Z",
+			conversationHistoryCutoff: "not-a-date",
 		});
 		expect(result.success).toBe(false);
 	});
@@ -75,12 +63,11 @@ describe("DeliveryRetentionCleanupRequestSchema", () => {
 describe("RetentionCleanupResponseSchema", () => {
 	it("accepts valid response with purge counts", () => {
 		const result = RetentionCleanupResponseSchema.safeParse({
-			purged: { conversationTurns: 10, pendingCommands: 5 },
+			purged: { conversationHistory: 10 },
 		});
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data.purged.conversationTurns).toBe(10);
-			expect(result.data.purged.pendingCommands).toBe(5);
+			expect(result.data.purged.conversationHistory).toBe(10);
 		}
 	});
 
@@ -98,7 +85,7 @@ describe("RetentionCleanupResponseSchema", () => {
 
 	it("rejects non-number values in purged", () => {
 		const result = RetentionCleanupResponseSchema.safeParse({
-			purged: { conversationTurns: "ten" },
+			purged: { conversationHistory: "ten" },
 		});
 		expect(result.success).toBe(false);
 	});
@@ -107,7 +94,7 @@ describe("RetentionCleanupResponseSchema", () => {
 describe("UserDataPurgeResponseSchema", () => {
 	it("accepts valid response with purge counts", () => {
 		const result = UserDataPurgeResponseSchema.safeParse({
-			purged: { conversationTurns: 10, pendingCommands: 3 },
+			purged: { conversationHistory: 10 },
 		});
 		expect(result.success).toBe(true);
 	});

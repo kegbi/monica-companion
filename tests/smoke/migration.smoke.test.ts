@@ -14,18 +14,14 @@ const config = loadSmokeConfig();
 describe("database auto-migration", () => {
 	const sql = postgres(config.POSTGRES_URL, { max: 1 });
 
-	it("ai-router tables exist (conversation_turns, pending_commands, conversation_history)", async () => {
+	it("ai-router conversation_history table exists (legacy tables dropped by migration 0004)", async () => {
 		const tables = await sql`
 			SELECT table_name FROM information_schema.tables
 			WHERE table_schema = 'public'
 			AND table_name IN ('conversation_turns', 'pending_commands', 'conversation_history')
 			ORDER BY table_name
 		`;
-		expect(tables.map((r) => r.table_name)).toEqual([
-			"conversation_history",
-			"conversation_turns",
-			"pending_commands",
-		]);
+		expect(tables.map((r) => r.table_name)).toEqual(["conversation_history"]);
 	});
 
 	it("user-management tables exist (users, setup_tokens, user_preferences)", async () => {
@@ -50,15 +46,22 @@ describe("database auto-migration", () => {
 		expect(names).toContain("__drizzle_migrations_user_management");
 	});
 
-	it("conversation_turns has expected indexes", async () => {
-		const indexes = await sql`
-			SELECT indexname FROM pg_indexes
-			WHERE tablename = 'conversation_turns'
-			ORDER BY indexname
+	it("legacy conversation_turns table was dropped by migration 0004", async () => {
+		const tables = await sql`
+			SELECT table_name FROM information_schema.tables
+			WHERE table_schema = 'public'
+			AND table_name = 'conversation_turns'
 		`;
-		const names = indexes.map((r) => r.indexname);
-		expect(names).toContain("idx_conversation_turns_user_created");
-		expect(names).toContain("idx_conversation_turns_created_at");
+		expect(tables).toHaveLength(0);
+	});
+
+	it("legacy pending_commands table was dropped by migration 0004", async () => {
+		const tables = await sql`
+			SELECT table_name FROM information_schema.tables
+			WHERE table_schema = 'public'
+			AND table_name = 'pending_commands'
+		`;
+		expect(tables).toHaveLength(0);
 	});
 
 	it("conversation_history has expected columns and constraints", async () => {
@@ -98,30 +101,6 @@ describe("database auto-migration", () => {
 		`;
 		const names = constraints.map((r) => r.constraint_name);
 		expect(names).toContain("uq_conversation_history_user_id");
-	});
-
-	it("pending_commands has narrowing_context column (progressive narrowing migration)", async () => {
-		const columns = await sql`
-			SELECT column_name, data_type, is_nullable
-			FROM information_schema.columns
-			WHERE table_name = 'pending_commands'
-			AND column_name = 'narrowing_context'
-		`;
-		expect(columns).toHaveLength(1);
-		expect(columns[0].data_type).toBe("jsonb");
-		expect(columns[0].is_nullable).toBe("YES");
-	});
-
-	it("pending_commands has unresolved_contact_ref column (confirm-then-resolve migration)", async () => {
-		const columns = await sql`
-			SELECT column_name, data_type, is_nullable
-			FROM information_schema.columns
-			WHERE table_name = 'pending_commands'
-			AND column_name = 'unresolved_contact_ref'
-		`;
-		expect(columns).toHaveLength(1);
-		expect(columns[0].data_type).toBe("text");
-		expect(columns[0].is_nullable).toBe("YES");
 	});
 
 	afterAll(async () => {

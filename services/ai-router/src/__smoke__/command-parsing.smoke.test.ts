@@ -6,7 +6,7 @@
  * correct response types are produced.
  *
  * Each test uses a unique userId (random UUID) so there are no
- * cross-test state interactions via conversation_turns or pending_commands.
+ * cross-test state interactions via conversation_history.
  *
  * Assertions are structural (response type, non-empty text) rather than
  * exact-match because LLM output varies between invocations.

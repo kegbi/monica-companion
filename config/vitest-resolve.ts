@@ -30,11 +30,11 @@ function storeEntries(): string[] {
  * Find a package in the pnpm store by name.
  *
  * Converts the npm package name to the pnpm directory prefix
- * (e.g. "@langchain/openai" → "@langchain+openai@") and finds
+ * (e.g. "@opentelemetry/api" → "@opentelemetry+api@") and finds
  * the first matching directory. Returns the resolved path to
  * node_modules/<name>/<subpath> inside that store entry.
  *
- * @param name - npm package name (e.g. "zod", "@langchain/openai")
+ * @param name - npm package name (e.g. "zod", "@opentelemetry/api")
  * @param subpath - optional path within the package (e.g. "v4", "dist/index.js")
  */
 export function pkg(name: string, subpath = ""): string {

@@ -12,8 +12,7 @@ const isoDateString = z
  * Request body for POST /internal/retention-cleanup on ai-router.
  */
 export const AiRouterRetentionCleanupRequestSchema = z.object({
-	conversationTurnsCutoff: isoDateString,
-	pendingCommandsCutoff: isoDateString,
+	conversationHistoryCutoff: isoDateString,
 });
 export type AiRouterRetentionCleanupRequest = z.infer<typeof AiRouterRetentionCleanupRequestSchema>;
 

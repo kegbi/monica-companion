@@ -115,7 +115,6 @@ services:
       JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
       DATABASE_URL: postgresql://monica:monica_dev@postgres:5432/monica_companion
       PENDING_COMMAND_TTL_MINUTES: ${PENDING_COMMAND_TTL_MINUTES:-30}
-      EXPIRY_SWEEP_INTERVAL_MS: ${EXPIRY_SWEEP_INTERVAL_MS:-60000}
       MONICA_INTEGRATION_URL: http://monica-integration:3004
       DELIVERY_URL: http://delivery:3006
       SCHEDULER_URL: http://scheduler:3005

@@ -4,11 +4,7 @@ import { Hono } from "hono";
 import { z } from "zod/v4";
 import type { Config } from "../config.js";
 import type { Database } from "../db/connection.js";
-import {
-	purgeUserConversationHistory,
-	purgeUserConversationTurns,
-	purgeUserPendingCommands,
-} from "./user-purge.js";
+import { purgeUserConversationHistory } from "./user-purge.js";
 
 const logger = createLogger("ai-router");
 const uuidSchema = z.string().uuid();
@@ -36,18 +32,14 @@ export function userPurgeRoutes(config: Config, db: Database) {
 			return c.json({ error: "Invalid userId format" }, 400);
 		}
 
-		const conversationTurns = await purgeUserConversationTurns(db, userId);
-		const pendingCommands = await purgeUserPendingCommands(db, userId);
 		const conversationHistory = await purgeUserConversationHistory(db, userId);
 
 		logger.info("User data purge completed", {
 			userId,
-			conversationTurnsPurged: conversationTurns,
-			pendingCommandsPurged: pendingCommands,
 			conversationHistoryPurged: conversationHistory,
 		});
 
-		return c.json({ purged: { conversationTurns, pendingCommands, conversationHistory } });
+		return c.json({ purged: { conversationHistory } });
 	});
 
 	return routes;

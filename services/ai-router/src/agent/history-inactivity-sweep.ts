@@ -9,7 +9,7 @@ const INACTIVITY_HOURS = 24;
 
 /**
  * Start a periodic sweep that clears conversation histories inactive
- * for more than 24 hours. Uses the same setInterval pattern as expiry-sweep.
+ * for more than 24 hours.
  *
  * Returns a cleanup function that stops the sweep timer.
  */

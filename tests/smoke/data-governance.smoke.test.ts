@@ -22,14 +22,12 @@ describe("retention cleanup endpoints", () => {
 			{
 				method: "POST",
 				issuer: "scheduler",
-				body: { conversationTurnsCutoff: cutoff, pendingCommandsCutoff: cutoff },
+				body: { conversationHistoryCutoff: cutoff },
 			},
 		);
 		expect(status).toBe(200);
 		expect(body).toHaveProperty("purged");
 		const purged = (body as { purged: Record<string, number> }).purged;
-		expect(purged).toHaveProperty("conversationTurns");
-		expect(purged).toHaveProperty("pendingCommands");
 		expect(purged).toHaveProperty("conversationHistory");
 	});
 
@@ -73,8 +71,7 @@ describe("data governance auth enforcement", () => {
 				method: "POST",
 				issuer: "telegram-bridge",
 				body: {
-					conversationTurnsCutoff: new Date().toISOString(),
-					pendingCommandsCutoff: new Date().toISOString(),
+					conversationHistoryCutoff: new Date().toISOString(),
 				},
 			},
 		);
@@ -125,8 +122,7 @@ describe("data governance auth enforcement", () => {
 		const { status } = await smokeRequest(config.AI_ROUTER_URL + "/internal/retention-cleanup", {
 			method: "POST",
 			body: {
-				conversationTurnsCutoff: new Date().toISOString(),
-				pendingCommandsCutoff: new Date().toISOString(),
+				conversationHistoryCutoff: new Date().toISOString(),
 			},
 		});
 		expect(status).toBe(401);
@@ -144,7 +140,7 @@ describe("data governance auth enforcement", () => {
 describe("user data purge endpoints", () => {
 	const testUserId = randomUUID();
 
-	it("ai-router user purge returns 200 with zero counts including conversationHistory", async () => {
+	it("ai-router user purge returns 200 with zero counts for conversationHistory", async () => {
 		const { status, body } = await authedRequest(
 			config.AI_ROUTER_URL + "/internal/users/" + testUserId + "/data",
 			"ai-router",
@@ -153,8 +149,6 @@ describe("user data purge endpoints", () => {
 		expect(status).toBe(200);
 		expect(body).toHaveProperty("purged");
 		const purged = (body as { purged: Record<string, number> }).purged;
-		expect(purged.conversationTurns).toBe(0);
-		expect(purged.pendingCommands).toBe(0);
 		expect(purged.conversationHistory).toBe(0);
 	});
 

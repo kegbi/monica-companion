@@ -2,11 +2,10 @@
  * Context preservation LLM smoke tests.
  *
  * Tests that the ai-router correctly resolves pronouns and implicit
- * references across multiple turns using the conversation_turns context.
+ * references across multiple turns using the conversation_history context.
  *
- * Both messages in each test use the same userId so the persistTurn node
- * stores the first turn and the loadContext node reads it back for the
- * second invocation.
+ * Both messages in each test use the same userId so the agent loop
+ * stores the first turn and loads it back for the second invocation.
  */
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";

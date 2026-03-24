@@ -31,19 +31,19 @@ Logical architecture and initial Telegram-only V1 deployment profile: **16 conta
 
 **Container:** `ai-router`
 
-**Purpose:** Handle natural language understanding, contact resolution, conversation context, and pending-command orchestration.
+**Purpose:** Handle natural language understanding, contact resolution, conversation context, and mutating-tool-call confirmation orchestration.
 
 **Why separate:** AI prompting, conversation state, and command synthesis evolve independently from connector and Monica integration concerns.
 
 **Responsibilities:**
-- Parse free-form text into structured command drafts using LangGraph TS plus OpenAI `gpt-5.4-mini` (with Zod structured outputs, medium reasoning effort).
+- Run a tool-calling agent loop using the OpenAI chat completions API with function calling to parse free-form text into tool invocations.
 - Detect language and generate user-facing copy in the same language.
 - Resolve contacts against the minimized `ContactResolutionSummary` projection exposed by `monica-integration`.
-- Own pending-command state in PostgreSQL, including correlation IDs, version numbers, source message references, TTL, and the lifecycle `draft -> pending_confirmation -> confirmed -> executed -> expired/cancelled`.
-- Handle clarifications, edits, and disambiguation by updating the existing draft version instead of creating unrelated commands.
-- Auto-confirm drafts only when user preferences and confidence thresholds allow it.
+- Intercept mutating tool calls, store them as pending tool calls in the `conversation_history` table with a `pendingCommandId`, version, and TTL.
+- Present confirmation prompts to the user and handle confirm/cancel/edit callbacks.
+- Reject stale, expired, or identity-mismatched confirmations with clear user-facing messages.
 - Emit connector-neutral outbound message intents to `delivery` for clarification prompts, confirmation prompts, query responses, and stale-action rejections.
-- Enqueue only confirmed execution payloads to `scheduler`.
+- Dispatch confirmed mutating tool calls to `scheduler` for execution.
 
 **Allowed callers:** `telegram-bridge` and future connectors.
 

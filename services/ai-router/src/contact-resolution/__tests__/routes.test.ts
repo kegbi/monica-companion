@@ -14,13 +14,6 @@ vi.mock("@monica-companion/observability", () => ({
 	}),
 }));
 
-// Mock @langchain/openai to avoid real LLM calls
-vi.mock("@langchain/openai", () => ({
-	ChatOpenAI: vi.fn().mockImplementation(function (this: any) {
-		this.withStructuredOutput = vi.fn().mockReturnValue({ invoke: vi.fn() });
-	}),
-}));
-
 // Mock openai SDK for agent loop
 vi.mock("openai", () => ({
 	default: class MockOpenAI {
@@ -101,7 +94,6 @@ const testConfig: Config = {
 	port: 3002,
 	databaseUrl: "postgresql://test:test@localhost:5432/test",
 	pendingCommandTtlMinutes: 30,
-	expirySweepIntervalMs: 60000,
 	monicaIntegrationUrl: "http://monica-integration:3004",
 	deliveryUrl: "http://delivery:3006",
 	schedulerUrl: "http://scheduler:3005",

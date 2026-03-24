@@ -37,8 +37,7 @@ export async function processRetentionCleanup(deps: RetentionCleanupDeps): Promi
 	} = deps;
 
 	// Compute cutoff dates
-	const conversationCutoff = daysAgo(config.conversationRetentionDays);
-	const pendingCommandCutoff = daysAgo(config.conversationRetentionDays);
+	const conversationHistoryCutoff = daysAgo(config.conversationRetentionDays);
 	const executionCutoff = daysAgo(config.commandLogRetentionDays);
 	const deliveryAuditCutoff = daysAgo(config.commandLogRetentionDays);
 	const idempotencyKeyCutoff = daysAgo(config.idempotencyKeyRetentionDays);
@@ -54,8 +53,7 @@ export async function processRetentionCleanup(deps: RetentionCleanupDeps): Promi
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
-			conversationTurnsCutoff: conversationCutoff.toISOString(),
-			pendingCommandsCutoff: pendingCommandCutoff.toISOString(),
+			conversationHistoryCutoff: conversationHistoryCutoff.toISOString(),
 		}),
 		signal: AbortSignal.timeout(config.httpTimeoutMs),
 	});

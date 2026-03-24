@@ -22,11 +22,10 @@ The first release is successful when all of the following are met.
 
 ## Command Lifecycle
 
-- [ ] Every mutating interaction is tracked with a `pendingCommandId`, version, source-message references, and TTL.
-- [ ] Pending commands follow the lifecycle `draft -> pending_confirmation -> confirmed -> executed -> expired/cancelled`.
-- [ ] Clarification replies, edit actions, button presses, and voice confirmations attach to an existing active pending command instead of creating unrelated executions.
-- [ ] Stale, expired, or version-mismatched confirmations are rejected with a clear user-facing message.
-- [ ] Scheduler accepts only confirmed commands for execution.
+- [ ] Every mutating tool call is intercepted by the agent loop and stored as a pending tool call in conversation history, with a `pendingCommandId`, version, and TTL.
+- [ ] The user receives a confirmation prompt with confirm/cancel/edit inline buttons before any mutation executes.
+- [ ] Stale, expired, or identity-mismatched confirmations are rejected with a clear user-facing message.
+- [ ] Confirmed mutations are dispatched to the scheduler for execution via the Monica API.
 - [ ] Read-only queries, clarification prompts, and other non-mutating conversational responses bypass `scheduler` and go directly from `ai-router` to outbound delivery.
 
 ## Onboarding & Multi-User
@@ -81,7 +80,7 @@ The first release is successful when all of the following are met.
 
 - [ ] Conversation state is minimized to what is needed for active workflows and recent context.
 - [ ] Voice audio is not retained after transcription completes, aside from minimal operational metadata.
-- [ ] Conversation summaries and pending-command records have a documented retention limit of 30 days after completion.
+- [ ] Conversation history records have a documented retention limit of 30 days after last activity.
 - [ ] Command logs and delivery audits have a documented retention limit of 90 days.
 - [ ] Traces, logs, and dead-letter payloads have a documented retention limit of 14 days.
 - [ ] Disconnecting an account deletes Monica credentials immediately and schedules user-specific conversational/audit data for purge within 30 days, excluding minimal security audit entries.

@@ -12,7 +12,6 @@ import { createLogger } from "@monica-companion/observability";
 import type { InboundEvent } from "@monica-companion/types";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import type { Database } from "../db/connection.js";
-import type { GraphResponse } from "../graph/state.js";
 import type { SchedulerClient } from "../lib/scheduler-client.js";
 import type { ConversationHistoryRow } from "./history-repository.js";
 import type { LlmClient } from "./llm-client.js";
@@ -30,6 +29,7 @@ import {
 	TOOL_ARG_SCHEMAS,
 	TOOL_DEFINITIONS,
 } from "./tools.js";
+import type { GraphResponse } from "./types.js";
 
 const logger = createLogger("ai-router:agent-loop");
 

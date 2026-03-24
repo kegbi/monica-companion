@@ -21,8 +21,6 @@ vi.mock("@monica-companion/guardrails", () => ({
 
 // Mock the cleanup functions
 vi.mock("../retention/cleanup.js", () => ({
-	purgeExpiredConversationTurns: vi.fn().mockResolvedValue(5),
-	purgeExpiredPendingCommands: vi.fn().mockResolvedValue(3),
 	purgeExpiredConversationHistory: vi.fn().mockResolvedValue(2),
 }));
 
@@ -58,16 +56,13 @@ describe("POST /internal/retention-cleanup (ai-router)", () => {
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({
-				conversationTurnsCutoff: "2024-01-01T00:00:00.000Z",
-				pendingCommandsCutoff: "2024-01-15T00:00:00.000Z",
+				conversationHistoryCutoff: "2024-01-01T00:00:00.000Z",
 			}),
 		});
 
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.purged).toEqual({
-			conversationTurns: 5,
-			pendingCommands: 3,
 			conversationHistory: 2,
 		});
 	});
@@ -98,8 +93,7 @@ describe("POST /internal/retention-cleanup (ai-router)", () => {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
-				conversationTurnsCutoff: "2024-01-01T00:00:00.000Z",
-				pendingCommandsCutoff: "2024-01-15T00:00:00.000Z",
+				conversationHistoryCutoff: "2024-01-01T00:00:00.000Z",
 			}),
 		});
 
@@ -121,8 +115,7 @@ describe("POST /internal/retention-cleanup (ai-router)", () => {
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({
-				conversationTurnsCutoff: "2024-01-01T00:00:00.000Z",
-				pendingCommandsCutoff: "2024-01-15T00:00:00.000Z",
+				conversationHistoryCutoff: "2024-01-01T00:00:00.000Z",
 			}),
 		});
 

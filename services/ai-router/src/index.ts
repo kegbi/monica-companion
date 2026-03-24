@@ -8,7 +8,6 @@ async function main() {
 	const { createApp } = await import("./app.js");
 	const { loadConfig } = await import("./config.js");
 	const { createDb } = await import("./db/connection.js");
-	const { startExpirySweep } = await import("./pending-command/expiry-sweep.js");
 	const { startHistoryInactivitySweep } = await import("./agent/history-inactivity-sweep.js");
 	const { createRedisClient, closeRedisClient } = await import("@monica-companion/guardrails");
 
@@ -18,7 +17,6 @@ async function main() {
 	const redis = createRedisClient(config.guardrails.redisUrl);
 	const app = createApp(config, db, redis);
 
-	const stopExpirySweep = startExpirySweep(db, config.expirySweepIntervalMs);
 	const stopHistorySweep = startHistoryInactivitySweep(db, config.historyInactivitySweepIntervalMs);
 
 	const port = config.port;
@@ -29,7 +27,6 @@ async function main() {
 
 	const shutdown = async () => {
 		logger.info("Shutting down ai-router");
-		stopExpirySweep();
 		stopHistorySweep();
 		await closeRedisClient(redis);
 		await telemetry.shutdown();

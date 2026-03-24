@@ -9,7 +9,6 @@
 		"start": "node dist/index.js",
 		"test": "vitest run --passWithNoTests",
 		"bench": "vitest run --config vitest.bench.config.ts && tsx promptfoo/check-thresholds.ts",
-		"test:llm-integration": "npx vitest run --config vitest.llm-integration.config.ts",
 		"test:smoke": "vitest run --config vitest.smoke.config.ts",
 		"check": "biome check .",
 		"db:generate": "drizzle-kit generate",
@@ -17,9 +16,6 @@
 	},
 	"dependencies": {
 		"@hono/node-server": "catalog:",
-		"@langchain/core": "catalog:",
-		"@langchain/langgraph": "catalog:",
-		"@langchain/openai": "catalog:",
 		"@monica-companion/auth": "workspace:*",
 		"@monica-companion/guardrails": "workspace:*",
 		"@monica-companion/observability": "workspace:*",

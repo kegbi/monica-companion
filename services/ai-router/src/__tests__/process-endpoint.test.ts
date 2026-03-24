@@ -14,16 +14,6 @@ vi.mock("@opentelemetry/api", () => {
 	};
 });
 
-const mockLlmInvoke = vi.fn();
-
-// Mock @langchain/openai to avoid real LLM calls (still needed for graph code in src/)
-vi.mock("@langchain/openai", () => ({
-	ChatOpenAI: vi.fn().mockImplementation(function (this: any) {
-		this.withStructuredOutput = vi.fn().mockReturnValue({ invoke: mockLlmInvoke });
-	}),
-}));
-
-// Mock openai SDK for the agent loop
 const mockChatCompletion = vi.fn();
 vi.mock("openai", () => ({
 	default: class MockOpenAI {
@@ -83,45 +73,6 @@ vi.mock("@monica-companion/redaction", () => ({
 	redactString: vi.fn().mockImplementation((s: string) => s),
 }));
 
-vi.mock("../db/turn-repository.js", () => ({
-	getRecentTurns: vi.fn().mockResolvedValue([]),
-	insertTurnSummary: vi.fn().mockResolvedValue({}),
-}));
-
-vi.mock("../pending-command/repository.js", () => ({
-	getActivePendingCommandForUser: vi.fn().mockResolvedValue(null),
-	updateDraftPayload: vi.fn().mockResolvedValue(null),
-	createPendingCommand: vi.fn().mockResolvedValue({
-		id: "cmd-mock",
-		userId: "test",
-		commandType: "create_note",
-		payload: { type: "create_note", body: "test" },
-		status: "draft",
-		version: 1,
-		sourceMessageRef: "tg:msg:1",
-		correlationId: "corr-1",
-		expiresAt: new Date(),
-		confirmedAt: null,
-		executedAt: null,
-		terminalAt: null,
-		executionResult: null,
-		createdAt: new Date(),
-		updatedAt: new Date(),
-	}),
-	transitionStatus: vi.fn().mockResolvedValue({
-		id: "cmd-mock",
-		status: "pending_confirmation",
-		version: 2,
-		commandType: "create_note",
-	}),
-	getPendingCommand: vi.fn().mockResolvedValue(null),
-	updateNarrowingContext: vi.fn().mockResolvedValue({}),
-	clearNarrowingContext: vi.fn().mockResolvedValue({}),
-	updatePendingPayload: vi.fn().mockResolvedValue(null),
-	setUnresolvedContactRef: vi.fn().mockResolvedValue({}),
-	clearUnresolvedContactRef: vi.fn().mockResolvedValue({}),
-}));
-
 vi.mock("../lib/delivery-client.js", () => ({
 	createDeliveryClient: vi.fn().mockReturnValue({
 		deliver: vi.fn().mockResolvedValue({ deliveryId: "del-1", status: "delivered" }),
@@ -160,7 +111,6 @@ const mockConfig = {
 	port: 3002,
 	databaseUrl: "postgresql://test",
 	pendingCommandTtlMinutes: 30,
-	expirySweepIntervalMs: 60000,
 	monicaIntegrationUrl: "http://monica-integration:3004",
 	deliveryUrl: "http://delivery:3006",
 	schedulerUrl: "http://scheduler:3005",
@@ -202,7 +152,6 @@ const validTextEvent = {
 describe("POST /internal/process", () => {
 	beforeEach(() => {
 		mockChatCompletion.mockReset();
-		mockLlmInvoke.mockReset();
 	});
 
 	it("returns text response for text_message via agent loop", async () => {

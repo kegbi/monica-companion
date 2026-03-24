@@ -7,11 +7,9 @@
  *
  * These tests verify:
  * 1. First message triggers a clarification response
- * 2. Pending command exists in draft status after first message
- * 3. Follow-up message resolves the ambiguity
- * 4. Pending command transitions to pending_confirmation or confirmed
+ * 2. Follow-up message resolves the ambiguity
  *
- * Both messages in each test use the same userId so conversation_turns
+ * Both messages in each test use the same userId so conversation_history
  * context enables follow-up resolution.
  */
 import { randomUUID } from "node:crypto";

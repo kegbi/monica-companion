@@ -28,23 +28,6 @@ vi.mock("@opentelemetry/api", () => {
 
 const executionOrder: string[] = [];
 
-// Mock @langchain/openai to avoid real LLM calls
-vi.mock("@langchain/openai", () => ({
-	ChatOpenAI: vi.fn().mockImplementation(function (this: any) {
-		this.withStructuredOutput = vi.fn().mockReturnValue({
-			invoke: vi.fn().mockResolvedValue({
-				intent: "greeting",
-				detectedLanguage: "en",
-				userFacingText: "Hello!",
-				commandType: null,
-				contactRef: null,
-				commandPayload: null,
-				confidence: 0.99,
-			}),
-		});
-	}),
-}));
-
 // Mock openai SDK for agent loop
 vi.mock("openai", () => ({
 	default: class MockOpenAI {
@@ -75,31 +58,6 @@ vi.mock("../agent/history-repository.js", () => ({
 
 vi.mock("@monica-companion/redaction", () => ({
 	redactString: vi.fn().mockImplementation((s: string) => s),
-}));
-
-vi.mock("../db/turn-repository.js", () => ({
-	getRecentTurns: vi.fn().mockResolvedValue([]),
-	insertTurnSummary: vi.fn().mockResolvedValue({}),
-}));
-
-vi.mock("../pending-command/repository.js", () => ({
-	getActivePendingCommandForUser: vi.fn().mockResolvedValue(null),
-	updateDraftPayload: vi.fn().mockResolvedValue(null),
-	createPendingCommand: vi
-		.fn()
-		.mockResolvedValue({ id: "cmd-mock", version: 1, status: "draft", commandType: "create_note" }),
-	transitionStatus: vi.fn().mockResolvedValue({
-		id: "cmd-mock",
-		version: 2,
-		status: "pending_confirmation",
-		commandType: "create_note",
-	}),
-	getPendingCommand: vi.fn().mockResolvedValue(null),
-	updateNarrowingContext: vi.fn().mockResolvedValue({}),
-	clearNarrowingContext: vi.fn().mockResolvedValue({}),
-	updatePendingPayload: vi.fn().mockResolvedValue(null),
-	setUnresolvedContactRef: vi.fn().mockResolvedValue({}),
-	clearUnresolvedContactRef: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("../lib/delivery-client.js", () => ({
@@ -187,7 +145,6 @@ const mockConfig = {
 	port: 3002,
 	databaseUrl: "postgresql://test",
 	pendingCommandTtlMinutes: 30,
-	expirySweepIntervalMs: 60000,
 	monicaIntegrationUrl: "http://monica-integration:3004",
 	deliveryUrl: "http://delivery:3006",
 	schedulerUrl: "http://scheduler:3005",

@@ -1,18 +1,11 @@
 /**
  * Shared helpers for LLM smoke tests.
  *
- * Provides JWT signing, HTTP client for ai-router /internal/process,
- * and direct DB query helpers for verifying pending command state.
- *
- * NOTE: The DB query functions in this file are test-only verification code.
- * They directly query the pending_commands table to assert on state that
- * is not exposed via the ai-router HTTP API. No production service should
- * use this pattern -- it exists solely for smoke test assertions.
+ * Provides JWT signing and HTTP client for ai-router /internal/process.
  */
 
 import { randomUUID } from "node:crypto";
 import { signServiceToken } from "@monica-companion/auth";
-import postgres from "postgres";
 import { loadLlmSmokeConfig } from "./smoke-config.js";
 
 interface GraphResponse {
@@ -84,40 +77,4 @@ export async function sendMessage(
 	} finally {
 		clearTimeout(timer);
 	}
-}
-
-/**
- * Query the pending_commands table for a specific user.
- *
- * NOTE: This is test-only verification code that directly queries the
- * ai-router database. It exists solely for smoke test assertions to verify
- * no unintended mutations were triggered. No production service should
- * query another service's tables directly.
- */
-export async function getPendingCommandsForUser(
-	userId: string,
-): Promise<Array<{ id: string; command_type: string; status: string }>> {
-	const config = loadLlmSmokeConfig();
-	const sql = postgres(config.POSTGRES_URL, { max: 1 });
-
-	try {
-		const rows = await sql`
-			SELECT id, command_type, status
-			FROM pending_commands
-			WHERE user_id = ${userId}
-			ORDER BY created_at DESC
-		`;
-		return rows as Array<{ id: string; command_type: string; status: string }>;
-	} finally {
-		await sql.end();
-	}
-}
-
-/**
- * Verify that no pending commands exist for a given user.
- * Returns true if the user has zero pending commands.
- */
-export async function assertNoPendingCommands(userId: string): Promise<boolean> {
-	const commands = await getPendingCommandsForUser(userId);
-	return commands.length === 0;
 }

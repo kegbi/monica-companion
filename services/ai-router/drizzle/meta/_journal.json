@@ -29,6 +29,13 @@
 			"when": 1774483200000,
 			"tag": "0003_add_conversation_history",
 			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1774569600000,
+			"tag": "0004_drop_legacy_tables",
+			"breakpoints": true
 		}
 	]
 }

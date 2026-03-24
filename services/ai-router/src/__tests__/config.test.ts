@@ -33,11 +33,6 @@ describe("loadConfig", () => {
 		expect(config.pendingCommandTtlMinutes).toBe(30);
 	});
 
-	it("applies default expiry sweep interval", () => {
-		const config = loadConfig(baseEnv);
-		expect(config.expirySweepIntervalMs).toBe(60000);
-	});
-
 	it("throws when DATABASE_URL is missing", () => {
 		const { DATABASE_URL, ...env } = baseEnv;
 		expect(() => loadConfig(env)).toThrow();
@@ -51,11 +46,6 @@ describe("loadConfig", () => {
 	it("coerces PENDING_COMMAND_TTL_MINUTES correctly", () => {
 		const config = loadConfig({ ...baseEnv, PENDING_COMMAND_TTL_MINUTES: "15" });
 		expect(config.pendingCommandTtlMinutes).toBe(15);
-	});
-
-	it("coerces EXPIRY_SWEEP_INTERVAL_MS correctly", () => {
-		const config = loadConfig({ ...baseEnv, EXPIRY_SWEEP_INTERVAL_MS: "30000" });
-		expect(config.expirySweepIntervalMs).toBe(30000);
 	});
 
 	it("includes previous JWT secret when provided", () => {

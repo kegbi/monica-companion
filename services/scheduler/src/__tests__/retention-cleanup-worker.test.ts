@@ -8,7 +8,7 @@ const mockPurgeExpiredReminderWindows = vi.fn().mockResolvedValue(3);
 const mockAiRouterClient = {
 	fetch: vi.fn().mockResolvedValue({
 		ok: true,
-		json: async () => ({ purged: { conversationTurns: 7, pendingCommands: 2 } }),
+		json: async () => ({ purged: { conversationHistory: 7 } }),
 	}),
 };
 
@@ -83,8 +83,10 @@ describe("processRetentionCleanup", () => {
 		expect(opts.method).toBe("POST");
 
 		const body = JSON.parse(opts.body);
-		expect(body.conversationTurnsCutoff).toBe(new Date("2024-05-16T12:00:00Z").toISOString());
-		expect(body.pendingCommandsCutoff).toBe(new Date("2024-05-16T12:00:00Z").toISOString());
+		expect(body.conversationHistoryCutoff).toBe(new Date("2024-05-16T12:00:00Z").toISOString());
+		// pendingCommandsCutoff and conversationTurnsCutoff should no longer be present
+		expect(body.pendingCommandsCutoff).toBeUndefined();
+		expect(body.conversationTurnsCutoff).toBeUndefined();
 	});
 
 	it("calls delivery cleanup endpoint with correct payload", async () => {

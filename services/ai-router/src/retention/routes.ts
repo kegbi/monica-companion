@@ -4,11 +4,7 @@ import { AiRouterRetentionCleanupRequestSchema } from "@monica-companion/types";
 import { Hono } from "hono";
 import type { Config } from "../config.js";
 import type { Database } from "../db/connection.js";
-import {
-	purgeExpiredConversationHistory,
-	purgeExpiredConversationTurns,
-	purgeExpiredPendingCommands,
-} from "./cleanup.js";
+import { purgeExpiredConversationHistory } from "./cleanup.js";
 
 const logger = createLogger("ai-router");
 
@@ -41,20 +37,18 @@ export function retentionRoutes(config: Config, db: Database) {
 			return c.json({ error: "Invalid request body" }, 400);
 		}
 
-		const conversationTurnsCutoff = new Date(parsed.data.conversationTurnsCutoff);
-		const pendingCommandsCutoff = new Date(parsed.data.pendingCommandsCutoff);
+		const conversationHistoryCutoff = new Date(parsed.data.conversationHistoryCutoff);
 
-		const conversationTurns = await purgeExpiredConversationTurns(db, conversationTurnsCutoff);
-		const pendingCommands = await purgeExpiredPendingCommands(db, pendingCommandsCutoff);
-		const conversationHistory = await purgeExpiredConversationHistory(db, conversationTurnsCutoff);
+		const conversationHistory = await purgeExpiredConversationHistory(
+			db,
+			conversationHistoryCutoff,
+		);
 
 		logger.info("Retention cleanup completed", {
-			conversationTurnsPurged: conversationTurns,
-			pendingCommandsPurged: pendingCommands,
 			conversationHistoryPurged: conversationHistory,
 		});
 
-		return c.json({ purged: { conversationTurns, pendingCommands, conversationHistory } });
+		return c.json({ purged: { conversationHistory } });
 	});
 
 	return routes;
