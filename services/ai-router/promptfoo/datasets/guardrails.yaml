@@ -27,11 +27,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -39,7 +39,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style programming help request"
@@ -54,11 +54,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -66,7 +66,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Joke request"
@@ -81,11 +81,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -93,7 +93,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Math problem"
@@ -108,11 +108,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -120,7 +120,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style translation request"
@@ -135,11 +135,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -147,7 +147,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "General knowledge question"
@@ -162,11 +162,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -174,7 +174,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Recipe request in Spanish"
@@ -189,11 +189,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -201,7 +201,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style sports score query"
@@ -216,11 +216,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -228,7 +228,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "News query in French"
@@ -243,11 +243,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -255,7 +255,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style restaurant recommendation"
@@ -270,11 +270,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -282,7 +282,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 # ========================================================================
@@ -300,11 +300,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -312,7 +312,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style casual greeting"
@@ -327,11 +327,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -339,7 +339,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Greeting in Spanish"
@@ -354,11 +354,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -366,7 +366,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style greeting with thanks"
@@ -381,11 +381,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -393,7 +393,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Greeting in French"
@@ -408,11 +408,11 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length === 0
+        return calls.length === 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
-        parsed.text != null && parsed.text.length > 0
+        return parsed.text != null && parsed.text.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -420,7 +420,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 # ========================================================================
@@ -443,7 +443,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Read query - phone number (not phone update)"
@@ -461,7 +461,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Read query - last note (not note create)"
@@ -479,7 +479,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Vague read about a contact (not any mutation)"
@@ -497,7 +497,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Search query (not create contact)"
@@ -515,7 +515,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Relationship lookup (not mutation)"
@@ -533,7 +533,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Email read check (not email update)"
@@ -551,7 +551,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Note existence check (not note create)"
@@ -569,7 +569,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Contact list query (not create)"
@@ -587,7 +587,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Address read (not address update)"
@@ -605,5 +605,5 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating

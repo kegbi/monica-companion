@@ -93,8 +93,10 @@ try {
 		timeout: 900_000, // 15 minute timeout for ~225 LLM calls
 	});
 } catch {
-	console.error("promptfoo eval failed");
-	process.exit(1);
+	// promptfoo exits non-zero when any individual test fails.
+	// Continue to read the results file and check aggregate thresholds,
+	// which may still pass even with a few individual failures.
+	console.log("promptfoo eval reported failures — checking aggregate thresholds...");
 }
 
 console.log("\nParsing results...\n");

@@ -33,13 +33,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -47,7 +47,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Ask for birthday using relationship label"
@@ -67,13 +67,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -81,7 +81,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('brother')
+        return args.query && args.query.toLowerCase().includes('brother')
       metric: contactResolution
 
 - description: "Voice-style birthday query"
@@ -101,13 +101,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -115,7 +115,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Birthday query for Mom"
@@ -135,13 +135,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -149,7 +149,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Birthday query in Spanish"
@@ -169,13 +169,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -183,7 +183,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Voice-style birthday with filler words"
@@ -203,13 +203,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -217,7 +217,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 - description: "Birthday query with full name for disambiguation"
@@ -237,13 +237,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -251,7 +251,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Birthday query with 'born' phrasing"
@@ -271,13 +271,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -285,7 +285,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Voice-style birthday query with run-on"
@@ -305,13 +305,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -319,7 +319,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Birthday query in French"
@@ -339,13 +339,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -353,7 +353,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Birthday query using spouse relationship"
@@ -373,13 +373,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -387,7 +387,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('husband')
+        return args.query && args.query.toLowerCase().includes('husband')
       metric: contactResolution
 
 - description: "Birthday query with ambiguous Sarah - full name"
@@ -407,13 +407,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -421,7 +421,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Voice-style birthday query for Alex Torres"
@@ -441,13 +441,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -455,7 +455,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Birthday query in Portuguese"
@@ -475,13 +475,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -489,7 +489,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Birthday query with 'date of birth' phrasing"
@@ -509,13 +509,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -523,7 +523,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Voice-style birthday query with 'remind me'"
@@ -543,13 +543,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -557,7 +557,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Birthday query in German"
@@ -577,13 +577,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -591,7 +591,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Birthday query with informal phrasing"
@@ -611,13 +611,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -625,7 +625,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Voice-style birthday query for sibling"
@@ -645,13 +645,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -659,7 +659,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('brother')
+        return args.query && args.query.toLowerCase().includes('brother')
       metric: contactResolution
 
 - description: "Birthday query in Japanese (romanized)"
@@ -679,13 +679,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -693,7 +693,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 - description: "Birthday query with 'tell me' phrasing"
@@ -713,13 +713,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -727,7 +727,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Voice-style birthday query concise"
@@ -747,13 +747,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -761,7 +761,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Birthday query with upcoming context"
@@ -781,13 +781,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -795,7 +795,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Birthday query in Arabic (romanized)"
@@ -815,13 +815,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -829,7 +829,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Birthday query with misspelling"
@@ -849,13 +849,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -863,7 +863,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 # ========================================================================
@@ -886,13 +886,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -900,7 +900,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Voice-style phone query"
@@ -920,13 +920,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -934,7 +934,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Phone query for Mom"
@@ -954,13 +954,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -968,7 +968,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Phone query in Spanish"
@@ -988,13 +988,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1002,7 +1002,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Voice-style phone query with filler"
@@ -1022,13 +1022,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1036,7 +1036,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Phone query with disambiguation"
@@ -1056,13 +1056,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1070,7 +1070,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Phone query using relationship label"
@@ -1090,13 +1090,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1104,7 +1104,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('husband')
+        return args.query && args.query.toLowerCase().includes('husband')
       metric: contactResolution
 
 - description: "Phone query in French"
@@ -1124,13 +1124,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1138,7 +1138,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Voice-style phone query concise"
@@ -1158,13 +1158,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1172,7 +1172,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 - description: "Phone query with 'cell' specification"
@@ -1192,13 +1192,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1206,7 +1206,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Phone query with ambiguous Alex"
@@ -1226,13 +1226,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1240,7 +1240,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Voice-style phone query for sibling"
@@ -1260,13 +1260,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1274,7 +1274,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('brother')
+        return args.query && args.query.toLowerCase().includes('brother')
       metric: contactResolution
 
 - description: "Phone query in German"
@@ -1294,13 +1294,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1308,7 +1308,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Phone query with 'look up' phrasing"
@@ -1328,13 +1328,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1342,7 +1342,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Voice-style phone query with context"
@@ -1362,13 +1362,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1376,7 +1376,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Phone query in Portuguese"
@@ -1396,13 +1396,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1410,7 +1410,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Phone query with 'contact info' phrasing"
@@ -1430,13 +1430,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1444,7 +1444,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 - description: "Voice-style phone query with misspelling"
@@ -1464,13 +1464,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1478,7 +1478,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Phone query for parent"
@@ -1498,13 +1498,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1512,7 +1512,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Phone query in Russian (romanized)"
@@ -1532,13 +1532,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1546,7 +1546,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emmy')
+        return args.query && args.query.toLowerCase().includes('emmy')
       metric: contactResolution
 
 # ========================================================================
@@ -1569,13 +1569,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1583,7 +1583,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Voice-style last note query"
@@ -1603,13 +1603,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1617,7 +1617,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Last note query for colleague"
@@ -1637,13 +1637,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1651,7 +1651,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Last note query in Spanish"
@@ -1671,13 +1671,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1685,7 +1685,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Voice-style last note with filler"
@@ -1705,13 +1705,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1719,7 +1719,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Last note query using relationship"
@@ -1739,13 +1739,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1753,7 +1753,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('husband')
+        return args.query && args.query.toLowerCase().includes('husband')
       metric: contactResolution
 
 - description: "Last note query with 'recent' phrasing"
@@ -1773,13 +1773,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1787,7 +1787,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Voice-style last note query for Yuki"
@@ -1807,13 +1807,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1821,7 +1821,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 - description: "Last note query in French"
@@ -1841,13 +1841,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1855,7 +1855,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Last note query with ambiguous Sarah"
@@ -1875,13 +1875,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1889,7 +1889,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Last note query with 'check' phrasing"
@@ -1909,13 +1909,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1923,7 +1923,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Voice-style last note query for Mom"
@@ -1943,13 +1943,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1957,7 +1957,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Last note query for Alex Torres"
@@ -1977,13 +1977,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1991,7 +1991,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Last note query in German"
@@ -2011,13 +2011,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2025,7 +2025,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Voice-style last note with run-on sentence"
@@ -2045,13 +2045,13 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2059,5 +2059,5 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution

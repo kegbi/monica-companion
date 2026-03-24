@@ -52,7 +52,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -60,7 +60,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 # ========================================================================
@@ -80,7 +80,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
 
 # ========================================================================
 # mt-004: Disambiguation with kinship narrowing
@@ -124,4 +124,4 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0

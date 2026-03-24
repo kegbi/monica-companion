@@ -33,7 +33,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -41,7 +41,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Record a gift idea as a note"
@@ -58,7 +58,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -66,7 +66,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Record a conversation note"
@@ -83,7 +83,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -91,7 +91,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Voice-style note about a contact preference"
@@ -108,7 +108,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -116,7 +116,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Save a note about a medical appointment"
@@ -133,7 +133,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -141,7 +141,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Voice-style note with filler words"
@@ -158,7 +158,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -166,7 +166,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Note about a work project"
@@ -183,7 +183,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -191,7 +191,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Note in Spanish"
@@ -208,7 +208,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -216,7 +216,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Voice-style note about travel plans"
@@ -233,7 +233,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -241,7 +241,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 - description: "Note about dietary preferences"
@@ -258,7 +258,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -266,7 +266,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Note about an event with a contact"
@@ -283,7 +283,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -291,7 +291,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Note in French"
@@ -308,7 +308,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -316,7 +316,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Voice-style note with run-on sentence"
@@ -333,7 +333,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -341,7 +341,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('husband')
+        return args.query && args.query.toLowerCase().includes('husband')
       metric: contactResolution
 
 - description: "Note about a pet"
@@ -358,7 +358,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -366,7 +366,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Voice-style ambiguous Sarah note"
@@ -383,7 +383,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -391,7 +391,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Note about a hobby"
@@ -408,7 +408,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -416,7 +416,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Note in German"
@@ -433,7 +433,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -441,7 +441,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Note with misspelling"
@@ -457,7 +457,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
 
 - description: "Voice-style verbose note"
   vars:
@@ -473,7 +473,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -481,7 +481,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Note in Portuguese"
@@ -498,7 +498,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -506,7 +506,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Voice-style note about job change"
@@ -523,7 +523,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -531,7 +531,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Note using relationship reference (spouse)"
@@ -548,7 +548,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -556,7 +556,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('husband')
+        return args.query && args.query.toLowerCase().includes('husband')
       metric: contactResolution
 
 - description: "Note in Japanese (romanized)"
@@ -573,7 +573,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -581,7 +581,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 - description: "Voice-style note with abbreviation"
@@ -598,7 +598,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -606,7 +606,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Note about a recommendation"
@@ -623,7 +623,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -631,7 +631,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 # ========================================================================
@@ -651,7 +651,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -659,7 +659,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Add a new person to contacts"
@@ -676,7 +676,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -684,7 +684,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('james')
+        return args.query && args.query.toLowerCase().includes('james')
       metric: contactResolution
 
 - description: "Voice-style create contact"
@@ -701,7 +701,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -709,7 +709,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('lisa')
+        return args.query && args.query.toLowerCase().includes('lisa')
       metric: contactResolution
 
 - description: "Create contact in Spanish"
@@ -726,7 +726,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -734,7 +734,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('pedro')
+        return args.query && args.query.toLowerCase().includes('pedro')
       metric: contactResolution
 
 - description: "Create contact with relationship context"
@@ -751,7 +751,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -759,7 +759,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('rachel')
+        return args.query && args.query.toLowerCase().includes('rachel')
       metric: contactResolution
 
 - description: "Voice-style create contact with filler"
@@ -776,7 +776,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -784,7 +784,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mike')
+        return args.query && args.query.toLowerCase().includes('mike')
       metric: contactResolution
 
 - description: "Create contact with first name only"
@@ -801,7 +801,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -809,7 +809,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('priya')
+        return args.query && args.query.toLowerCase().includes('priya')
       metric: contactResolution
 
 - description: "Create contact in French"
@@ -826,7 +826,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -834,7 +834,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('jean')
+        return args.query && args.query.toLowerCase().includes('jean')
       metric: contactResolution
 
 - description: "Compound command - create contact and add note (primary: create contact)"
@@ -851,7 +851,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -859,7 +859,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('natalie')
+        return args.query && args.query.toLowerCase().includes('natalie')
       metric: contactResolution
 
 - description: "Voice-style create contact with spoken context"
@@ -876,7 +876,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -884,7 +884,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('aisha')
+        return args.query && args.query.toLowerCase().includes('aisha')
       metric: contactResolution
 
 - description: "Create contact in German"
@@ -901,7 +901,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -909,7 +909,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('hans')
+        return args.query && args.query.toLowerCase().includes('hans')
       metric: contactResolution
 
 - description: "Create contact with informal phrasing"
@@ -926,7 +926,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -934,7 +934,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('ben')
+        return args.query && args.query.toLowerCase().includes('ben')
       metric: contactResolution
 
 - description: "Voice-style create contact with name spelling"
@@ -951,7 +951,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -959,7 +959,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('olivia')
+        return args.query && args.query.toLowerCase().includes('olivia')
       metric: contactResolution
 
 - description: "Create contact in Russian (romanized)"
@@ -976,7 +976,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -984,7 +984,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('dmitrij')
+        return args.query && args.query.toLowerCase().includes('dmitrij')
       metric: contactResolution
 
 - description: "Create contact with polite phrasing"
@@ -1001,7 +1001,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1009,7 +1009,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('fatima')
+        return args.query && args.query.toLowerCase().includes('fatima')
       metric: contactResolution
 
 # ========================================================================
@@ -1029,7 +1029,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1037,7 +1037,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Log a meeting activity"
@@ -1054,7 +1054,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1062,7 +1062,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Voice-style activity log"
@@ -1079,7 +1079,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1087,7 +1087,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Log coffee meetup"
@@ -1104,7 +1104,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1112,7 +1112,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Activity in Spanish"
@@ -1129,7 +1129,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1137,7 +1137,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Voice-style activity with filler words"
@@ -1154,7 +1154,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1162,7 +1162,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 - description: "Log a dinner activity"
@@ -1179,7 +1179,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1187,7 +1187,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Log a birthday party activity"
@@ -1204,7 +1204,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1212,7 +1212,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Voice-style activity with relationship reference"
@@ -1229,7 +1229,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1237,7 +1237,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('brother')
+        return args.query && args.query.toLowerCase().includes('brother')
       metric: contactResolution
 
 - description: "Log a work meeting"
@@ -1254,7 +1254,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1262,7 +1262,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Activity in French"
@@ -1279,7 +1279,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1287,7 +1287,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Compound command - activity plus note (primary: activity)"
@@ -1304,7 +1304,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1312,7 +1312,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Voice-style activity log about texting"
@@ -1329,7 +1329,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1337,7 +1337,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Log a gym session together"
@@ -1354,7 +1354,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1362,7 +1362,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Activity in Portuguese"
@@ -1379,7 +1379,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1387,7 +1387,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Voice-style activity with disambiguating David"
@@ -1404,7 +1404,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1412,7 +1412,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Log a virtual event attendance"
@@ -1429,7 +1429,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1437,7 +1437,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 - description: "Log a walk activity"
@@ -1454,7 +1454,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1462,7 +1462,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('spouse')
+        return args.query && args.query.toLowerCase().includes('spouse')
       metric: contactResolution
 
 - description: "Voice-style activity log with spoken date"
@@ -1479,7 +1479,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1487,7 +1487,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Activity in Japanese (romanized)"
@@ -1504,7 +1504,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1512,7 +1512,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 # ========================================================================
@@ -1532,7 +1532,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1540,7 +1540,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Set birthday with full date"
@@ -1557,7 +1557,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1565,7 +1565,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Voice-style birthday update with spoken date"
@@ -1582,7 +1582,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1590,7 +1590,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Birthday update using relationship label"
@@ -1607,7 +1607,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1615,7 +1615,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sister')
+        return args.query && args.query.toLowerCase().includes('sister')
       metric: contactResolution
 
 - description: "Birthday update in Spanish"
@@ -1632,7 +1632,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1640,7 +1640,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Voice-style birthday with day-month format"
@@ -1657,7 +1657,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1665,7 +1665,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 - description: "Correct a birthday"
@@ -1682,7 +1682,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1690,7 +1690,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Birthday update with ambiguous David"
@@ -1707,7 +1707,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1715,7 +1715,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Birthday update for Mom"
@@ -1732,7 +1732,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1740,7 +1740,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Voice-style birthday update with filler"
@@ -1757,7 +1757,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1765,7 +1765,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 # ========================================================================
@@ -1785,7 +1785,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1793,7 +1793,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Voice-style phone update with spoken digits"
@@ -1810,7 +1810,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1818,7 +1818,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Change phone number with full format"
@@ -1835,7 +1835,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1843,7 +1843,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Phone update for Mom"
@@ -1860,7 +1860,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1868,7 +1868,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Voice-style phone update with context"
@@ -1885,7 +1885,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1893,7 +1893,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Phone update in French"
@@ -1910,7 +1910,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1918,7 +1918,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Phone update with specific number"
@@ -1935,7 +1935,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1943,7 +1943,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Phone update with cell specification"
@@ -1960,7 +1960,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1968,7 +1968,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 - description: "Voice-style phone with relationship reference"
@@ -1985,7 +1985,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -1993,7 +1993,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('husband')
+        return args.query && args.query.toLowerCase().includes('husband')
       metric: contactResolution
 
 - description: "Phone update with ambiguous Sarah"
@@ -2010,7 +2010,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2018,7 +2018,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 # ========================================================================
@@ -2038,7 +2038,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2046,7 +2046,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Voice-style email update with spoken address"
@@ -2063,7 +2063,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2071,7 +2071,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Change email with formal phrasing"
@@ -2088,7 +2088,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2096,7 +2096,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Email update for sibling"
@@ -2113,7 +2113,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2121,7 +2121,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('brother')
+        return args.query && args.query.toLowerCase().includes('brother')
       metric: contactResolution
 
 - description: "Email update in Spanish"
@@ -2138,7 +2138,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2146,7 +2146,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Voice-style email update with filler"
@@ -2163,7 +2163,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2171,7 +2171,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 - description: "Set work email address"
@@ -2188,7 +2188,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2196,7 +2196,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Email update with ambiguous Alex"
@@ -2213,7 +2213,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2221,7 +2221,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Email update for Mom"
@@ -2238,7 +2238,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2246,7 +2246,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Update email address with full value"
@@ -2263,7 +2263,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2271,7 +2271,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 # ========================================================================
@@ -2291,7 +2291,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2299,7 +2299,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Voice-style address update"
@@ -2316,7 +2316,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2324,7 +2324,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('sarah')
+        return args.query && args.query.toLowerCase().includes('sarah')
       metric: contactResolution
 
 - description: "Change address with formal phrasing"
@@ -2341,7 +2341,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2349,7 +2349,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('carlos')
+        return args.query && args.query.toLowerCase().includes('carlos')
       metric: contactResolution
 
 - description: "Address update for Mom"
@@ -2366,7 +2366,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2374,7 +2374,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mom')
+        return args.query && args.query.toLowerCase().includes('mom')
       metric: contactResolution
 
 - description: "Voice-style address with spoken numbers"
@@ -2391,7 +2391,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2399,7 +2399,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 - description: "Address update in German"
@@ -2416,7 +2416,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2424,7 +2424,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('emma')
+        return args.query && args.query.toLowerCase().includes('emma')
       metric: contactResolution
 
 - description: "Address update with relationship reference"
@@ -2441,7 +2441,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2449,7 +2449,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('husband')
+        return args.query && args.query.toLowerCase().includes('husband')
       metric: contactResolution
 
 - description: "Address update with ambiguous David"
@@ -2466,7 +2466,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2474,7 +2474,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Voice-style address with run-on"
@@ -2491,7 +2491,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2499,7 +2499,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yuki')
+        return args.query && args.query.toLowerCase().includes('yuki')
       metric: contactResolution
 
 - description: "Update address with full value"
@@ -2516,7 +2516,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2524,7 +2524,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex')
+        return args.query && args.query.toLowerCase().includes('alex')
       metric: contactResolution
 
 # ========================================================================
@@ -2544,7 +2544,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2552,7 +2552,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mum')
+        return args.query && args.query.toLowerCase().includes('mum')
       metric: contactResolution
 
 - description: "Create note for mum with polite phrasing"
@@ -2569,7 +2569,7 @@
       value: |
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
-        calls.length > 0
+        return calls.length > 0
     - type: javascript
       value: |
         const parsed = JSON.parse(output);
@@ -2577,5 +2577,5 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return true;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('mum')
+        return args.query && args.query.toLowerCase().includes('mum')
       metric: contactResolution

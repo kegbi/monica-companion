@@ -101,8 +101,9 @@ describe("executeReminder", () => {
 		);
 
 		await executeReminder(testJobData, deps);
-		// Should still update status, just with "no reminders" message
-		expect(deps.db.execute).toHaveBeenCalled();
+		// Should skip delivery and window update when no reminders
+		expect(deps.deliveryClient.fetch).not.toHaveBeenCalled();
+		expect(deps.db.execute).not.toHaveBeenCalled();
 	});
 
 	it("throws on monica-integration failure to trigger retry", async () => {

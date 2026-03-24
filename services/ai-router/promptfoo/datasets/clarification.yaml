@@ -34,7 +34,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Disambiguation question - which Alex"
@@ -52,7 +52,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style disambiguation - which David"
@@ -70,7 +70,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Disambiguation question in Spanish"
@@ -88,7 +88,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Disambiguation question - asking for options"
@@ -106,7 +106,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 # ========================================================================
@@ -129,7 +129,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
@@ -139,7 +139,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return false;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex torres')
+        return args.query && args.query.toLowerCase().includes('alex torres')
       metric: contactResolution
 
 - description: "Disambiguation answer - the friend"
@@ -158,7 +158,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style disambiguation answer with full name"
@@ -177,7 +177,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Disambiguation answer with last name"
@@ -196,7 +196,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Disambiguation answer - my husband"
@@ -215,7 +215,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 # ========================================================================
@@ -236,7 +236,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style confirmation"
@@ -254,7 +254,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Confirmation - correct"
@@ -272,7 +272,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Confirmation in French"
@@ -290,7 +290,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Confirmation with emphasis"
@@ -308,7 +308,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 # ========================================================================
@@ -329,7 +329,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style negation with correction"
@@ -347,7 +347,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Negation with cancellation"
@@ -365,7 +365,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Negation in German"
@@ -383,7 +383,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 # ========================================================================
@@ -405,7 +405,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style edit with correction"
@@ -424,7 +424,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Edit with partial correction (with prior turn context)"
@@ -444,7 +444,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
@@ -454,7 +454,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return false;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('alex kim')
+        return args.query && args.query.toLowerCase().includes('alex kim')
       metric: contactResolution
 
 # ========================================================================
@@ -476,7 +476,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Voice-style provide missing phone number"
@@ -494,7 +494,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 - description: "Provide missing email in Portuguese"
@@ -512,7 +512,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
 
 # ========================================================================
@@ -535,7 +535,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
@@ -545,7 +545,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return false;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('elena')
+        return args.query && args.query.toLowerCase().includes('elena')
       metric: contactResolution
 
 - description: "Language switch with name correction during disambiguation"
@@ -565,7 +565,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
@@ -575,7 +575,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return false;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('elena')
+        return args.query && args.query.toLowerCase().includes('elena')
       metric: contactResolution
 
 - description: "Voice-style narrowing with kinship and first name"
@@ -595,7 +595,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
@@ -605,7 +605,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return false;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('elena')
+        return args.query && args.query.toLowerCase().includes('elena')
       metric: contactResolution
 
 - description: "Short single-word name response during contact disambiguation"
@@ -625,7 +625,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
@@ -635,7 +635,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return false;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david')
+        return args.query && args.query.toLowerCase().includes('david')
       metric: contactResolution
 
 - description: "Full name response to narrow kinship-based ambiguity"
@@ -655,7 +655,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
@@ -665,7 +665,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return false;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('elena')
+        return args.query && args.query.toLowerCase().includes('elena')
       metric: contactResolution
 
 # ========================================================================
@@ -688,7 +688,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
@@ -698,7 +698,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return false;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yelena')
+        return args.query && args.query.toLowerCase().includes('yelena')
       metric: contactResolution
 
 - description: "Voice-style name during narrowing with active create_note draft"
@@ -718,7 +718,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
@@ -728,7 +728,7 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return false;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('yelena')
+        return args.query && args.query.toLowerCase().includes('yelena')
       metric: contactResolution
 
 - description: "Name narrowing during active update_contact_birthday draft"
@@ -748,7 +748,7 @@
         const mutating = ['create_note','create_contact','create_activity',
           'update_contact_birthday','update_contact_phone',
           'update_contact_email','update_contact_address'];
-        !calls.some(c => mutating.includes(c.function?.name))
+        return !calls.some(c => mutating.includes(c.function?.name))
       metric: isMutating
     - type: javascript
       value: |
@@ -758,5 +758,5 @@
         const search = calls.find(c => c.function?.name === 'search_contacts');
         if (!search) return false;
         const args = JSON.parse(search.function.arguments || '{}');
-        args.query && args.query.toLowerCase().includes('david chen')
+        return args.query && args.query.toLowerCase().includes('david chen')
       metric: contactResolution

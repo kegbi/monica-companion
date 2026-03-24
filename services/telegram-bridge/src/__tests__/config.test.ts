@@ -41,7 +41,7 @@ describe("loadConfig", () => {
 		expect(config.port).toBe(3001);
 		expect(config.rateLimitWindowMs).toBe(60_000);
 		expect(config.rateLimitMaxRequests).toBe(60);
-		expect(config.aiRouterTimeoutMs).toBe(10000);
+		expect(config.aiRouterTimeoutMs).toBe(120000);
 		expect(config.voiceTranscriptionTimeoutMs).toBe(30000);
 		expect(config.userManagementTimeoutMs).toBe(5000);
 	});

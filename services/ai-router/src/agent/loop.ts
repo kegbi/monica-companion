@@ -516,6 +516,7 @@ export async function runAgentLoop(
 
 		// Agent loop: call LLM, handle tool calls, repeat up to MAX_ITERATIONS
 		let iteration = 0;
+		let consecutiveToolErrors = 0;
 		while (iteration < MAX_ITERATIONS) {
 			iteration++;
 
@@ -650,6 +651,41 @@ export async function runAgentLoop(
 			}
 
 			// No mutating tool intercepted — add all tool results and continue loop
+			const allToolsFailed =
+				toolResults.length > 0 &&
+				toolResults.every((tr) => {
+					const content = "content" in tr && typeof tr.content === "string" ? tr.content : "";
+					return content.includes('"status":"error"');
+				});
+
+			if (allToolsFailed) {
+				consecutiveToolErrors++;
+			} else {
+				consecutiveToolErrors = 0;
+			}
+
+			// If tools keep failing, stop looping — the LLM will just retry the same call
+			if (consecutiveToolErrors >= 2) {
+				logger.warn("Agent loop stopped: consecutive tool errors", {
+					correlationId,
+					userId,
+					iteration,
+					consecutiveToolErrors,
+				});
+
+				// Save history and return a graceful text response
+				for (const tr of toolResults) {
+					messages.push(tr);
+				}
+				const historyToSave = messages.slice(1);
+				await deps.saveHistory(deps.db, userId, historyToSave, null);
+
+				return {
+					type: "text",
+					text: "I'm having trouble connecting to your contact database right now. Please try again later.",
+				};
+			}
+
 			for (const tr of toolResults) {
 				messages.push(tr);
 			}
