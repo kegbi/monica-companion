@@ -26,6 +26,8 @@ export const PendingToolCallSchema = z.object({
 	createdAt: z.string().min(1),
 	/** The full assistant message that contained this tool call, stored for history reconstruction. */
 	assistantMessage: z.record(z.string(), z.unknown()),
+	/** Read-only tool results collected in the same LLM turn as the intercepted mutating call. */
+	collectedToolResults: z.array(z.record(z.string(), z.unknown())).optional(),
 });
 
 export type PendingToolCall = z.infer<typeof PendingToolCallSchema>;

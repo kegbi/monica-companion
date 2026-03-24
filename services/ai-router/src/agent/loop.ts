@@ -260,10 +260,15 @@ async function handleConfirm(
 					}),
 	};
 
+	// Re-append collected read-only tool results from the same LLM turn
+	const collectedResults = (pendingToolCall.collectedToolResults ??
+		[]) as ChatCompletionMessageParam[];
+
 	const messages: ChatCompletionMessageParam[] = [
 		systemMessage,
 		...existingMessages,
 		assistantMsg,
+		...collectedResults,
 		toolResult,
 	];
 
@@ -272,7 +277,7 @@ async function handleConfirm(
 		completion.choices?.[0]?.message?.content ?? "The action was completed successfully.";
 
 	// Save history (without system prompt, with cleared pendingToolCall)
-	const historyToSave = [...existingMessages, assistantMsg, toolResult];
+	const historyToSave = [...existingMessages, assistantMsg, ...collectedResults, toolResult];
 	if (completion.choices?.[0]?.message) {
 		historyToSave.push(completion.choices[0].message as ChatCompletionMessageParam);
 	}
@@ -297,6 +302,8 @@ async function handleCancel(
 	};
 
 	const assistantMsg = pendingToolCall.assistantMessage as ChatCompletionMessageParam;
+	const collectedResults = (pendingToolCall.collectedToolResults ??
+		[]) as ChatCompletionMessageParam[];
 	const cancelledToolResult: ChatCompletionMessageParam = {
 		role: "tool",
 		tool_call_id: pendingToolCall.toolCallId,
@@ -310,6 +317,7 @@ async function handleCancel(
 		systemMessage,
 		...existingMessages,
 		assistantMsg,
+		...collectedResults,
 		cancelledToolResult,
 	];
 
@@ -317,7 +325,12 @@ async function handleCancel(
 	const responseText =
 		completion.choices?.[0]?.message?.content ?? "The action has been cancelled.";
 
-	const historyToSave = [...existingMessages, assistantMsg, cancelledToolResult];
+	const historyToSave = [
+		...existingMessages,
+		assistantMsg,
+		...collectedResults,
+		cancelledToolResult,
+	];
 	if (completion.choices?.[0]?.message) {
 		historyToSave.push(completion.choices[0].message as ChatCompletionMessageParam);
 	}
@@ -342,6 +355,8 @@ async function handleEdit(
 	};
 
 	const assistantMsg = pendingToolCall.assistantMessage as ChatCompletionMessageParam;
+	const collectedResults = (pendingToolCall.collectedToolResults ??
+		[]) as ChatCompletionMessageParam[];
 	const editToolResult: ChatCompletionMessageParam = {
 		role: "tool",
 		tool_call_id: pendingToolCall.toolCallId,
@@ -355,6 +370,7 @@ async function handleEdit(
 		systemMessage,
 		...existingMessages,
 		assistantMsg,
+		...collectedResults,
 		editToolResult,
 	];
 
@@ -362,7 +378,7 @@ async function handleEdit(
 	const responseText =
 		completion.choices?.[0]?.message?.content ?? "What would you like to change?";
 
-	const historyToSave = [...existingMessages, assistantMsg, editToolResult];
+	const historyToSave = [...existingMessages, assistantMsg, ...collectedResults, editToolResult];
 	if (completion.choices?.[0]?.message) {
 		historyToSave.push(completion.choices[0].message as ChatCompletionMessageParam);
 	}
@@ -501,8 +517,10 @@ export async function runAgentLoop(
 			const staleParsed = PendingToolCallSchema.safeParse(history.pendingToolCall);
 			if (staleParsed.success) {
 				const stalePending = staleParsed.data;
-				// Append assistant message + abandoned tool result to history
+				// Append assistant message + collected read-only results + abandoned tool result to history
 				const assistantMsg = stalePending.assistantMessage as ChatCompletionMessageParam;
+				const staleCollected = (stalePending.collectedToolResults ??
+					[]) as ChatCompletionMessageParam[];
 				const abandonedToolResult: ChatCompletionMessageParam = {
 					role: "tool",
 					tool_call_id: stalePending.toolCallId,
@@ -511,7 +529,12 @@ export async function runAgentLoop(
 						message: `Tool "${stalePending.name}" was abandoned because the user sent a new message.`,
 					}),
 				};
-				messagesWithStaleHandling = [...existingMessages, assistantMsg, abandonedToolResult];
+				messagesWithStaleHandling = [
+					...existingMessages,
+					assistantMsg,
+					...staleCollected,
+					abandonedToolResult,
+				];
 				logger.info("Cleared stale pending tool call", {
 					correlationId,
 					userId,
@@ -560,6 +583,9 @@ export async function runAgentLoop(
 
 			const choice = completion.choices[0];
 			const assistantMessage = choice.message;
+
+			// Track position before adding assistant message (used to trim history for pending state)
+			const preAssistantLen = messages.length;
 
 			// Add assistant message to history
 			messages.push(assistantMessage as ChatCompletionMessageParam);
@@ -666,15 +692,18 @@ export async function runAgentLoop(
 					actionDescription,
 					createdAt: new Date().toISOString(),
 					assistantMessage: assistantMessage as unknown as Record<string, unknown>,
+					// Preserve read-only tool results from the same turn so they can be
+					// re-appended alongside the assistant message on confirm/cancel/edit.
+					collectedToolResults:
+						toolResults.length > 0
+							? toolResults.map((tr) => tr as unknown as Record<string, unknown>)
+							: undefined,
 				};
 
-				// Add any read-only tool results that were collected before the interception
-				for (const tr of toolResults) {
-					messages.push(tr);
-				}
-
-				// Save history with pending tool call (exclude system prompt)
-				const historyToSave = messages.slice(1);
+				// Save history WITHOUT the assistant message or its tool results.
+				// The assistant message is preserved in pendingToolCall.assistantMessage
+				// and will be re-appended on confirm/cancel/edit with all tool results.
+				const historyToSave = messages.slice(1, preAssistantLen);
 				await deps.saveHistory(deps.db, userId, historyToSave, pendingToolCall);
 
 				return {
