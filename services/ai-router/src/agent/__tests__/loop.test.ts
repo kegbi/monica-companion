@@ -977,6 +977,84 @@ describe("mutating tool interception", () => {
 		expect(savedPendingToolCall.assistantMessage).toBeTruthy();
 	});
 
+	it("confirmation prompt shows contact name from search_contacts results", async () => {
+		// Mock search_contacts to return a contact with displayName
+		mockedHandleSearchContacts.mockResolvedValueOnce({
+			status: "ok",
+			contacts: [
+				{
+					contactId: 683113,
+					displayName: "Elena Yuryevna",
+					aliases: [],
+					relationshipLabels: ["mother"],
+					birthdate: null,
+					matchReason: "name",
+				},
+			],
+		});
+
+		// LLM iteration 1: calls search_contacts
+		// LLM iteration 2: calls create_note with the found contact_id
+		const chatCompletion = vi
+			.fn()
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_search_1",
+									type: "function",
+									function: {
+										name: "search_contacts",
+										arguments: '{"query": "mum"}',
+									},
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+			})
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_note_1",
+									type: "function",
+									function: {
+										name: "create_note",
+										arguments: '{"contact_id": 683113, "body": "went to the park"}',
+									},
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+			});
+
+		const deps = createMockDeps({ llmClient: { chatCompletion } });
+		const event = {
+			type: "text_message" as const,
+			userId,
+			sourceRef: "telegram:msg:name-test",
+			correlationId,
+			text: "Add a note to mum: went to the park",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("confirmation_prompt");
+		expect(result.text).toContain("Elena Yuryevna");
+		expect(result.text).not.toContain("683113");
+	});
+
 	it("returns error tool result and continues loop when mutating tool args are invalid", async () => {
 		const chatCompletion = vi
 			.fn()
@@ -1152,7 +1230,7 @@ describe("callback handling — confirm", () => {
 			sourceRef: "telegram:msg:30",
 			correlationId,
 			action: "confirm",
-			data: `confirm:cmd-aaa-bbb-ccc:1`,
+			data: `cmd-aaa-bbb-ccc:1`,
 		};
 
 		const result = await runAgentLoop(deps, userId, event, correlationId);
@@ -1221,7 +1299,7 @@ describe("callback handling — confirm", () => {
 			sourceRef: "telegram:msg:30b",
 			correlationId,
 			action: "confirm",
-			data: `confirm:cmd-aaa-bbb-ccc:1`,
+			data: `cmd-aaa-bbb-ccc:1`,
 		};
 
 		const result = await runAgentLoop(deps, userId, event, correlationId);
@@ -1272,7 +1350,7 @@ describe("callback handling — cancel", () => {
 			sourceRef: "telegram:msg:31",
 			correlationId,
 			action: "cancel",
-			data: `cancel:cmd-aaa-bbb-ccc:1`,
+			data: `cmd-aaa-bbb-ccc:1`,
 		};
 
 		const result = await runAgentLoop(deps, userId, event, correlationId);
@@ -1318,7 +1396,7 @@ describe("callback handling — edit", () => {
 			sourceRef: "telegram:msg:32",
 			correlationId,
 			action: "edit",
-			data: `edit:cmd-aaa-bbb-ccc:1`,
+			data: `cmd-aaa-bbb-ccc:1`,
 		};
 
 		const result = await runAgentLoop(deps, userId, event, correlationId);
@@ -1349,7 +1427,7 @@ describe("callback identity verification", () => {
 			sourceRef: "telegram:msg:40",
 			correlationId,
 			action: "confirm",
-			data: "confirm:cmd-WRONG-ID:1", // wrong pendingCommandId
+			data: "cmd-WRONG-ID:1", // wrong pendingCommandId
 		};
 
 		const result = await runAgentLoop(deps, userId, event, correlationId);
@@ -1403,13 +1481,65 @@ describe("callback identity verification", () => {
 			sourceRef: "telegram:msg:42",
 			correlationId,
 			action: "unknown_action",
-			data: "unknown_action:cmd-aaa-bbb-ccc:1",
+			data: "cmd-aaa-bbb-ccc:1",
 		};
 
 		const result = await runAgentLoop(deps, userId, event, correlationId);
 		expect(result.type).toBe("text");
 		// Should not crash, graceful handling
 		expect(result.text).toBeTruthy();
+	});
+});
+
+describe("callback data with real UUID format", () => {
+	it("accepts UUID-format pendingCommandId from telegram-bridge (pendingCommandId:version)", async () => {
+		const uuid = "89dbf8b1-0341-40fd-8628-5bc62a75a6e3";
+		const pending = makePendingToolCall({ pendingCommandId: uuid });
+
+		mockedExecuteMutatingTool.mockResolvedValue({
+			status: "success",
+			executionId: "exec-uuid-1",
+		});
+
+		const chatCompletion = vi.fn().mockResolvedValueOnce({
+			choices: [
+				{
+					message: {
+						role: "assistant",
+						content: "Done! Note created.",
+						tool_calls: undefined,
+					},
+					finish_reason: "stop",
+				},
+			],
+		});
+
+		const deps = createMockDeps({
+			llmClient: { chatCompletion },
+			getHistory: vi.fn().mockResolvedValue({
+				id: "hist-1",
+				userId,
+				messages: [{ role: "user", content: "Create note" }],
+				pendingToolCall: pending,
+				updatedAt: new Date(),
+			}),
+		});
+
+		const event = {
+			type: "callback_action" as const,
+			userId,
+			sourceRef: "telegram:msg:uuid-test",
+			correlationId,
+			action: "confirm",
+			data: `${uuid}:1`,
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("text");
+		expect(result.text).toContain("Done");
+		expect(mockedExecuteMutatingTool).toHaveBeenCalledWith(
+			expect.objectContaining({ pendingCommandId: uuid }),
+		);
 	});
 });
 
@@ -1436,7 +1566,7 @@ describe("TTL enforcement", () => {
 			sourceRef: "telegram:msg:50",
 			correlationId,
 			action: "confirm",
-			data: `confirm:cmd-aaa-bbb-ccc:1`,
+			data: `cmd-aaa-bbb-ccc:1`,
 		};
 
 		const result = await runAgentLoop(deps, userId, event, correlationId);
@@ -1464,7 +1594,7 @@ describe("TTL enforcement", () => {
 			sourceRef: "telegram:msg:51",
 			correlationId,
 			action: "confirm",
-			data: `confirm:cmd-aaa-bbb-ccc:1`,
+			data: `cmd-aaa-bbb-ccc:1`,
 		};
 
 		await runAgentLoop(deps, userId, event, correlationId);

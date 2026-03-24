@@ -23,8 +23,8 @@ import { buildAgentSystemPrompt } from "../src/agent/system-prompt.js";
 import { TOOL_DEFINITIONS } from "../src/agent/tools.js";
 
 const LLM_API_KEY = process.env.LLM_API_KEY ?? "";
-const LLM_BASE_URL = process.env.LLM_BASE_URL ?? "https://openrouter.ai/api/v1";
-const LLM_MODEL_ID = process.env.LLM_MODEL_ID ?? "qwen/qwen3-235b-a22b";
+const LLM_BASE_URL = process.env.LLM_BASE_URL ?? "https://api.openai.com/v1";
+const LLM_MODEL_ID = process.env.LLM_MODEL_ID ?? "gpt-5.4-mini";
 
 if (!LLM_API_KEY || LLM_API_KEY.startsWith("sk-fake")) {
 	throw new Error(

@@ -370,13 +370,30 @@ export const TOOL_ARG_SCHEMAS: Record<string, z.ZodType> = {
 };
 
 /**
+ * Resolve a human-readable contact label from args.
+ * Uses contactName when available (extracted from prior search_contacts results),
+ * falls back to the numeric contact_id.
+ */
+function contactLabel(args: Record<string, unknown>): string {
+	if (typeof args.contactName === "string" && args.contactName.length > 0) {
+		return args.contactName;
+	}
+	return `contact ${args.contact_id}`;
+}
+
+/**
  * Generate a human-readable description of a tool action for the confirmation prompt.
  * Avoids including sensitive data — uses tool name and key identifiers only.
+ *
+ * When a `contactName` key is present in `args` it is used instead of the raw
+ * numeric `contact_id`.  The caller is responsible for injecting `contactName`
+ * by looking up the most recent `search_contacts` tool result in the
+ * conversation history.
  */
 export function generateActionDescription(toolName: string, args: Record<string, unknown>): string {
 	switch (toolName) {
 		case "create_note":
-			return `Create a note for contact ${args.contact_id}`;
+			return `Create a note for ${contactLabel(args)}`;
 		case "create_contact": {
 			const name = [args.first_name, args.last_name].filter(Boolean).join(" ");
 			return `Create a new contact: ${name}`;
@@ -386,13 +403,13 @@ export function generateActionDescription(toolName: string, args: Record<string,
 			return `Log an activity with contact(s) ${ids}`;
 		}
 		case "update_contact_birthday":
-			return `Update birthday for contact ${args.contact_id} to ${args.date}`;
+			return `Update birthday for ${contactLabel(args)} to ${args.date}`;
 		case "update_contact_phone":
-			return `Update phone number for contact ${args.contact_id}`;
+			return `Update phone number for ${contactLabel(args)}`;
 		case "update_contact_email":
-			return `Update email for contact ${args.contact_id}`;
+			return `Update email for ${contactLabel(args)}`;
 		case "update_contact_address":
-			return `Update address for contact ${args.contact_id}`;
+			return `Update address for ${contactLabel(args)}`;
 		default:
 			return `Execute ${toolName}`;
 	}

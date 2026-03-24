@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockCreate = vi.fn();
+let lastConstructorOpts: Record<string, unknown> = {};
 
 vi.mock("openai", () => {
 	return {
@@ -11,8 +12,9 @@ vi.mock("openai", () => {
 					create: mockCreate,
 				},
 			};
-			constructor(opts: unknown) {
+			constructor(opts: Record<string, unknown>) {
 				this._opts = opts;
+				lastConstructorOpts = opts;
 			}
 		},
 	};
@@ -69,33 +71,39 @@ describe("createLlmClient", () => {
 		expect(result.choices[0].message.content).toBe("Hi there!");
 	});
 
-	it("applies default 30s timeout", async () => {
-		mockCreate.mockResolvedValueOnce({ choices: [] });
-
-		const client = createLlmClient({
+	it("applies default 30s timeout on the client constructor", () => {
+		createLlmClient({
 			baseUrl: "https://openrouter.ai/api/v1",
 			apiKey: "sk-test-key",
 			modelId: "test-model",
 		});
 
-		await client.chatCompletion([], []);
-		const callArgs = mockCreate.mock.calls[0][0];
-		expect(callArgs.timeout).toBe(30_000);
+		expect(lastConstructorOpts.timeout).toBe(30_000);
 	});
 
-	it("applies custom timeout", async () => {
-		mockCreate.mockResolvedValueOnce({ choices: [] });
-
-		const client = createLlmClient({
+	it("applies custom timeout on the client constructor", () => {
+		createLlmClient({
 			baseUrl: "https://openrouter.ai/api/v1",
 			apiKey: "sk-test-key",
 			modelId: "test-model",
 			timeoutMs: 15_000,
 		});
 
+		expect(lastConstructorOpts.timeout).toBe(15_000);
+	});
+
+	it("does not pass timeout in the create() call body", async () => {
+		mockCreate.mockResolvedValueOnce({ choices: [] });
+
+		const client = createLlmClient({
+			baseUrl: "https://openrouter.ai/api/v1",
+			apiKey: "sk-test-key",
+			modelId: "test-model",
+		});
+
 		await client.chatCompletion([], []);
 		const callArgs = mockCreate.mock.calls[0][0];
-		expect(callArgs.timeout).toBe(15_000);
+		expect(callArgs.timeout).toBeUndefined();
 	});
 
 	it("propagates errors from the OpenAI SDK", async () => {

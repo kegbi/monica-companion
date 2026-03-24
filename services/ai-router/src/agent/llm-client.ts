@@ -24,12 +24,13 @@ export interface LlmClient {
  * via configurable baseURL.
  */
 export function createLlmClient(config: LlmClientConfig): LlmClient {
+	const timeoutMs = config.timeoutMs ?? 30_000;
+
 	const openai = new OpenAI({
 		baseURL: config.baseUrl,
 		apiKey: config.apiKey,
+		timeout: timeoutMs,
 	});
-
-	const timeoutMs = config.timeoutMs ?? 30_000;
 
 	return {
 		async chatCompletion(messages, tools) {
@@ -37,7 +38,6 @@ export function createLlmClient(config: LlmClientConfig): LlmClient {
 				model: config.modelId,
 				messages,
 				tools: tools.length > 0 ? tools : undefined,
-				timeout: timeoutMs,
 			});
 		},
 	};

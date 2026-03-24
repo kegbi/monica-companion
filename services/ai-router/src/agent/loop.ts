@@ -70,17 +70,48 @@ function extractUserText(event: InboundEvent): string | null {
 
 /**
  * Parse pendingCommandId from callback data.
- * Format: "action:pendingCommandId:version"
+ * Format: "pendingCommandId:version"
+ * (The action prefix is stripped by telegram-bridge and sent as a separate
+ * field in the InboundEvent, so only pendingCommandId:version arrives here.)
  * Returns null if the format is invalid.
  */
 function parseCallbackData(data: string): { pendingCommandId: string; version: number } | null {
 	const parts = data.split(":");
-	if (parts.length < 3) return null;
+	if (parts.length < 2) return null;
 	const version = Number(parts[parts.length - 1]);
 	if (Number.isNaN(version)) return null;
-	const pendingCommandId = parts.slice(1, -1).join(":");
+	const pendingCommandId = parts.slice(0, -1).join(":");
 	if (!pendingCommandId) return null;
 	return { pendingCommandId, version };
+}
+
+/**
+ * Scan conversation messages for the most recent search_contacts tool result
+ * and return the displayName matching the given contact_id.
+ * Returns null if no match is found.
+ */
+function resolveContactNameFromHistory(
+	messages: ChatCompletionMessageParam[],
+	parsedArgs: Record<string, unknown>,
+): string | null {
+	const contactId = parsedArgs.contact_id;
+	if (typeof contactId !== "number") return null;
+
+	// Walk messages backwards to find the latest search_contacts result
+	for (let i = messages.length - 1; i >= 0; i--) {
+		const msg = messages[i];
+		if (msg.role !== "tool" || typeof msg.content !== "string") continue;
+
+		try {
+			const parsed = JSON.parse(msg.content);
+			if (parsed.status !== "ok" || !Array.isArray(parsed.contacts)) continue;
+			const match = parsed.contacts.find((c: { contactId?: number }) => c.contactId === contactId);
+			if (match?.displayName) return match.displayName;
+		} catch {
+			// Not valid JSON — skip
+		}
+	}
+	return null;
 }
 
 /**
@@ -621,7 +652,11 @@ export async function runAgentLoop(
 			if (interceptedMutatingTool) {
 				const { toolCall, parsedArgs } = interceptedMutatingTool;
 				const pendingCommandId = crypto.randomUUID(); // LOW-1: inline at call site
-				const actionDescription = generateActionDescription(toolCall.function.name, parsedArgs);
+
+				// Enrich parsedArgs with contact display name from prior search_contacts results
+				const contactName = resolveContactNameFromHistory(messages, parsedArgs);
+				const enrichedArgs = contactName ? { ...parsedArgs, contactName } : parsedArgs;
+				const actionDescription = generateActionDescription(toolCall.function.name, enrichedArgs);
 
 				const pendingToolCall: PendingToolCall = {
 					pendingCommandId,

@@ -13,9 +13,9 @@ const configSchema = z.object({
 	INBOUND_ALLOWED_CALLERS: z.string().optional(),
 	MAX_CONVERSATION_TURNS: z.coerce.number().int().positive().default(10),
 	AUTO_CONFIRM_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.95),
-	LLM_BASE_URL: z.string().min(1).default("https://openrouter.ai/api/v1"),
+	LLM_BASE_URL: z.string().min(1).default("https://api.openai.com/v1"),
 	LLM_API_KEY: z.string().min(1),
-	LLM_MODEL_ID: z.string().min(1).default("qwen/qwen3-235b-a22b"),
+	LLM_MODEL_ID: z.string().min(1).default("gpt-5.4-mini"),
 	HISTORY_INACTIVITY_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(3600000),
 });
 

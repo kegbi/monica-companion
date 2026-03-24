@@ -157,9 +157,9 @@ describe("loadConfig", () => {
 
 	// --- LLM config vars ---
 
-	it("applies default LLM_BASE_URL of https://openrouter.ai/api/v1", () => {
+	it("applies default LLM_BASE_URL of https://api.openai.com/v1", () => {
 		const config = loadConfig(baseEnv);
-		expect(config.llmBaseUrl).toBe("https://openrouter.ai/api/v1");
+		expect(config.llmBaseUrl).toBe("https://api.openai.com/v1");
 	});
 
 	it("parses custom LLM_BASE_URL", () => {
@@ -177,9 +177,9 @@ describe("loadConfig", () => {
 		expect(config.llmApiKey).toBe("sk-test-llm-key");
 	});
 
-	it("applies default LLM_MODEL_ID of qwen/qwen3-235b-a22b", () => {
+	it("applies default LLM_MODEL_ID of gpt-5.4-mini", () => {
 		const config = loadConfig(baseEnv);
-		expect(config.llmModelId).toBe("qwen/qwen3-235b-a22b");
+		expect(config.llmModelId).toBe("gpt-5.4-mini");
 	});
 
 	it("parses custom LLM_MODEL_ID", () => {

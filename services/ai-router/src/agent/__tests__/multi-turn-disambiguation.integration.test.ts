@@ -307,7 +307,7 @@ describe("multi-turn disambiguation integration", () => {
 				sourceRef: "telegram:msg:t3",
 				correlationId,
 				action: "confirm",
-				data: `confirm:${pendingToolCall.pendingCommandId}:1`,
+				data: `${pendingToolCall.pendingCommandId}:1`,
 			},
 			correlationId,
 		);
@@ -430,7 +430,7 @@ describe("multi-turn disambiguation integration", () => {
 				sourceRef: "telegram:msg:cancel-t2",
 				correlationId,
 				action: "cancel",
-				data: `cancel:${pendingCommandId}:1`,
+				data: `${pendingCommandId}:1`,
 			},
 			correlationId,
 		);

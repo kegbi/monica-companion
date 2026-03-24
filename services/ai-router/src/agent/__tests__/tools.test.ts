@@ -177,13 +177,24 @@ describe("TOOL_ARG_SCHEMAS", () => {
 });
 
 describe("generateActionDescription", () => {
-	it("generates description for create_note", () => {
+	it("generates description for create_note with numeric ID fallback", () => {
 		const desc = generateActionDescription("create_note", {
 			contact_id: 42,
 			body: "Had coffee with them today",
 		});
 		expect(desc).toContain("Create a note");
 		expect(desc).toContain("contact 42");
+	});
+
+	it("generates description for create_note with contactName", () => {
+		const desc = generateActionDescription("create_note", {
+			contact_id: 42,
+			body: "Had coffee with them today",
+			contactName: "Elena Yuryevna",
+		});
+		expect(desc).toContain("Create a note");
+		expect(desc).toContain("Elena Yuryevna");
+		expect(desc).not.toContain("42");
 	});
 
 	it("generates description for create_contact", () => {
@@ -213,6 +224,17 @@ describe("generateActionDescription", () => {
 		expect(desc).toContain("birthday");
 		expect(desc).toContain("contact 5");
 		expect(desc).toContain("1990-01-15");
+	});
+
+	it("generates description for update_contact_birthday with contactName", () => {
+		const desc = generateActionDescription("update_contact_birthday", {
+			contact_id: 5,
+			date: "1990-01-15",
+			contactName: "Alex",
+		});
+		expect(desc).toContain("birthday");
+		expect(desc).toContain("Alex");
+		expect(desc).not.toContain("contact 5");
 	});
 
 	it("generates description for update_contact_phone", () => {
