@@ -9,7 +9,7 @@ describe("LLM smoke config", () => {
 	it("loads config from environment variables", () => {
 		const config = loadLlmSmokeConfig();
 		expect(config.AI_ROUTER_URL).toBeDefined();
-		expect(config.OPENAI_API_KEY.length).toBeGreaterThan(0);
+		expect(config.LLM_API_KEY.length).toBeGreaterThan(0);
 		expect(config.JWT_SECRET.length).toBeGreaterThan(0);
 	});
 });

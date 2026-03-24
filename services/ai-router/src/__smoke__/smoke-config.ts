@@ -2,14 +2,14 @@
  * LLM smoke test configuration.
  *
  * Resolves service URLs, API keys, and database connection from environment
- * variables. OPENAI_API_KEY is required with no default -- it must come from
+ * variables. LLM_API_KEY is required with no default -- it must come from
  * the environment or GitHub Actions secrets, never hardcoded.
  */
 
 import { z } from "zod/v4";
 
 const LlmSmokeConfigSchema = z.object({
-	OPENAI_API_KEY: z.string().min(1),
+	LLM_API_KEY: z.string().min(1),
 	AI_ROUTER_URL: z.string().default("http://localhost:3002"),
 	VOICE_TRANSCRIPTION_URL: z.string().default("http://localhost:3003"),
 	JWT_SECRET: z.string().min(1),
@@ -32,7 +32,7 @@ export function loadLlmSmokeConfig(): LlmSmokeConfig {
 				"LLM smoke test configuration is missing or invalid.",
 				"",
 				"Required:",
-				"  OPENAI_API_KEY  (real OpenAI key, never hardcoded)",
+				"  LLM_API_KEY  (real OpenAI key, never hardcoded)",
 				"  JWT_SECRET      (must match the running ai-router instance)",
 				"",
 				"Optional overrides (with defaults):",

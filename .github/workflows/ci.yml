@@ -141,8 +141,7 @@ jobs:
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: ci-smoke-test-secret-at-least-32-chars
           JWT_SECRET_PREVIOUS: ""
-          OPENAI_API_KEY: sk-fake-ci-key
-          LLM_API_KEY: sk-fake-ci-llm-key
+          LLM_API_KEY: sk-fake-ci-key
           SETUP_TOKEN_SECRET: ci-smoke-setup-token-secret-at-least-32-chars
           SETUP_BASE_URL: http://localhost
           ENCRYPTION_MASTER_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"

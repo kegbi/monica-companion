@@ -20,7 +20,8 @@ function getModelCostPerMinute(model: string): number {
 }
 
 const voiceTranscriptionConfigSchema = z.object({
-	OPENAI_API_KEY: z.string().min(1),
+	LLM_API_KEY: z.string().min(1),
+	LLM_BASE_URL: z.string().min(1).default("https://api.openai.com/v1"),
 	WHISPER_MODEL: z.string().min(1).default("gpt-4o-transcribe"),
 	WHISPER_TIMEOUT_MS: z.coerce.number().int().positive().default(60000),
 	WHISPER_MAX_FILE_SIZE_BYTES: z.coerce
@@ -34,7 +35,8 @@ const voiceTranscriptionConfigSchema = z.object({
 
 export interface Config {
 	auth: AuthConfig;
-	openaiApiKey: string;
+	llmApiKey: string;
+	llmBaseUrl: string;
 	whisperModel: string;
 	whisperTimeoutMs: number;
 	whisperMaxFileSizeBytes: number;
@@ -64,7 +66,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
 
 	return {
 		auth,
-		openaiApiKey: parsed.OPENAI_API_KEY,
+		llmApiKey: parsed.LLM_API_KEY,
+		llmBaseUrl: parsed.LLM_BASE_URL,
 		whisperModel: parsed.WHISPER_MODEL,
 		whisperTimeoutMs: parsed.WHISPER_TIMEOUT_MS,
 		whisperMaxFileSizeBytes: parsed.WHISPER_MAX_FILE_SIZE_BYTES,

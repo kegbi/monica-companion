@@ -85,15 +85,15 @@ Replicates the "Benchmark quality gates" CI step. Fails if accuracy thresholds a
 These replicate the manual-dispatch and nightly CI workflows. They are required **only when their prerequisites are available**.
 
 #### 4a. LLM Integration Tests (from `llm-integration.yml`)
-- **Condition:** `OPENAI_API_KEY` environment variable is set
+- **Condition:** `LLM_API_KEY` environment variable is set
 - **Command:** `pnpm test:llm-integration`
-- **If key not set:** Skip with note "Skipped: OPENAI_API_KEY not available"
+- **If key not set:** Skip with note "Skipped: LLM_API_KEY not available"
 - **If fails:** verdict FAIL
 
 #### 4b. LLM Smoke Tests (from `llm-smoke.yml`)
-- **Condition:** `OPENAI_API_KEY` environment variable is set AND services are running
+- **Condition:** `LLM_API_KEY` environment variable is set AND services are running
 - **Command:** `pnpm test:smoke:llm`
-- **If key not set:** Skip with note "Skipped: OPENAI_API_KEY not available"
+- **If key not set:** Skip with note "Skipped: LLM_API_KEY not available"
 - **If fails:** verdict FAIL
 
 #### 4c. Monica Smoke Tests (from `monica-smoke.yml`)
@@ -157,8 +157,8 @@ smoke_checks_passed: 8
 ## Extended Pipelines
 | # | Pipeline | Condition | Result |
 |---|----------|-----------|--------|
-| 1 | LLM integration (llm-integration.yml) | OPENAI_API_KEY not set | SKIPPED |
-| 2 | LLM smoke (llm-smoke.yml) | OPENAI_API_KEY not set | SKIPPED |
+| 1 | LLM integration (llm-integration.yml) | LLM_API_KEY not set | SKIPPED |
+| 2 | LLM smoke (llm-smoke.yml) | LLM_API_KEY not set | SKIPPED |
 | 3 | Monica smoke (monica-smoke.yml) | No Monica instance | SKIPPED |
 
 ## Environment

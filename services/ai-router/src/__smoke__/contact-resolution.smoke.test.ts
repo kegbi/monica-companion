@@ -8,7 +8,7 @@
  *
  * Prerequisites:
  * - ai-router, monica-integration, user-management, postgres, redis running
- * - OPENAI_API_KEY and JWT_SECRET set in environment
+ * - LLM_API_KEY and JWT_SECRET set in environment
  *
  * Run: pnpm vitest run src/__smoke__/contact-resolution.smoke.test.ts
  */

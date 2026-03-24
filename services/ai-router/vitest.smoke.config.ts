@@ -6,7 +6,7 @@ import { pkg, workspace } from "../../config/vitest-resolve.js";
  * Vitest config for LLM smoke tests.
  *
  * These tests require a live Docker stack with ai-router running,
- * a real OPENAI_API_KEY, JWT_SECRET, and POSTGRES_URL.
+ * a real LLM_API_KEY, JWT_SECRET, and POSTGRES_URL.
  *
  * Timeouts are extended to accommodate LLM response times.
  * Tests run sequentially to avoid race conditions on shared state.

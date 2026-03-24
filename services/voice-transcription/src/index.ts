@@ -17,7 +17,8 @@ async function main() {
 
 	// Create Whisper client
 	const whisperClient = createWhisperClient({
-		apiKey: config.openaiApiKey,
+		apiKey: config.llmApiKey,
+		baseUrl: config.llmBaseUrl,
 		model: config.whisperModel,
 		timeoutMs: config.whisperTimeoutMs,
 	});

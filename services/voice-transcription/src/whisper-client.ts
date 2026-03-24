@@ -34,6 +34,7 @@ export class TranscriptionError extends Error {
 
 export interface WhisperClientOptions {
 	apiKey: string;
+	baseUrl: string;
 	model: string;
 	timeoutMs: number;
 }
@@ -88,7 +89,7 @@ function isGpt4oTranscribeModel(model: string): boolean {
 }
 
 export function createWhisperClient(options: WhisperClientOptions): WhisperClient {
-	const openai = new OpenAI({ apiKey: options.apiKey });
+	const openai = new OpenAI({ apiKey: options.apiKey, baseURL: options.baseUrl });
 
 	async function attemptTranscription(
 		audioBlob: Blob,

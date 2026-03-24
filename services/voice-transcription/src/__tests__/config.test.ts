@@ -4,7 +4,7 @@ import { loadConfig } from "../config";
 const baseEnv: Record<string, string> = {
 	SERVICE_NAME: "voice-transcription",
 	JWT_SECRET: "test-secret-256-bit-minimum-key!",
-	OPENAI_API_KEY: "sk-test-key-for-testing-only",
+	LLM_API_KEY: "sk-test-key-for-testing-only",
 	REDIS_URL: "redis://localhost:6379",
 };
 
@@ -12,7 +12,7 @@ describe("loadConfig", () => {
 	it("loads config with all required fields", () => {
 		const config = loadConfig(baseEnv);
 		expect(config.auth.jwtSecrets).toEqual(["test-secret-256-bit-minimum-key!"]);
-		expect(config.openaiApiKey).toBe("sk-test-key-for-testing-only");
+		expect(config.llmApiKey).toBe("sk-test-key-for-testing-only");
 		expect(config.redisUrl).toBe("redis://localhost:6379");
 	});
 
@@ -78,8 +78,8 @@ describe("loadConfig", () => {
 		expect(config.guardrails.budgetAlarmThresholdPct).toBe(90);
 	});
 
-	it("throws when OPENAI_API_KEY is missing", () => {
-		const { OPENAI_API_KEY: _, ...envWithoutKey } = baseEnv;
+	it("throws when LLM_API_KEY is missing", () => {
+		const { LLM_API_KEY: _, ...envWithoutKey } = baseEnv;
 		expect(() => loadConfig(envWithoutKey)).toThrow();
 	});
 

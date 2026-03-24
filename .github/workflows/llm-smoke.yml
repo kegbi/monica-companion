@@ -98,7 +98,7 @@ jobs:
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: ci-smoke-test-secret-at-least-32-chars
           JWT_SECRET_PREVIOUS: ""
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           SETUP_TOKEN_SECRET: ci-smoke-setup-token-secret-at-least-32-chars
           SETUP_BASE_URL: http://localhost
           ENCRYPTION_MASTER_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
@@ -117,7 +117,7 @@ jobs:
       - name: Run LLM smoke tests
         run: pnpm test:smoke:llm
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           JWT_SECRET: ci-smoke-test-secret-at-least-32-chars
           AI_ROUTER_URL: http://localhost:3002
           POSTGRES_URL: postgresql://monica:monica_dev@localhost:5432/monica_companion
@@ -125,7 +125,7 @@ jobs:
       - name: Run benchmark with real key
         run: pnpm bench:ai
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
 
       - name: Upload smoke test results
         if: always()
