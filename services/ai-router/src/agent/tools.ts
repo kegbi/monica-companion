@@ -110,7 +110,7 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
 		function: {
 			name: "create_note",
 			description:
-				"Create a note for a contact. The note body should be the user's message or a summary of what they want to record.",
+				"Create a note for a contact. The body parameter must contain the actual note text provided by the user. If the user did not specify what the note should say, do NOT call this tool — ask the user for the note content first.",
 			parameters: {
 				type: "object",
 				properties: {
@@ -381,6 +381,10 @@ function contactLabel(args: Record<string, unknown>): string {
 	return `contact ${args.contact_id}`;
 }
 
+function truncate(text: string, maxLen: number): string {
+	return text.length > maxLen ? `${text.slice(0, maxLen)}…` : text;
+}
+
 /**
  * Generate a human-readable description of a tool action for the confirmation prompt.
  * Avoids including sensitive data — uses tool name and key identifiers only.
@@ -393,14 +397,15 @@ function contactLabel(args: Record<string, unknown>): string {
 export function generateActionDescription(toolName: string, args: Record<string, unknown>): string {
 	switch (toolName) {
 		case "create_note":
-			return `Create a note for ${contactLabel(args)}`;
+			return `Create a note for ${contactLabel(args)}: "${truncate(String(args.body ?? ""), 200)}"`;
 		case "create_contact": {
 			const name = [args.first_name, args.last_name].filter(Boolean).join(" ");
 			return `Create a new contact: ${name}`;
 		}
 		case "create_activity": {
 			const ids = Array.isArray(args.contact_ids) ? args.contact_ids.join(", ") : "unknown";
-			return `Log an activity with contact(s) ${ids}`;
+			const desc = typeof args.description === "string" ? args.description : "";
+			return `Log an activity with contact(s) ${ids}: "${truncate(desc, 200)}"`;
 		}
 		case "update_contact_birthday":
 			return `Update birthday for ${contactLabel(args)} to ${args.date}`;

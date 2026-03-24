@@ -184,6 +184,7 @@ describe("generateActionDescription", () => {
 		});
 		expect(desc).toContain("Create a note");
 		expect(desc).toContain("contact 42");
+		expect(desc).toContain("Had coffee with them today");
 	});
 
 	it("generates description for create_note with contactName", () => {
@@ -195,6 +196,17 @@ describe("generateActionDescription", () => {
 		expect(desc).toContain("Create a note");
 		expect(desc).toContain("Elena Yuryevna");
 		expect(desc).not.toContain("42");
+		expect(desc).toContain("Had coffee with them today");
+	});
+
+	it("truncates long note body in description", () => {
+		const longBody = "A".repeat(300);
+		const desc = generateActionDescription("create_note", {
+			contact_id: 1,
+			body: longBody,
+		});
+		expect(desc.length).toBeLessThan(350);
+		expect(desc).toContain("…");
 	});
 
 	it("generates description for create_contact", () => {
@@ -214,6 +226,7 @@ describe("generateActionDescription", () => {
 		});
 		expect(desc).toContain("Log");
 		expect(desc).toContain("activity");
+		expect(desc).toContain("Had lunch");
 	});
 
 	it("generates description for update_contact_birthday", () => {

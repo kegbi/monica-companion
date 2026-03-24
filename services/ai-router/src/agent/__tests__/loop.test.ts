@@ -1172,7 +1172,7 @@ function makePendingToolCall(overrides?: Record<string, unknown>) {
 		name: "create_note",
 		arguments: '{"contact_id": 1, "body": "Test note"}',
 		toolCallId: "call_abc123",
-		actionDescription: "Create a note for contact 1",
+		actionDescription: 'Create a note for contact 1: "Test note"',
 		createdAt: new Date().toISOString(),
 		assistantMessage: {
 			role: "assistant",
