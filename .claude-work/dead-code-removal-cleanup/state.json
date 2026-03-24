@@ -1,0 +1,12 @@
+{
+	"taskId": "dead-code-removal-cleanup",
+	"taskGroup": "Stage 6: Dead Code Removal & Cleanup",
+	"phase": "completed",
+	"planAttempts": 1,
+	"codeAttempts": 1,
+	"smokeAttempts": 1,
+	"status": "completed",
+	"mode": "auto",
+	"startedAt": "2026-03-24T00:00:00.000Z",
+	"completedAt": "2026-03-24T12:00:00.000Z"
+}
