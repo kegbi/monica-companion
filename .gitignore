@@ -56,6 +56,9 @@ test-results/
 **/test-results/
 playwright-report/
 
+# Orchestrate runner work directory
+.claude-work/
+
 # Throwaway scaffolding scripts
 tests/smoke/_gen.mjs
 tests/smoke/_write-test.mjs
