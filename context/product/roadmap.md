@@ -360,23 +360,23 @@ _The tool-calling pattern (validated by OpenAI function calling, Claude tool use
   - [x] **Smoke tests** (`tests/smoke/`): unchanged. POST /internal/process still returns `GraphResponse` shape. Same HTTP assertions. The response contract does not change.
   - [x] **Acceptance criteria parity**: run the full benchmark. Thresholds: read accuracy ≥ 92%, write accuracy ≥ 90%, contact-resolution precision ≥ 95%, false-positive mutation rate < 1%, p95 latency ≤ 5s text / ≤ 12s voice. Compare against Phase 9 baselines.
 
-- [ ] **Stage 6: Dead Code Removal & Cleanup**
+- [x] **Stage 6: Dead Code Removal & Cleanup**
 
   _Remove the LangGraph pipeline, intent classification, pending command state machine, and all supporting code. Update acceptance criteria._
 
-  - [ ] Remove `ai-router/src/graph/nodes/execute-action.ts` (~980 lines) and `__tests__/execute-action.test.ts` (2,265 lines).
-  - [ ] Remove `ai-router/src/graph/nodes/resolve-contact-ref.ts` (~797 lines) and `__tests__/resolve-contact-ref.test.ts` (1,408 lines).
-  - [ ] Remove `ai-router/src/graph/nodes/format-response.ts` (~141 lines) and `__tests__/format-response.test.ts`.
-  - [ ] Remove `ai-router/src/graph/nodes/classify-intent.ts` and `__tests__/classify-intent.test.ts`.
-  - [ ] Remove `ai-router/src/graph/nodes/deliver-response.ts` and `__tests__/deliver-response.test.ts`.
-  - [ ] Remove `ai-router/src/graph/nodes/persist-turn.ts` and `__tests__/persist-turn.test.ts`.
-  - [ ] Remove `ai-router/src/graph/nodes/load-context.ts` and `__tests__/load-context.test.ts`.
-  - [ ] Remove `ai-router/src/graph/intent-schemas.ts` (77 lines) — tool definitions replace structured output schemas.
-  - [ ] Remove `ai-router/src/graph/system-prompt.ts` — replaced by `agent/system-prompt.ts`.
-  - [ ] Remove `ai-router/src/graph/llm.ts` — replaced by OpenAI SDK client.
-  - [ ] Remove `ai-router/src/graph/graph.ts` (StateGraph wiring) and `ai-router/src/graph/state.ts` (ConversationAnnotation, ConversationStateSchema, NarrowingContextSchema).
-  - [ ] Remove `ai-router/src/pending-command/repository.ts` (321 lines), state machine, confirm helpers, and all tests.
-  - [ ] Drop the `pendingCommands` table via a Drizzle migration. Drop `narrowingContext` and `unresolvedContactRef` columns. Replace the `conversationTurns` table with the new `conversationHistory` table (if not already done in Stage 1 migration).
-  - [ ] Remove `@langchain/core`, `@langchain/langgraph`, `@langchain/openai` from `ai-router/package.json` and pnpm catalog. Remove vitest resolve aliases for `@langchain/*` from `ai-router/vitest.config.ts`.
-  - [ ] Update `context/product/acceptance-criteria.md`: replace "pending commands follow the lifecycle draft → pending_confirmation → confirmed → executed → expired/cancelled" with "mutating tool calls are intercepted for user confirmation before execution; confirmed calls are sent to scheduler". Remove references to narrowingContext, unresolvedContactRef, and the 6-status lifecycle.
-  - [ ] Verify all remaining tests pass. Run Docker Compose smoke tests against the live stack. Run the full promptfoo benchmark and confirm acceptance thresholds are met.
+  - [x] Remove `ai-router/src/graph/nodes/execute-action.ts` (~980 lines) and `__tests__/execute-action.test.ts` (2,265 lines).
+  - [x] Remove `ai-router/src/graph/nodes/resolve-contact-ref.ts` (~797 lines) and `__tests__/resolve-contact-ref.test.ts` (1,408 lines).
+  - [x] Remove `ai-router/src/graph/nodes/format-response.ts` (~141 lines) and `__tests__/format-response.test.ts`.
+  - [x] Remove `ai-router/src/graph/nodes/classify-intent.ts` and `__tests__/classify-intent.test.ts`.
+  - [x] Remove `ai-router/src/graph/nodes/deliver-response.ts` and `__tests__/deliver-response.test.ts`.
+  - [x] Remove `ai-router/src/graph/nodes/persist-turn.ts` and `__tests__/persist-turn.test.ts`.
+  - [x] Remove `ai-router/src/graph/nodes/load-context.ts` and `__tests__/load-context.test.ts`.
+  - [x] Remove `ai-router/src/graph/intent-schemas.ts` (77 lines) — tool definitions replace structured output schemas.
+  - [x] Remove `ai-router/src/graph/system-prompt.ts` — replaced by `agent/system-prompt.ts`.
+  - [x] Remove `ai-router/src/graph/llm.ts` — replaced by OpenAI SDK client.
+  - [x] Remove `ai-router/src/graph/graph.ts` (StateGraph wiring) and `ai-router/src/graph/state.ts` (ConversationAnnotation, ConversationStateSchema, NarrowingContextSchema).
+  - [x] Remove `ai-router/src/pending-command/repository.ts` (321 lines), state machine, confirm helpers, and all tests.
+  - [x] Drop the `pendingCommands` table via a Drizzle migration. Drop `narrowingContext` and `unresolvedContactRef` columns. Replace the `conversationTurns` table with the new `conversationHistory` table (if not already done in Stage 1 migration).
+  - [x] Remove `@langchain/core`, `@langchain/langgraph`, `@langchain/openai` from `ai-router/package.json` and pnpm catalog. Remove vitest resolve aliases for `@langchain/*` from `ai-router/vitest.config.ts`.
+  - [x] Update `context/product/acceptance-criteria.md`: replace "pending commands follow the lifecycle draft → pending_confirmation → confirmed → executed → expired/cancelled" with "mutating tool calls are intercepted for user confirmation before execution; confirmed calls are sent to scheduler". Remove references to narrowingContext, unresolvedContactRef, and the 6-status lifecycle.
+  - [x] Verify all remaining tests pass. Run Docker Compose smoke tests against the live stack. Run the full promptfoo benchmark and confirm acceptance thresholds are met.
