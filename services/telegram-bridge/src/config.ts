@@ -12,7 +12,7 @@ const configSchema = z.object({
 	REDIS_URL: z.string().min(1),
 	RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
 	RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(60),
-	AI_ROUTER_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+	AI_ROUTER_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
 	VOICE_TRANSCRIPTION_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
 	USER_MANAGEMENT_TIMEOUT_MS: z.coerce.number().int().positive().default(5_000),
 });

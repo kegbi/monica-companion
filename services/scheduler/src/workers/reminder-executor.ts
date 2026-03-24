@@ -55,6 +55,13 @@ export async function executeReminder(
 
 			const { data: reminders } = (await response.json()) as { data: UpcomingReminder[] };
 
+			// Skip sending when there are no reminders — don't bother the user
+			if (reminders.length === 0) {
+				span.setAttribute("scheduler.reminder_count", 0);
+				span.setAttribute("scheduler.status", "skipped_empty");
+				return;
+			}
+
 			// Format connector-neutral digest text
 			const digestText = formatReminderDigest(reminders);
 
