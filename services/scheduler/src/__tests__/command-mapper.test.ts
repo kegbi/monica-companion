@@ -90,6 +90,28 @@ describe("mapCommandToMonicaRequest", () => {
 		});
 	});
 
+	it("maps update_contact_nickname to PUT /internal/contacts/:contactId/nickname", () => {
+		const result = mapCommandToMonicaRequest({
+			type: "update_contact_nickname",
+			contactId: 8,
+			nickname: "Johnny",
+		});
+		expect(result.method).toBe("PUT");
+		expect(result.path).toBe("/internal/contacts/8/nickname");
+		expect(result.body).toEqual({ nickname: "Johnny" });
+	});
+
+	it("maps update_contact_nickname with empty string for removal", () => {
+		const result = mapCommandToMonicaRequest({
+			type: "update_contact_nickname",
+			contactId: 8,
+			nickname: "",
+		});
+		expect(result.method).toBe("PUT");
+		expect(result.path).toBe("/internal/contacts/8/nickname");
+		expect(result.body).toEqual({ nickname: "" });
+	});
+
 	it("maps update_contact_address to POST /internal/contacts/:contactId/addresses", () => {
 		const result = mapCommandToMonicaRequest({
 			type: "update_contact_address",

@@ -83,6 +83,69 @@ describe("executeMutatingTool", () => {
 		});
 	});
 
+	it("create_contact passes nickname when provided", async () => {
+		await executeMutatingTool({
+			toolName: "create_contact",
+			args: { first_name: "John", last_name: "Doe", nickname: "Johnny" },
+			userId,
+			correlationId,
+			pendingCommandId,
+			schedulerClient,
+			monicaServiceClient,
+		});
+
+		const payload = (schedulerClient.execute as ReturnType<typeof vi.fn>).mock
+			.calls[0][0] as ConfirmedCommandPayload;
+		expect(payload.payload).toMatchObject({
+			type: "create_contact",
+			firstName: "John",
+			lastName: "Doe",
+			nickname: "Johnny",
+			genderId: 3,
+		});
+	});
+
+	it("executes update_contact_nickname with correct payload", async () => {
+		const result = await executeMutatingTool({
+			toolName: "update_contact_nickname",
+			args: { contact_id: 10, nickname: "Johnny" },
+			userId,
+			correlationId,
+			pendingCommandId,
+			schedulerClient,
+			monicaServiceClient,
+		});
+
+		expect(result.status).toBe("success");
+		const payload = (schedulerClient.execute as ReturnType<typeof vi.fn>).mock
+			.calls[0][0] as ConfirmedCommandPayload;
+		expect(payload.payload).toEqual({
+			type: "update_contact_nickname",
+			contactId: 10,
+			nickname: "Johnny",
+		});
+	});
+
+	it("executes update_contact_nickname with empty string to remove", async () => {
+		await executeMutatingTool({
+			toolName: "update_contact_nickname",
+			args: { contact_id: 10, nickname: "" },
+			userId,
+			correlationId,
+			pendingCommandId,
+			schedulerClient,
+			monicaServiceClient,
+		});
+
+		const payload = (schedulerClient.execute as ReturnType<typeof vi.fn>).mock
+			.calls[0][0] as ConfirmedCommandPayload;
+		expect(payload.payload).toEqual({
+			type: "update_contact_nickname",
+			contactId: 10,
+			nickname: "",
+		});
+	});
+
 	it("create_contact uses provided genderId when given", async () => {
 		await executeMutatingTool({
 			toolName: "create_contact",

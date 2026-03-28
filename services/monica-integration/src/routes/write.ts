@@ -308,5 +308,83 @@ export function writeRoutes(config: Config) {
 		}
 	});
 
+	// --- Update contact nickname ---
+	const UpdateNicknameBody = z.object({
+		nickname: z.string().max(100),
+	});
+
+	routes.put("/contacts/:contactId/nickname", schedulerAuth, async (c) => {
+		const userId = requireUserId(c);
+		const correlationId = getCorrelationId(c);
+		const contactId = Number(c.req.param("contactId"));
+
+		if (!Number.isFinite(contactId) || contactId <= 0) {
+			return c.json({ error: "Invalid contactId" }, 400);
+		}
+
+		let body: unknown;
+		try {
+			body = await c.req.json();
+		} catch {
+			return c.json({ error: "Invalid request body" }, 400);
+		}
+
+		const parsed = UpdateNicknameBody.safeParse(body);
+		if (!parsed.success) {
+			return c.json({ error: "Invalid request body" }, 400);
+		}
+
+		try {
+			const client = await createMonicaClient(config, userId, correlationId);
+			// Fetch existing contact + genders to preserve required fields for the Monica PUT
+			const [existing, genders] = await Promise.all([
+				client.getContact(contactId),
+				client.listGenders(),
+			]);
+
+			const genderMatch = genders.find((g) => g.type === existing.gender_type);
+			const genderId = genderMatch?.id ?? genders[0]?.id ?? 3;
+
+			const newNickname = parsed.data.nickname.length > 0 ? parsed.data.nickname : undefined;
+
+			const contact = await client.updateContact(contactId, {
+				first_name: existing.first_name,
+				last_name: existing.last_name,
+				nickname: newNickname,
+				gender_id: genderId,
+				is_birthdate_known: false,
+				is_deceased: existing.is_dead,
+				is_deceased_date_known: false,
+			});
+
+			return c.json({
+				contactId: contact.id,
+				displayName: contact.complete_name,
+				nickname: contact.nickname,
+			});
+		} catch (err) {
+			return handleMonicaError(c, err);
+		}
+	});
+
+	// --- Delete contact ---
+	routes.delete("/contacts/:contactId", schedulerAuth, async (c) => {
+		const userId = requireUserId(c);
+		const correlationId = getCorrelationId(c);
+		const contactId = Number(c.req.param("contactId"));
+
+		if (!Number.isFinite(contactId) || contactId <= 0) {
+			return c.json({ error: "Invalid contactId" }, 400);
+		}
+
+		try {
+			const client = await createMonicaClient(config, userId, correlationId);
+			const result = await client.deleteContact(contactId);
+			return c.json({ deleted: result.deleted, contactId: result.id });
+		} catch (err) {
+			return handleMonicaError(c, err);
+		}
+	});
+
 	return routes;
 }

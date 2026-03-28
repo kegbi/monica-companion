@@ -111,6 +111,7 @@ async function buildPayload(
 				type: "create_contact",
 				firstName: args.first_name as string,
 				lastName: args.last_name as string | undefined,
+				nickname: args.nickname as string | undefined,
 				genderId: (args.gender_id as number | undefined) ?? 3,
 			};
 
@@ -177,6 +178,19 @@ async function buildPayload(
 				province: args.province as string | undefined,
 				postalCode: args.postal_code as string | undefined,
 				country: (args.country as string | undefined) ?? "US",
+			};
+
+		case "update_contact_nickname":
+			return {
+				type: "update_contact_nickname",
+				contactId: args.contact_id as number,
+				nickname: args.nickname as string,
+			};
+
+		case "delete_contact":
+			return {
+				type: "delete_contact",
+				contactId: args.contact_id as number,
 			};
 
 		default:

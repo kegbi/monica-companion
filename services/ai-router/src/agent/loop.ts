@@ -22,6 +22,7 @@ import { executeMutatingTool } from "./tool-handlers/mutating-handlers.js";
 import { handleQueryBirthday } from "./tool-handlers/query-birthday.js";
 import { handleQueryLastNote } from "./tool-handlers/query-last-note.js";
 import { handleQueryPhone } from "./tool-handlers/query-phone.js";
+import { handleQueryTodayReminders } from "./tool-handlers/query-today-reminders.js";
 import { handleSearchContacts } from "./tool-handlers/search-contacts.js";
 import {
 	generateActionDescription,
@@ -467,6 +468,14 @@ async function executeReadOnlyTool(
 		case "query_last_note":
 			handlerResult = await handleQueryLastNote({
 				contactId: parsedArgs.contact_id as number,
+				serviceClient: deps.monicaServiceClient,
+				userId,
+				correlationId,
+			});
+			break;
+
+		case "query_today_reminders":
+			handlerResult = await handleQueryTodayReminders({
 				serviceClient: deps.monicaServiceClient,
 				userId,
 				correlationId,

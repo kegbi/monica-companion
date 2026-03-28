@@ -15,6 +15,8 @@ export const MutatingCommandType = {
 	update_contact_phone: "update_contact_phone",
 	update_contact_email: "update_contact_email",
 	update_contact_address: "update_contact_address",
+	update_contact_nickname: "update_contact_nickname",
+	delete_contact: "delete_contact",
 } as const;
 export type MutatingCommandType = (typeof MutatingCommandType)[keyof typeof MutatingCommandType];
 
@@ -26,6 +28,8 @@ const MutatingCommandTypeSchema = z.enum([
 	"update_contact_phone",
 	"update_contact_email",
 	"update_contact_address",
+	"update_contact_nickname",
+	"delete_contact",
 ]);
 
 /**
@@ -36,6 +40,7 @@ export const ReadOnlyCommandType = {
 	query_birthday: "query_birthday",
 	query_phone: "query_phone",
 	query_last_note: "query_last_note",
+	query_today_reminders: "query_today_reminders",
 } as const;
 export type ReadOnlyCommandType = (typeof ReadOnlyCommandType)[keyof typeof ReadOnlyCommandType];
 
@@ -146,6 +151,18 @@ const UpdateContactAddressPayloadSchema = z.object({
 	country: z.string(),
 });
 
+const UpdateContactNicknamePayloadSchema = z.object({
+	type: z.literal("update_contact_nickname"),
+	contactId: z.number().int(),
+	/** The new nickname. Empty string means remove the nickname. */
+	nickname: z.string().max(100),
+});
+
+const DeleteContactPayloadSchema = z.object({
+	type: z.literal("delete_contact"),
+	contactId: z.number().int(),
+});
+
 /** Discriminated union of all mutating command payloads. */
 export const MutatingCommandPayloadSchema = z.discriminatedUnion("type", [
 	CreateContactPayloadSchema,
@@ -155,6 +172,8 @@ export const MutatingCommandPayloadSchema = z.discriminatedUnion("type", [
 	UpdateContactPhonePayloadSchema,
 	UpdateContactEmailPayloadSchema,
 	UpdateContactAddressPayloadSchema,
+	UpdateContactNicknamePayloadSchema,
+	DeleteContactPayloadSchema,
 ]);
 export type MutatingCommandPayload = z.infer<typeof MutatingCommandPayloadSchema>;
 

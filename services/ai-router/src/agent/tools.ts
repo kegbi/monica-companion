@@ -10,6 +10,7 @@ export const READ_ONLY_TOOLS = new Set([
 	"query_birthday",
 	"query_phone",
 	"query_last_note",
+	"query_today_reminders",
 ]);
 
 /**
@@ -24,6 +25,8 @@ export const MUTATING_TOOLS = new Set([
 	"update_contact_phone",
 	"update_contact_email",
 	"update_contact_address",
+	"update_contact_nickname",
+	"delete_contact",
 ]);
 
 /**
@@ -103,6 +106,19 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
 			},
 		},
 	},
+	{
+		type: "function",
+		function: {
+			name: "query_today_reminders",
+			description:
+				"Get all reminders and notifications scheduled for today. Returns reminder titles, descriptions, and associated contact names. Call this when the user asks about today's events, reminders, or notifications.",
+			parameters: {
+				type: "object",
+				properties: {},
+				required: [],
+			},
+		},
+	},
 
 	// --- Mutating tools ---
 	{
@@ -142,6 +158,10 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
 					last_name: {
 						type: "string",
 						description: "The contact's last name (optional)",
+					},
+					nickname: {
+						type: "string",
+						description: "The contact's nickname (optional)",
 					},
 					gender_id: {
 						type: "number",
@@ -286,6 +306,47 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
 			},
 		},
 	},
+	{
+		type: "function",
+		function: {
+			name: "update_contact_nickname",
+			description:
+				"Set, update, or remove a contact's nickname. Pass an empty string to remove an existing nickname.",
+			parameters: {
+				type: "object",
+				properties: {
+					contact_id: {
+						type: "number",
+						description: "The Monica contact ID",
+					},
+					nickname: {
+						type: "string",
+						description:
+							"The new nickname for the contact. Pass an empty string to remove the nickname.",
+					},
+				},
+				required: ["contact_id", "nickname"],
+			},
+		},
+	},
+	{
+		type: "function",
+		function: {
+			name: "delete_contact",
+			description:
+				"Permanently delete a contact and all associated data (notes, activities, reminders). This action is irreversible. Only call this when the user explicitly asks to delete a contact.",
+			parameters: {
+				type: "object",
+				properties: {
+					contact_id: {
+						type: "number",
+						description: "The Monica contact ID",
+					},
+				},
+				required: ["contact_id"],
+			},
+		},
+	},
 ];
 
 // --- Zod argument schemas for read-only tools that require validation ---
@@ -306,6 +367,8 @@ export const QueryLastNoteArgsSchema = z.object({
 	contact_id: z.number().int().positive(),
 });
 
+export const QueryTodayRemindersArgsSchema = z.object({});
+
 // --- Zod argument schemas for mutating tools ---
 
 const CreateNoteArgsSchema = z.object({
@@ -316,6 +379,7 @@ const CreateNoteArgsSchema = z.object({
 const CreateContactArgsSchema = z.object({
 	first_name: z.string().min(1),
 	last_name: z.string().optional(),
+	nickname: z.string().optional(),
 	gender_id: z.number().int().optional(),
 });
 
@@ -351,6 +415,15 @@ const UpdateContactAddressArgsSchema = z.object({
 	country: z.string().optional(),
 });
 
+const UpdateContactNicknameArgsSchema = z.object({
+	contact_id: z.number().int().positive(),
+	nickname: z.string(),
+});
+
+const DeleteContactArgsSchema = z.object({
+	contact_id: z.number().int().positive(),
+});
+
 /**
  * Map of mutating tool names to their Zod argument schemas.
  * Used to validate tool arguments before serialization into pendingToolCall.
@@ -367,6 +440,9 @@ export const TOOL_ARG_SCHEMAS: Record<string, z.ZodType> = {
 	update_contact_phone: UpdateContactPhoneArgsSchema,
 	update_contact_email: UpdateContactEmailArgsSchema,
 	update_contact_address: UpdateContactAddressArgsSchema,
+	update_contact_nickname: UpdateContactNicknameArgsSchema,
+	delete_contact: DeleteContactArgsSchema,
+	query_today_reminders: QueryTodayRemindersArgsSchema,
 };
 
 /**
@@ -400,7 +476,11 @@ export function generateActionDescription(toolName: string, args: Record<string,
 			return `Create a note for ${contactLabel(args)}: "${truncate(String(args.body ?? ""), 200)}"`;
 		case "create_contact": {
 			const name = [args.first_name, args.last_name].filter(Boolean).join(" ");
-			return `Create a new contact: ${name}`;
+			const nick =
+				typeof args.nickname === "string" && args.nickname.length > 0
+					? ` (nickname: "${args.nickname}")`
+					: "";
+			return `Create a new contact: ${name}${nick}`;
 		}
 		case "create_activity": {
 			const ids = Array.isArray(args.contact_ids) ? args.contact_ids.join(", ") : "unknown";
@@ -415,6 +495,15 @@ export function generateActionDescription(toolName: string, args: Record<string,
 			return `Update email for ${contactLabel(args)}`;
 		case "update_contact_address":
 			return `Update address for ${contactLabel(args)}`;
+		case "update_contact_nickname": {
+			const nick =
+				typeof args.nickname === "string" && args.nickname.length > 0
+					? `"${args.nickname}"`
+					: "(remove)";
+			return `Update nickname for ${contactLabel(args)} to ${nick}`;
+		}
+		case "delete_contact":
+			return `Permanently delete ${contactLabel(args)} and all associated data`;
 		default:
 			return `Execute ${toolName}`;
 	}

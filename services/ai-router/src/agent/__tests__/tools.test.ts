@@ -8,8 +8,8 @@ import {
 } from "../tools.js";
 
 describe("tool definitions", () => {
-	it("exports 11 tool definitions", () => {
-		expect(TOOL_DEFINITIONS).toHaveLength(11);
+	it("exports 14 tool definitions", () => {
+		expect(TOOL_DEFINITIONS).toHaveLength(14);
 	});
 
 	it("all definitions have type 'function'", () => {
@@ -26,16 +26,17 @@ describe("tool definitions", () => {
 		}
 	});
 
-	it("READ_ONLY_TOOLS contains exactly 4 tools including search_contacts", () => {
-		expect(READ_ONLY_TOOLS.size).toBe(4);
+	it("READ_ONLY_TOOLS contains exactly 5 tools including search_contacts", () => {
+		expect(READ_ONLY_TOOLS.size).toBe(5);
 		expect(READ_ONLY_TOOLS.has("search_contacts")).toBe(true);
 		expect(READ_ONLY_TOOLS.has("query_birthday")).toBe(true);
 		expect(READ_ONLY_TOOLS.has("query_phone")).toBe(true);
 		expect(READ_ONLY_TOOLS.has("query_last_note")).toBe(true);
+		expect(READ_ONLY_TOOLS.has("query_today_reminders")).toBe(true);
 	});
 
-	it("MUTATING_TOOLS contains exactly 7 tools", () => {
-		expect(MUTATING_TOOLS.size).toBe(7);
+	it("MUTATING_TOOLS contains exactly 9 tools", () => {
+		expect(MUTATING_TOOLS.size).toBe(9);
 		expect(MUTATING_TOOLS.has("create_note")).toBe(true);
 		expect(MUTATING_TOOLS.has("create_contact")).toBe(true);
 		expect(MUTATING_TOOLS.has("create_activity")).toBe(true);
@@ -43,6 +44,8 @@ describe("tool definitions", () => {
 		expect(MUTATING_TOOLS.has("update_contact_phone")).toBe(true);
 		expect(MUTATING_TOOLS.has("update_contact_email")).toBe(true);
 		expect(MUTATING_TOOLS.has("update_contact_address")).toBe(true);
+		expect(MUTATING_TOOLS.has("update_contact_nickname")).toBe(true);
+		expect(MUTATING_TOOLS.has("delete_contact")).toBe(true);
 	});
 
 	it("every tool definition name is in exactly one of MUTATING_TOOLS or READ_ONLY_TOOLS", () => {
@@ -63,8 +66,8 @@ describe("tool definitions", () => {
 		}
 	});
 
-	it("total of MUTATING_TOOLS + READ_ONLY_TOOLS equals 11", () => {
-		expect(MUTATING_TOOLS.size + READ_ONLY_TOOLS.size).toBe(11);
+	it("total of MUTATING_TOOLS + READ_ONLY_TOOLS equals TOOL_DEFINITIONS length", () => {
+		expect(MUTATING_TOOLS.size + READ_ONLY_TOOLS.size).toBe(TOOL_DEFINITIONS.length);
 	});
 });
 
@@ -131,6 +134,31 @@ describe("TOOL_ARG_SCHEMAS", () => {
 			first_name: "Jane",
 			last_name: "Doe",
 			gender_id: 2,
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("validates create_contact with nickname", () => {
+		const result = TOOL_ARG_SCHEMAS.create_contact.safeParse({
+			first_name: "John",
+			last_name: "Doe",
+			nickname: "Johnny",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("validates valid update_contact_nickname args", () => {
+		const result = TOOL_ARG_SCHEMAS.update_contact_nickname.safeParse({
+			contact_id: 1,
+			nickname: "Johnny",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("validates update_contact_nickname with empty string to remove", () => {
+		const result = TOOL_ARG_SCHEMAS.update_contact_nickname.safeParse({
+			contact_id: 1,
+			nickname: "",
 		});
 		expect(result.success).toBe(true);
 	});
@@ -276,6 +304,44 @@ describe("generateActionDescription", () => {
 		});
 		expect(desc).toContain("address");
 		expect(desc).toContain("contact 9");
+	});
+
+	it("generates description for create_contact with nickname", () => {
+		const desc = generateActionDescription("create_contact", {
+			first_name: "John",
+			last_name: "Doe",
+			nickname: "Johnny",
+		});
+		expect(desc).toContain("John Doe");
+		expect(desc).toContain("Johnny");
+	});
+
+	it("generates description for update_contact_nickname", () => {
+		const desc = generateActionDescription("update_contact_nickname", {
+			contact_id: 5,
+			nickname: "Johnny",
+		});
+		expect(desc).toContain("nickname");
+		expect(desc).toContain("contact 5");
+		expect(desc).toContain("Johnny");
+	});
+
+	it("generates description for update_contact_nickname with contactName", () => {
+		const desc = generateActionDescription("update_contact_nickname", {
+			contact_id: 5,
+			nickname: "Johnny",
+			contactName: "John Doe",
+		});
+		expect(desc).toContain("John Doe");
+		expect(desc).not.toContain("contact 5");
+	});
+
+	it("generates description for update_contact_nickname removal", () => {
+		const desc = generateActionDescription("update_contact_nickname", {
+			contact_id: 5,
+			nickname: "",
+		});
+		expect(desc).toContain("(remove)");
 	});
 
 	it("returns a fallback for unknown tool names", () => {

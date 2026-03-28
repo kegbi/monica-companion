@@ -126,6 +126,33 @@ export function readRoutes(config: Config) {
 		}
 	});
 
+	// --- Today's reminders (ai-router only) ---
+	routes.get("/reminders/today", aiRouterAuth, async (c) => {
+		const userId = requireUserId(c);
+		const correlationId = getCorrelationId(c);
+
+		try {
+			const client = await createMonicaClient(config, userId, correlationId);
+			const reminders = await client.getUpcomingReminders(0);
+
+			const today = new Date().toISOString().split("T")[0];
+			const todayReminders = reminders.filter((r) => r.planned_date === today);
+
+			return c.json({
+				data: todayReminders.map((r) => ({
+					reminderId: r.reminder_id,
+					plannedDate: r.planned_date,
+					title: r.title,
+					description: r.description,
+					contactId: r.contact.id,
+					contactName: r.contact.complete_name,
+				})),
+			});
+		} catch (err) {
+			return handleMonicaError(c, err);
+		}
+	});
+
 	// --- Upcoming reminders (scheduler only) ---
 	const schedulerAuth = serviceAuth({
 		audience: "monica-integration",

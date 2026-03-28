@@ -14,6 +14,7 @@ import {
 	CreateContactRequest,
 	CreateNoteRequest,
 	CreateReminderRequest,
+	DeleteResponse,
 	FullContact,
 	Gender,
 	Note,
@@ -248,6 +249,14 @@ export class MonicaApiClient {
 		const response = await this.request("POST", "/addresses", validated);
 		const body = await response.json();
 		return singleEnvelope(Address).parse(body).data;
+	}
+
+	// ── Delete operations ───────────────────────────────────────────────
+
+	async deleteContact(id: number): Promise<z.infer<typeof DeleteResponse>> {
+		const response = await this.request("DELETE", `/contacts/${id}`);
+		const body = await response.json();
+		return DeleteResponse.parse(body);
 	}
 
 	// ── Internal helpers ────────────────────────────────────────────────

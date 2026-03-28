@@ -1,7 +1,7 @@
 import type { MutatingCommandPayload } from "@monica-companion/types";
 
 export interface MonicaRequest {
-	method: "POST" | "PUT";
+	method: "POST" | "PUT" | "DELETE";
 	path: string;
 	body: Record<string, unknown>;
 }
@@ -66,6 +66,22 @@ export function mapCommandToMonicaRequest(payload: MutatingCommandPayload): Moni
 				method: "POST",
 				path: `/internal/contacts/${contactId}/addresses`,
 				body: rest,
+			};
+		}
+
+		case "update_contact_nickname": {
+			return {
+				method: "PUT",
+				path: `/internal/contacts/${payload.contactId}/nickname`,
+				body: { nickname: payload.nickname },
+			};
+		}
+
+		case "delete_contact": {
+			return {
+				method: "DELETE",
+				path: `/internal/contacts/${payload.contactId}`,
+				body: {},
 			};
 		}
 	}
