@@ -126,20 +126,42 @@ export function readRoutes(config: Config) {
 		}
 	});
 
-	// --- Today's reminders (ai-router only) ---
-	routes.get("/reminders/today", aiRouterAuth, async (c) => {
+	// --- Upcoming reminders for a date range (ai-router only) ---
+	routes.get("/reminders/range", aiRouterAuth, async (c) => {
 		const userId = requireUserId(c);
 		const correlationId = getCorrelationId(c);
+		const days = Math.max(1, Math.min(Number(c.req.query("days")) || 1, 90));
+
+		const today = new Date();
+		const fromDate = today.toISOString().split("T")[0];
+		const endDate = new Date(today);
+		endDate.setDate(endDate.getDate() + days - 1);
+		const toDate = endDate.toISOString().split("T")[0];
+
+		// Calculate which month offsets we need to cover the date range.
+		// Month offset 0 = current month, 1 = next month, etc.
+		const endMonth =
+			(endDate.getFullYear() - today.getFullYear()) * 12 + (endDate.getMonth() - today.getMonth());
+		const monthOffsets = Array.from({ length: endMonth + 1 }, (_, i) => i);
 
 		try {
 			const client = await createMonicaClient(config, userId, correlationId);
-			const reminders = await client.getUpcomingReminders(0);
+			const allReminders = (
+				await Promise.all(monthOffsets.map((offset) => client.getUpcomingReminders(offset)))
+			).flat();
 
-			const today = new Date().toISOString().split("T")[0];
-			const todayReminders = reminders.filter((r) => r.planned_date === today);
+			// Filter to the exact date range and deduplicate by outbox entry id
+			const seen = new Set<number>();
+			const filtered = allReminders.filter((r) => {
+				if (seen.has(r.id)) return false;
+				seen.add(r.id);
+				return r.planned_date >= fromDate && r.planned_date <= toDate;
+			});
 
 			return c.json({
-				data: todayReminders.map((r) => ({
+				fromDate,
+				toDate,
+				data: filtered.map((r) => ({
 					reminderId: r.reminder_id,
 					plannedDate: r.planned_date,
 					title: r.title,

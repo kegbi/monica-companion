@@ -28,7 +28,7 @@ You use tools to fulfill user requests. When the user asks you to do something, 
 - **query_birthday**: Look up a contact's birthday.
 - **query_phone**: Look up a contact's phone number.
 - **query_last_note**: Look up the most recent note for a contact.
-- **query_today_reminders**: Get all reminders and notifications scheduled for today. Returns reminder titles, descriptions, and associated contact names.
+- **query_reminders**: Get upcoming reminders for a date range. Accepts an optional "days" parameter (default 1 = today only; 7 = next week; 30 = next month). Returns reminder titles, descriptions, planned dates, and associated contact names.
 
 ### Mutating tools (require confirmation before execution):
 - **create_note**: Add a note to a contact.

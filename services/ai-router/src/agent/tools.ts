@@ -10,7 +10,7 @@ export const READ_ONLY_TOOLS = new Set([
 	"query_birthday",
 	"query_phone",
 	"query_last_note",
-	"query_today_reminders",
+	"query_reminders",
 ]);
 
 /**
@@ -109,12 +109,18 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
 	{
 		type: "function",
 		function: {
-			name: "query_today_reminders",
+			name: "query_reminders",
 			description:
-				"Get all reminders and notifications scheduled for today. Returns reminder titles, descriptions, and associated contact names. Call this when the user asks about today's events, reminders, or notifications.",
+				"Get upcoming reminders and notifications for a date range. Returns reminder titles, descriptions, associated contact names, and planned dates. Use days=1 for today, days=7 for the next week, days=30 for the next month, etc.",
 			parameters: {
 				type: "object",
-				properties: {},
+				properties: {
+					days: {
+						type: "number",
+						description:
+							"Number of days to look ahead (including today). Default 1 (today only). Max 90.",
+					},
+				},
 				required: [],
 			},
 		},
@@ -367,7 +373,9 @@ export const QueryLastNoteArgsSchema = z.object({
 	contact_id: z.number().int().positive(),
 });
 
-export const QueryTodayRemindersArgsSchema = z.object({});
+export const QueryRemindersArgsSchema = z.object({
+	days: z.number().int().min(1).max(90).optional(),
+});
 
 // --- Zod argument schemas for mutating tools ---
 
@@ -442,7 +450,7 @@ export const TOOL_ARG_SCHEMAS: Record<string, z.ZodType> = {
 	update_contact_address: UpdateContactAddressArgsSchema,
 	update_contact_nickname: UpdateContactNicknameArgsSchema,
 	delete_contact: DeleteContactArgsSchema,
-	query_today_reminders: QueryTodayRemindersArgsSchema,
+	query_reminders: QueryRemindersArgsSchema,
 };
 
 /**

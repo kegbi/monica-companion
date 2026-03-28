@@ -40,7 +40,7 @@ export const ReadOnlyCommandType = {
 	query_birthday: "query_birthday",
 	query_phone: "query_phone",
 	query_last_note: "query_last_note",
-	query_today_reminders: "query_today_reminders",
+	query_reminders: "query_reminders",
 } as const;
 export type ReadOnlyCommandType = (typeof ReadOnlyCommandType)[keyof typeof ReadOnlyCommandType];
 

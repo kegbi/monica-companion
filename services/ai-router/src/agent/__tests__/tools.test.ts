@@ -32,7 +32,7 @@ describe("tool definitions", () => {
 		expect(READ_ONLY_TOOLS.has("query_birthday")).toBe(true);
 		expect(READ_ONLY_TOOLS.has("query_phone")).toBe(true);
 		expect(READ_ONLY_TOOLS.has("query_last_note")).toBe(true);
-		expect(READ_ONLY_TOOLS.has("query_today_reminders")).toBe(true);
+		expect(READ_ONLY_TOOLS.has("query_reminders")).toBe(true);
 	});
 
 	it("MUTATING_TOOLS contains exactly 9 tools", () => {
