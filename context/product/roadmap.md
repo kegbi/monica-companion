@@ -2,7 +2,7 @@
 
 _This roadmap is an execution plan for the selected V1 logical architecture and deployment profile documented in `context/product/adr-v1-deployment-profile.md`. It prioritizes security contracts and core behavior before future connector expansion or service refactoring._
 
-> **Current status:** Phases 1-9 complete. Phase 10 replaces the custom LangGraph pipeline with a tool-calling agent architecture — see Stage descriptions below.
+> **Current status:** Phases 1-10 complete. Phase 11 adds a standalone MCP server package exposing MonicaHQ operations as tools for Claude Desktop, Claude Code, and other MCP-compatible AI clients.
 
 ---
 
@@ -380,3 +380,137 @@ _The tool-calling pattern (validated by OpenAI function calling, Claude tool use
   - [x] Remove `@langchain/core`, `@langchain/langgraph`, `@langchain/openai` from `ai-router/package.json` and pnpm catalog. Remove vitest resolve aliases for `@langchain/*` from `ai-router/vitest.config.ts`.
   - [x] Update `context/product/acceptance-criteria.md`: replace "pending commands follow the lifecycle draft → pending_confirmation → confirmed → executed → expired/cancelled" with "mutating tool calls are intercepted for user confirmation before execution; confirmed calls are sent to scheduler". Remove references to narrowingContext, unresolvedContactRef, and the 6-status lifecycle.
   - [x] Verify all remaining tests pass. Run Docker Compose smoke tests against the live stack. Run the full promptfoo benchmark and confirm acceptance thresholds are met.
+
+---
+
+### Phase 11: MCP Server — Monica CRM Tools for AI Clients
+
+_Expose MonicaHQ operations as a standalone MCP (Model Context Protocol) server package. This gives Claude Desktop, Claude Code, and other MCP-compatible AI clients direct access to a user's Monica CRM — independent of the Telegram bot stack. The MCP server is a thin adapter over `@monica-companion/monica-api-lib`, not a gateway into the internal service mesh._
+
+_**Architectural rationale:** The MCP server and `ai-router` serve different audiences with different safety models. `ai-router` orchestrates an unattended Telegram bot flow with multi-service confirmation, idempotency, and scheduler dispatch. The MCP server serves an interactive AI client where the human operator is the confirmation layer. Both reuse `monica-api-lib` for typed Monica access, but the MCP server calls the Monica API directly — it does not route through `monica-integration`, `scheduler`, or `delivery`._
+
+- [ ] **Stage 1: Package Scaffold & Transport**
+
+  _Create the package, wire stdio transport, and verify the server starts and advertises capabilities._
+
+  - [ ] Create `packages/monica-mcp-server` as a new pnpm workspace package. Dependencies: `@modelcontextprotocol/sdk` (pin exact version), `@monica-companion/monica-api-lib` (workspace dependency), `zod`. Dev dependencies: `vitest`, `tsup`, `tsx`.
+  - [ ] Add a `src/index.ts` entry point that creates an MCP `Server` instance with stdio transport. Register server metadata: name `monica-crm`, version from `package.json`, capabilities `{ tools: {} }`.
+  - [ ] Add configuration via environment variables: `MONICA_BASE_URL` (required), `MONICA_API_TOKEN` (required), `MONICA_TIMEOUT_MS` (optional, default 15000), `MONICA_ALLOW_HTTP` (optional, default false — controls whether non-HTTPS Monica URLs are accepted for self-hosted instances on trusted networks). Validate with Zod on startup; exit with a clear error if required vars are missing.
+  - [ ] Add `bin` field in `package.json` pointing to the compiled entry point so the package can be invoked directly as `npx @monica-companion/monica-mcp-server` or via Claude Desktop/Code config.
+  - [ ] Add `tsup` build config producing a single CJS bundle with shebang for the bin entry.
+  - [ ] Verify the server starts, completes MCP handshake over stdio, and responds to `tools/list` with an empty tool list.
+
+- [ ] **Stage 2: Read-Only Tools**
+
+  _Implement tools that query Monica data without mutations. These are safe to call without confirmation._
+
+  - [ ] **`search_contacts`**: Search contacts by name, nickname, or query string. Params: `query` (string, required). Calls `MonicaApiClient.listContacts({ query })`. Returns top results with id, name, nickname, birthday, last activity date.
+  - [ ] **`get_contact`**: Get full contact details by ID. Params: `contact_id` (number, required). Calls `MonicaApiClient.getContactWithFields(id)`. Returns contact with career, dates, addresses, contact fields, recent notes, relationships, tags.
+  - [ ] **`list_contacts`**: List all contacts with optional pagination. Params: `page` (number, optional), `limit` (number, optional, max 100). Calls `MonicaApiClient.listContacts()`. Returns paginated contact list with total count.
+  - [ ] **`list_contact_notes`**: List notes for a contact. Params: `contact_id` (number, required), `page` (number, optional). Calls `MonicaApiClient.listContactNotes(contactId)`. Returns paginated notes.
+  - [ ] **`get_upcoming_reminders`**: Get reminders for a given month offset. Params: `month_offset` (number, optional, default 0 = current month). Calls `MonicaApiClient.getUpcomingReminders(monthOffset)`. Returns reminder list with planned dates and contact info.
+  - [ ] **`list_contact_addresses`**: List addresses for a contact. Params: `contact_id` (number, required). Calls `MonicaApiClient.listContactAddresses(contactId)`. Returns address list.
+  - [ ] **`list_genders`**: List available genders (needed for contact creation). No params. Calls `MonicaApiClient.listGenders()`. Returns gender list with IDs.
+  - [ ] **`list_contact_field_types`**: List available contact field types (email, phone, etc.). No params. Calls `MonicaApiClient.listContactFieldTypes()`. Returns field type list with IDs.
+  - [ ] Add Vitest unit tests for each tool handler with mocked `MonicaApiClient`. Assert correct client method called, correct params passed, correct MCP tool result shape returned. Test error handling: Monica API errors mapped to MCP tool errors with clear messages.
+
+- [ ] **Stage 3: Mutating Tools**
+
+  _Implement tools that create or update Monica data. These call the Monica API directly — the human operating the AI client is the confirmation layer._
+
+  - [ ] **`create_contact`**: Create a new contact. Params: `first_name` (string, required), `last_name` (string, optional), `nickname` (string, optional), `gender_id` (number, required). Calls `MonicaApiClient.createContact()`. Returns created contact.
+  - [ ] **`update_contact`**: Update an existing contact. Params: `contact_id` (number, required), plus same fields as create. Calls `MonicaApiClient.updateContact()`. Returns updated contact.
+  - [ ] **`delete_contact`**: Delete a contact. Params: `contact_id` (number, required). Calls `MonicaApiClient.deleteContact()`. Returns deletion confirmation.
+  - [ ] **`create_note`**: Add a note to a contact. Params: `contact_id` (number, required), `body` (string, required), `is_favorited` (boolean, optional). Calls `MonicaApiClient.createNote()`. Returns created note.
+  - [ ] **`create_activity`**: Log an activity with contacts. Params: `contact_ids` (number[], required), `summary` (string, required), `description` (string, optional), `happened_at` (string YYYY-MM-DD, required), `activity_type_id` (number, optional). Calls `MonicaApiClient.createActivity()`. Returns created activity.
+  - [ ] **`create_reminder`**: Create a reminder for a contact. Params: `contact_id` (number, required), `title` (string, required), `description` (string, optional), `initial_date` (string YYYY-MM-DD, required), `frequency_type` (enum: one_time/week/month/year, required), `frequency_number` (number, required). Calls `MonicaApiClient.createReminder()`. Returns created reminder.
+  - [ ] **`update_contact_career`**: Update job and company. Params: `contact_id` (number, required), `job` (string, optional), `company` (string, optional). Calls `MonicaApiClient.updateContactCareer()`. Returns updated contact.
+  - [ ] **`create_contact_field`**: Add a phone, email, or other contact field. Params: `contact_id` (number, required), `contact_field_type_id` (number, required), `data` (string, required — the value). Calls `MonicaApiClient.createContactField()`. Returns created field.
+  - [ ] **`create_address`**: Add an address to a contact. Params: `contact_id` (number, required), `name` (string, optional — label like "home"), `street` (string, optional), `city` (string, optional), `province` (string, optional), `postal_code` (string, optional), `country` (string, required — ISO 3166-1 alpha-2). Calls `MonicaApiClient.createAddress()`. Returns created address.
+  - [ ] Add Vitest unit tests for each mutating tool handler. Assert correct client method called with correct payload shape. Test Zod validation: invalid params (missing required fields, wrong types) return MCP error before calling the client.
+
+- [ ] **Stage 4: MCP Resources (Optional)**
+
+  _Expose Monica data as browsable MCP resources for clients that support resource browsing._
+
+  - [ ] **`monica://contacts`** resource: lists all contacts as a resource collection. Each entry has URI `monica://contacts/{id}`, name = display name, description = nickname + relationship summary. Uses `MonicaApiClient.getAllContacts()` with pagination.
+  - [ ] **`monica://contacts/{id}`** resource template: returns a single contact's full details as structured text (name, dates, career, addresses, recent notes, relationships). Uses `MonicaApiClient.getContactWithFields(id)`.
+  - [ ] Add resource capability to server metadata: `{ tools: {}, resources: {} }`.
+  - [ ] Add unit tests for resource handlers.
+
+- [ ] **Stage 5: Error Handling, Logging & Polish**
+
+  _Harden the server for real-world use: structured error responses, connection validation, and documentation._
+
+  - [ ] Map `MonicaApiError` (4xx/5xx from Monica), `MonicaNetworkError` (timeouts, DNS), and `MonicaPaginationCapError` to MCP tool error responses with actionable messages (e.g., "Monica returned 401 — check your API token", "Connection timed out after 15s — verify your Monica URL is reachable").
+  - [ ] Add a startup connection check: on first tool call (lazy), call `MonicaApiClient.listGenders()` as a lightweight connectivity probe. Cache the result. Log success/failure. Do not block server startup — fail on first actual tool call with a clear message if Monica is unreachable.
+  - [ ] Add a `README.md` to the package with: what it does, prerequisites (Monica instance + API token), configuration (env vars), usage with Claude Desktop (JSON config snippet), usage with Claude Code (`claude mcp add` command), available tools list.
+  - [ ] Add an example Claude Desktop config snippet in the README:
+    ```json
+    {
+      "mcpServers": {
+        "monica-crm": {
+          "command": "npx",
+          "args": ["@monica-companion/monica-mcp-server"],
+          "env": {
+            "MONICA_BASE_URL": "https://app.monicahq.com",
+            "MONICA_API_TOKEN": "your-token-here"
+          }
+        }
+      }
+    }
+    ```
+  - [ ] Verify full tool set works end-to-end against a real Monica instance (manual verification, not CI).
+
+- [ ] **Stage 6: Testing & Release**
+
+  - [ ] Vitest unit tests for all tool handlers (mocked `MonicaApiClient`) — already added per-stage above.
+  - [ ] Vitest integration test: spin up the MCP server as a child process over stdio, send `initialize` → `tools/list` → `tools/call` (search_contacts with a mocked client) → verify correct MCP protocol responses.
+  - [ ] Verify `tsup` build produces a working standalone bundle. Test `npx` invocation from a clean directory.
+  - [ ] Add the package to the pnpm workspace `pnpm-workspace.yaml`.
+  - [ ] Run Biome lint and format checks on the new package.
+
+---
+
+### Future Improvements: MCP Server Hardening for Public Deployment
+
+_The Phase 11 MCP server uses stdio transport with env-var credentials — suitable for personal/local use. The following improvements enable multi-user remote deployment, auditability, and enterprise readiness. These are not part of the V1 scope._
+
+#### Auth Tier 1: HTTP Transport with Static Bearer Token
+
+_Minimum viable remote deployment. One user, one token, no browser flow._
+
+- [ ] Add Streamable HTTP transport (alongside stdio) behind a `--transport http --port 8080` CLI flag.
+- [ ] Accept a pre-shared `Authorization: Bearer <token>` header on all HTTP requests. Token configured via `MCP_AUTH_TOKEN` env var.
+- [ ] Reject requests without a valid Bearer token with HTTP 401.
+- [ ] Support Claude Code `--header` flag: `claude mcp add --transport http monica https://host:8080/mcp --header "Authorization: Bearer ${TOKEN}"`.
+
+#### Auth Tier 2: OAuth 2.1 (MCP Spec-Compliant)
+
+_Multi-user remote deployment. Each user authenticates with their own Monica credentials. Follows the MCP authorization specification (2025-11-25)._
+
+- [ ] Implement the MCP server as an OAuth 2.1 Resource Server per the MCP spec.
+- [ ] Implement Protected Resource Metadata (RFC 9728) discovery at `/.well-known/oauth-protected-resource`.
+- [ ] Support a pluggable Authorization Server: the MCP server delegates authentication to an external OAuth provider (e.g., the Monica instance itself if it supports OAuth, or a standalone IdP like Keycloak/Authentik).
+- [ ] Support Dynamic Client Registration (RFC 7591) as a fallback and Client ID Metadata Documents (CIMD) as the primary client registration method per the 2025-11-25 spec.
+- [ ] Require PKCE (S256) for all authorization code grants.
+- [ ] Bind tokens to the MCP server resource via Resource Indicators (RFC 8707) to prevent token misuse.
+- [ ] Map the authenticated user identity to their Monica base URL + API token (stored in a server-side credential store or derived from the OAuth token claims).
+- [ ] Support token refresh and step-up authorization for mutating operations if the OAuth provider supports scopes (e.g., `monica:read` vs `monica:write`).
+
+#### Auth Tier 3: Enterprise Authorization Extensions
+
+_Corporate governance: IdP-mediated access control, audit trails, centralized policy._
+
+- [ ] Support the Client Credentials grant (SEP-1046) for machine-to-machine access: automated agents, CI pipelines, or cron jobs that need Monica access without a human in the loop.
+- [ ] Support Enterprise-Managed Authorization / Cross App Access (SEP-990): an enterprise IdP (Okta, Entra ID, etc.) interposes policy controls on MCP OAuth flows, enabling centralized approval, audit logging, and scope restriction.
+- [ ] Add audit logging: log all tool calls with caller identity, tool name, params (redacted), timestamp, and result status. Route audit events through the observability stack (OpenTelemetry).
+
+#### Operational Improvements
+
+- [ ] **Rate limiting**: Per-user rate limiting on HTTP transport to prevent abuse. Configurable limits via env vars.
+- [ ] **Request validation**: Enforce request-size limits on HTTP transport to prevent oversized payloads.
+- [ ] **Health endpoint**: Add an internal `/health` endpoint for Docker/Kubernetes liveness probes (HTTP transport only).
+- [ ] **Containerized deployment**: Add a `Dockerfile` for the MCP server. Publish to the project's container registry. Add a Docker Compose profile for running the MCP server alongside the existing stack.
+- [ ] **npm publishing**: Publish `@monica-companion/monica-mcp-server` to npm so users can run it via `npx` without cloning the monorepo.
+- [ ] **MCP resource subscriptions**: Implement `resources/subscribe` so AI clients get notified when contact data changes (requires polling Monica on an interval).
