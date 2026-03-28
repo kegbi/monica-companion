@@ -103,36 +103,38 @@ export async function processCommandJob(
 			// Complete idempotency key
 			await deps.idempotencyStore.complete(command.idempotencyKey, result);
 
-			// Resolve connector routing for delivery intent
-			const routing = await resolveConnectorRouting(command, deps);
+			// Send delivery notification unless suppressed (ai-router handles its own responses)
+			if (!command.suppressDelivery) {
+				const routing = await resolveConnectorRouting(command, deps);
 
-			// Send success delivery intent (best-effort, don't block on failure)
-			try {
-				await deps.deliveryClient.fetch("/internal/deliver", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
+				// Send success delivery intent (best-effort, don't block on failure)
+				try {
+					await deps.deliveryClient.fetch("/internal/deliver", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							userId: command.userId,
+							connectorType: routing.connectorType,
+							connectorRoutingId: routing.connectorRoutingId,
+							correlationId,
+							content: {
+								type: "text",
+								text: `Command ${command.commandType} completed successfully.`,
+							},
+						}),
 						userId: command.userId,
-						connectorType: routing.connectorType,
-						connectorRoutingId: routing.connectorRoutingId,
 						correlationId,
-						content: {
-							type: "text",
-							text: `Command ${command.commandType} completed successfully.`,
-						},
-					}),
-					userId: command.userId,
-					correlationId,
-				});
-			} catch (deliveryErr) {
-				const msg = deliveryErr instanceof Error ? deliveryErr.message : String(deliveryErr);
-				logger.warn("Failed to send success notification via delivery", {
-					executionId,
-					commandType: command.commandType,
-					correlationId,
-					error: msg,
-				});
-				span.setAttribute("scheduler.delivery_failed", true);
+					});
+				} catch (deliveryErr) {
+					const msg = deliveryErr instanceof Error ? deliveryErr.message : String(deliveryErr);
+					logger.warn("Failed to send success notification via delivery", {
+						executionId,
+						commandType: command.commandType,
+						correlationId,
+						error: msg,
+					});
+					span.setAttribute("scheduler.delivery_failed", true);
+				}
 			}
 
 			span.setAttribute("scheduler.status", "completed");

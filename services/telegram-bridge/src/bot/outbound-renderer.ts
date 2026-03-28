@@ -1,6 +1,7 @@
 import type { OutboundMessageIntent } from "@monica-companion/types";
 import type { Api } from "grammy";
 import { encodeCallbackData } from "./callback-data";
+import { sanitizeTelegramMarkdown } from "./sanitize-markdown";
 
 /**
  * Renders a connector-neutral outbound message intent as a Telegram message.
@@ -12,7 +13,12 @@ export async function renderOutbound(api: Api, intent: OutboundMessageIntent): P
 
 	switch (content.type) {
 		case "text": {
-			await api.sendMessage(chatId, content.text, { parse_mode: "Markdown" });
+			const sanitized = sanitizeTelegramMarkdown(content.text);
+			try {
+				await api.sendMessage(chatId, sanitized, { parse_mode: "Markdown" });
+			} catch {
+				await api.sendMessage(chatId, content.text);
+			}
 			break;
 		}
 		case "confirmation_prompt": {

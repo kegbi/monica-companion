@@ -1740,3 +1740,347 @@ describe("stale pending tool call handling", () => {
 		expect(toolResultMsg.content).toContain("abandoned");
 	});
 });
+
+describe("post-action LLM call — history safety", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("on confirm, processes follow-up tool_calls and saves clean history", async () => {
+		mockedExecuteMutatingTool.mockResolvedValueOnce({
+			status: "success",
+			executionId: "exec-790",
+		});
+		mockedHandleSearchContacts.mockResolvedValueOnce({
+			status: "ok",
+			contacts: [{ contactId: 1, displayName: "Test" }],
+		});
+
+		const pending = makePendingToolCall();
+		const chatCompletion = vi
+			.fn()
+			// First post-confirm LLM call: returns a follow-up read-only tool call
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_followup",
+									type: "function",
+									function: { name: "search_contacts", arguments: '{"query":"test"}' },
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+			})
+			// Second post-confirm LLM call: final text response
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: "Note created for Test.",
+							tool_calls: undefined,
+						},
+						finish_reason: "stop",
+					},
+				],
+			});
+
+		const deps = createMockDeps({
+			llmClient: { chatCompletion },
+			getHistory: vi.fn().mockResolvedValue({
+				id: "hist-1",
+				userId,
+				messages: [{ role: "user", content: "Create note" }],
+				pendingToolCall: pending,
+				updatedAt: new Date(),
+			}),
+		});
+
+		const event = {
+			type: "callback_action" as const,
+			userId,
+			sourceRef: "telegram:msg:71",
+			correlationId,
+			action: "confirm",
+			data: "cmd-aaa-bbb-ccc:1",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("text");
+		expect(result.text).toContain("Note created");
+
+		// Saved history should end with a text-only assistant message (no orphaned tool_calls)
+		const saveCall = (deps.saveHistory as ReturnType<typeof vi.fn>).mock.calls[0];
+		const savedMessages = saveCall[2]; // args: (db, userId, messages, pendingToolCall)
+		const lastMsg = savedMessages[savedMessages.length - 1];
+		expect(lastMsg.role).toBe("assistant");
+		expect(lastMsg.tool_calls).toBeUndefined();
+
+		// The follow-up tool was processed
+		expect(mockedHandleSearchContacts).toHaveBeenCalled();
+	});
+});
+
+describe("corrupted history recovery", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("repairs history when agent loop fails due to orphaned tool_calls", async () => {
+		// Simulate corrupted history: assistant message with tool_calls but no tool result
+		const corruptedMessages = [
+			{ role: "user", content: "Create contact Hottabych" },
+			{
+				role: "assistant",
+				content: null,
+				tool_calls: [
+					{
+						id: "call_orphaned",
+						type: "function",
+						function: { name: "search_contacts", arguments: '{"query":"info"}' },
+					},
+				],
+			},
+		];
+
+		const chatCompletion = vi
+			.fn()
+			.mockRejectedValue(
+				new Error(
+					"400 An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id'. The following tool_call_ids did not have response messages: call_orphaned",
+				),
+			);
+
+		const deps = createMockDeps({
+			llmClient: { chatCompletion },
+			getHistory: vi.fn().mockResolvedValue({
+				id: "hist-1",
+				userId,
+				messages: corruptedMessages,
+				pendingToolCall: null,
+				updatedAt: new Date(),
+			}),
+		});
+
+		const event = {
+			type: "text_message" as const,
+			userId,
+			sourceRef: "telegram:msg:80",
+			correlationId,
+			text: "Give all info on Hottabych",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("error");
+
+		// saveHistory should have been called to repair the corrupted history
+		const saveCalls = (deps.saveHistory as ReturnType<typeof vi.fn>).mock.calls;
+		expect(saveCalls.length).toBeGreaterThanOrEqual(1);
+
+		// The repaired history should have synthetic tool results for orphaned tool_calls
+		const repairedMessages = saveCalls[0][2]; // args: (db, userId, messages, pendingToolCall)
+		const toolResult = repairedMessages.find(
+			(m: { role: string; tool_call_id?: string }) =>
+				m.role === "tool" && m.tool_call_id === "call_orphaned",
+		);
+		expect(toolResult).toBeTruthy();
+	});
+});
+
+describe("post-confirm follow-up tool execution", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("intercepts follow-up mutating tools for confirmation instead of auto-executing", async () => {
+		mockedExecuteMutatingTool.mockResolvedValueOnce({
+			status: "success",
+			executionId: "exec-create",
+		});
+
+		const pending = makePendingToolCall({
+			name: "create_contact",
+			arguments: '{"first_name": "Hottabych"}',
+			assistantMessage: {
+				role: "assistant",
+				content: null,
+				tool_calls: [
+					{
+						id: "call_abc123",
+						type: "function",
+						function: {
+							name: "create_contact",
+							arguments: '{"first_name": "Hottabych"}',
+						},
+					},
+				],
+			},
+		});
+
+		const chatCompletion = vi.fn().mockResolvedValueOnce({
+			choices: [
+				{
+					message: {
+						role: "assistant",
+						content: null,
+						tool_calls: [
+							{
+								id: "call_birthday",
+								type: "function",
+								function: {
+									name: "update_contact_birthday",
+									arguments: '{"contact_id": 42, "date": "1994-09-14"}',
+								},
+							},
+						],
+					},
+					finish_reason: "tool_calls",
+				},
+			],
+		});
+
+		const deps = createMockDeps({
+			llmClient: { chatCompletion },
+			getHistory: vi.fn().mockResolvedValue({
+				id: "hist-1",
+				userId,
+				messages: [{ role: "user", content: "Create contact Hottabych with birthday 14.09.1994" }],
+				pendingToolCall: pending,
+				updatedAt: new Date(),
+			}),
+		});
+
+		const event = {
+			type: "callback_action" as const,
+			userId,
+			sourceRef: "telegram:msg:90",
+			correlationId,
+			action: "confirm",
+			data: "cmd-aaa-bbb-ccc:1",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+
+		// Should return a NEW confirmation prompt for the birthday update
+		expect(result.type).toBe("confirmation_prompt");
+		expect(result.text).toContain("birthday");
+		expect(result.pendingCommandId).toBeTruthy();
+
+		// executeMutatingTool called only once (for create_contact)
+		expect(mockedExecuteMutatingTool).toHaveBeenCalledTimes(1);
+		expect(mockedExecuteMutatingTool).toHaveBeenCalledWith(
+			expect.objectContaining({ toolName: "create_contact" }),
+		);
+
+		// LLM called only once (post-confirm, returned the birthday tool call)
+		expect(chatCompletion).toHaveBeenCalledTimes(1);
+
+		// New pending tool call saved for birthday
+		const saveCall = (deps.saveHistory as ReturnType<typeof vi.fn>).mock.calls[0];
+		const savedPending = saveCall[3];
+		expect(savedPending).toBeTruthy();
+		expect(savedPending.name).toBe("update_contact_birthday");
+	});
+
+	it("auto-executes read-only tools in post-confirm flow", async () => {
+		mockedExecuteMutatingTool.mockResolvedValueOnce({
+			status: "success",
+			executionId: "exec-create",
+		});
+		mockedHandleSearchContacts.mockResolvedValueOnce({
+			status: "ok",
+			contacts: [{ contactId: 42, displayName: "Hottabych" }],
+		});
+
+		const pending = makePendingToolCall({
+			name: "create_contact",
+			arguments: '{"first_name": "Hottabych"}',
+			assistantMessage: {
+				role: "assistant",
+				content: null,
+				tool_calls: [
+					{
+						id: "call_abc123",
+						type: "function",
+						function: {
+							name: "create_contact",
+							arguments: '{"first_name": "Hottabych"}',
+						},
+					},
+				],
+			},
+		});
+
+		const chatCompletion = vi
+			.fn()
+			// First LLM call: wants to search_contacts to verify
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: null,
+							tool_calls: [
+								{
+									id: "call_search",
+									type: "function",
+									function: {
+										name: "search_contacts",
+										arguments: '{"query": "Hottabych"}',
+									},
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					},
+				],
+			})
+			// Second LLM call: final text
+			.mockResolvedValueOnce({
+				choices: [
+					{
+						message: {
+							role: "assistant",
+							content: "Contact Hottabych created successfully!",
+							tool_calls: undefined,
+						},
+						finish_reason: "stop",
+					},
+				],
+			});
+
+		const deps = createMockDeps({
+			llmClient: { chatCompletion },
+			getHistory: vi.fn().mockResolvedValue({
+				id: "hist-1",
+				userId,
+				messages: [{ role: "user", content: "Create contact Hottabych" }],
+				pendingToolCall: pending,
+				updatedAt: new Date(),
+			}),
+		});
+
+		const event = {
+			type: "callback_action" as const,
+			userId,
+			sourceRef: "telegram:msg:91",
+			correlationId,
+			action: "confirm",
+			data: "cmd-aaa-bbb-ccc:1",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+		expect(result.type).toBe("text");
+		expect(result.text).toContain("Hottabych");
+
+		// search_contacts should have been called as read-only follow-up
+		expect(mockedHandleSearchContacts).toHaveBeenCalled();
+	});
+});

@@ -59,6 +59,7 @@ export async function executeMutatingTool(
 			idempotencyKey: `${pendingCommandId}:v${PENDING_COMMAND_VERSION}`,
 			correlationId,
 			confirmedAt: new Date().toISOString(),
+			suppressDelivery: true,
 		};
 
 		const result = await schedulerClient.execute(confirmedPayload);

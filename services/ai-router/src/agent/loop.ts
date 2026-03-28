@@ -37,6 +37,58 @@ const logger = createLogger("ai-router:agent-loop");
 /** Maximum number of LLM call iterations before aborting. */
 const MAX_ITERATIONS = 5;
 
+/**
+ * Strip tool_calls from an assistant message before persisting.
+ * Prevents history corruption when the LLM unexpectedly returns tool_calls
+ * in a context where they won't be processed (e.g., post-action acknowledgment).
+ */
+function stripToolCalls(msg: ChatCompletionMessageParam): ChatCompletionMessageParam {
+	if (msg.role === "assistant" && "tool_calls" in msg && msg.tool_calls) {
+		const { tool_calls: _, ...rest } = msg;
+		return rest as ChatCompletionMessageParam;
+	}
+	return msg;
+}
+
+/**
+ * Repair corrupted conversation history by adding synthetic error results
+ * for assistant tool_calls that have no matching tool response.
+ * This prevents the "tool_call_ids did not have response messages" API error.
+ */
+function repairHistory(messages: ChatCompletionMessageParam[]): ChatCompletionMessageParam[] {
+	const repaired: ChatCompletionMessageParam[] = [];
+
+	for (let i = 0; i < messages.length; i++) {
+		repaired.push(messages[i]);
+		const msg = messages[i];
+
+		if (msg.role !== "assistant" || !("tool_calls" in msg) || !msg.tool_calls) continue;
+
+		// Collect IDs of tool_calls that have matching tool results after this message
+		const expectedIds = new Set(msg.tool_calls.map((tc) => tc.id));
+		for (let j = i + 1; j < messages.length; j++) {
+			const next = messages[j];
+			if (next.role === "tool" && "tool_call_id" in next && typeof next.tool_call_id === "string") {
+				expectedIds.delete(next.tool_call_id);
+			}
+		}
+
+		// Add synthetic error results for any orphaned tool_call_ids
+		for (const id of expectedIds) {
+			repaired.push({
+				role: "tool",
+				tool_call_id: id,
+				content: JSON.stringify({
+					status: "error",
+					message: "Tool call was not completed due to an earlier error.",
+				}),
+			});
+		}
+	}
+
+	return repaired;
+}
+
 /** Hardcoded version for pending commands (incremented in future stages). */
 const PENDING_COMMAND_VERSION = 1;
 
@@ -273,18 +325,15 @@ async function handleConfirm(
 		toolResult,
 	];
 
-	const completion = await deps.llmClient.chatCompletion(messages, TOOL_DEFINITIONS);
-	const responseText =
-		completion.choices?.[0]?.message?.content ?? "The action was completed successfully.";
+	// Post-confirm agent loop: auto-execute follow-up tool calls (both read-only
+	// and mutating) so multi-step user requests complete in a single confirmation.
+	const result = await runPostConfirmLoop(deps, messages, userId, correlationId);
 
 	// Save history (without system prompt, with cleared pendingToolCall)
-	const historyToSave = [...existingMessages, assistantMsg, ...collectedResults, toolResult];
-	if (completion.choices?.[0]?.message) {
-		historyToSave.push(completion.choices[0].message as ChatCompletionMessageParam);
-	}
+	const historyToSave = messages.slice(1);
 	await deps.saveHistory(deps.db, userId, historyToSave, null);
 
-	return { type: "text", text: responseText };
+	return result;
 }
 
 /**
@@ -322,6 +371,7 @@ async function handleCancel(
 		cancelledToolResult,
 	];
 
+	// Pass tools so the LLM can generate clean responses; stripToolCalls prevents history corruption
 	const completion = await deps.llmClient.chatCompletion(messages, TOOL_DEFINITIONS);
 	const responseText =
 		completion.choices?.[0]?.message?.content ?? "The action has been cancelled.";
@@ -333,7 +383,7 @@ async function handleCancel(
 		cancelledToolResult,
 	];
 	if (completion.choices?.[0]?.message) {
-		historyToSave.push(completion.choices[0].message as ChatCompletionMessageParam);
+		historyToSave.push(stripToolCalls(completion.choices[0].message as ChatCompletionMessageParam));
 	}
 	await deps.saveHistory(deps.db, userId, historyToSave, null);
 
@@ -375,17 +425,163 @@ async function handleEdit(
 		editToolResult,
 	];
 
+	// Pass tools so the LLM can generate clean responses; stripToolCalls prevents history corruption
 	const completion = await deps.llmClient.chatCompletion(messages, TOOL_DEFINITIONS);
 	const responseText =
 		completion.choices?.[0]?.message?.content ?? "What would you like to change?";
 
 	const historyToSave = [...existingMessages, assistantMsg, ...collectedResults, editToolResult];
 	if (completion.choices?.[0]?.message) {
-		historyToSave.push(completion.choices[0].message as ChatCompletionMessageParam);
+		historyToSave.push(stripToolCalls(completion.choices[0].message as ChatCompletionMessageParam));
 	}
 	await deps.saveHistory(deps.db, userId, historyToSave, null);
 
 	return { type: "text", text: responseText };
+}
+
+/** Maximum follow-up iterations after a confirmed action. */
+const MAX_POST_CONFIRM_ITERATIONS = 3;
+
+/**
+ * Post-confirm agent loop: after the user-confirmed tool is executed, the LLM
+ * may want to make follow-up tool calls (e.g., set birthday after creating a
+ * contact). This loop auto-executes them without requiring additional user
+ * confirmation, then returns the final text response.
+ *
+ * Mutates `messages` in place (appends assistant + tool result messages).
+ */
+async function runPostConfirmLoop(
+	deps: AgentLoopDeps,
+	messages: ChatCompletionMessageParam[],
+	userId: string,
+	correlationId: string,
+): Promise<GraphResponse> {
+	for (let i = 0; i < MAX_POST_CONFIRM_ITERATIONS; i++) {
+		const completion = await deps.llmClient.chatCompletion(messages, TOOL_DEFINITIONS);
+		const choice = completion.choices?.[0];
+
+		if (!choice?.message) {
+			return { type: "text", text: "The action was completed successfully." };
+		}
+
+		const msg = choice.message;
+		const preAssistantLen = messages.length;
+		messages.push(msg as ChatCompletionMessageParam);
+
+		// No tool calls → final text response
+		if (!msg.tool_calls || msg.tool_calls.length === 0) {
+			return { type: "text", text: msg.content ?? "The action was completed successfully." };
+		}
+
+		// Process tool calls: execute read-only, intercept mutating for confirmation
+		const toolResults: ChatCompletionMessageParam[] = [];
+		let interceptedMutating: {
+			toolCall: (typeof msg.tool_calls)[number];
+			parsedArgs: Record<string, unknown>;
+		} | null = null;
+
+		for (const toolCall of msg.tool_calls) {
+			const toolName = toolCall.function.name;
+
+			if (MUTATING_TOOLS.has(toolName)) {
+				// Intercept for confirmation — same as main agent loop
+				if (interceptedMutating) {
+					toolResults.push({
+						role: "tool",
+						tool_call_id: toolCall.id,
+						content: JSON.stringify({
+							status: "error",
+							message: `Cannot execute "${toolName}" while another mutating action is pending confirmation.`,
+						}),
+					});
+					continue;
+				}
+
+				let parsedArgs: Record<string, unknown>;
+				try {
+					parsedArgs = JSON.parse(toolCall.function.arguments);
+				} catch {
+					toolResults.push({
+						role: "tool",
+						tool_call_id: toolCall.id,
+						content: JSON.stringify({
+							status: "error",
+							message: `Invalid JSON arguments for "${toolName}".`,
+						}),
+					});
+					continue;
+				}
+
+				const schema = TOOL_ARG_SCHEMAS[toolName];
+				if (schema) {
+					const validation = schema.safeParse(parsedArgs);
+					if (!validation.success) {
+						toolResults.push({
+							role: "tool",
+							tool_call_id: toolCall.id,
+							content: JSON.stringify({
+								status: "error",
+								message: `Invalid arguments for "${toolName}": ${validation.error.issues.map((i: { message: string }) => i.message).join(", ")}`,
+							}),
+						});
+						continue;
+					}
+				}
+
+				interceptedMutating = { toolCall, parsedArgs };
+			} else {
+				const result = await executeReadOnlyTool(toolName, toolCall, deps, userId, correlationId);
+				toolResults.push(result);
+			}
+		}
+
+		// If a mutating tool was intercepted, save pending and return confirmation
+		if (interceptedMutating) {
+			const { toolCall, parsedArgs } = interceptedMutating;
+			const pendingCommandId = crypto.randomUUID();
+
+			const contactName = resolveContactNameFromHistory(messages, parsedArgs);
+			const enrichedArgs = contactName ? { ...parsedArgs, contactName } : parsedArgs;
+			const actionDescription = generateActionDescription(toolCall.function.name, enrichedArgs);
+
+			const pendingToolCall: PendingToolCall = {
+				pendingCommandId,
+				name: toolCall.function.name,
+				arguments: toolCall.function.arguments,
+				toolCallId: toolCall.id,
+				actionDescription,
+				createdAt: new Date().toISOString(),
+				assistantMessage: msg as unknown as Record<string, unknown>,
+				collectedToolResults:
+					toolResults.length > 0
+						? toolResults.map((tr) => tr as unknown as Record<string, unknown>)
+						: undefined,
+			};
+
+			// Save history up to (but excluding) the new assistant message
+			const historyToSave = messages.slice(1, preAssistantLen);
+			await deps.saveHistory(deps.db, userId, historyToSave, pendingToolCall);
+
+			return {
+				type: "confirmation_prompt",
+				text: `Please confirm: ${actionDescription}`,
+				pendingCommandId,
+				version: PENDING_COMMAND_VERSION,
+			};
+		}
+
+		// Only read-only tools — add results and continue loop
+		for (const tr of toolResults) {
+			messages.push(tr);
+		}
+	}
+
+	// Reached iteration limit — return best available text
+	const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+	const fallbackText =
+		(lastAssistant && "content" in lastAssistant ? (lastAssistant.content as string) : null) ??
+		"The action was completed successfully.";
+	return { type: "text", text: fallbackText };
 }
 
 /**
@@ -787,6 +983,22 @@ export async function runAgentLoop(
 			userId,
 			error: errMsg,
 		});
+
+		// Attempt to repair corrupted history so the next request doesn't hit the same error
+		try {
+			const history = await deps.getHistory(deps.db, userId);
+			if (history?.messages && Array.isArray(history.messages)) {
+				const msgs = history.messages as ChatCompletionMessageParam[];
+				const repaired = repairHistory(msgs);
+				if (repaired.length !== msgs.length) {
+					await deps.saveHistory(deps.db, userId, repaired, history.pendingToolCall);
+					logger.info("Repaired corrupted conversation history", { correlationId, userId });
+				}
+			}
+		} catch {
+			logger.warn("Failed to repair conversation history", { correlationId, userId });
+		}
+
 		return {
 			type: "error",
 			text: "Sorry, I encountered an error processing your request. Please try again.",

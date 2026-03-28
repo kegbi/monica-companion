@@ -257,5 +257,11 @@ export const ConfirmedCommandPayloadSchema = z.object({
 	 */
 	connectorType: z.string().min(1).optional(),
 	connectorRoutingId: z.string().min(1).optional(),
+	/**
+	 * When true, the scheduler worker skips sending a delivery notification
+	 * after command execution. Used when the caller (e.g., ai-router) handles
+	 * user communication itself.
+	 */
+	suppressDelivery: z.boolean().optional(),
 });
 export type ConfirmedCommandPayload = z.infer<typeof ConfirmedCommandPayloadSchema>;

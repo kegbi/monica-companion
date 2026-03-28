@@ -1,6 +1,7 @@
 import type { AiRouterResponse } from "../lib/ai-router-client.js";
 import { encodeCallbackData } from "./callback-data.js";
 import type { BotContext } from "./context.js";
+import { sanitizeTelegramMarkdown } from "./sanitize-markdown.js";
 
 /**
  * Renders an AiRouterResponse back to the user via grammY context.
@@ -9,7 +10,12 @@ import type { BotContext } from "./context.js";
 export async function renderResponse(ctx: BotContext, response: AiRouterResponse): Promise<void> {
 	switch (response.type) {
 		case "text": {
-			await ctx.reply(response.text, { parse_mode: "Markdown" });
+			const sanitized = sanitizeTelegramMarkdown(response.text);
+			try {
+				await ctx.reply(sanitized, { parse_mode: "Markdown" });
+			} catch {
+				await ctx.reply(response.text);
+			}
 			break;
 		}
 		case "confirmation_prompt": {

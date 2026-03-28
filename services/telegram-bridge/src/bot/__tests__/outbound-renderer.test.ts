@@ -95,6 +95,45 @@ describe("renderOutbound", () => {
 		);
 	});
 
+	it("sanitizes unpaired Markdown markers before sending", async () => {
+		const api = createMockBotApi();
+		const intent: OutboundMessageIntent = {
+			userId: "user-uuid",
+			connectorType: "telegram",
+			connectorRoutingId: "12345",
+			correlationId: "corr-abc",
+			content: { type: "text", text: "Contact *Hottabych created" },
+		};
+
+		await renderOutbound(api as never, intent);
+
+		expect(api.sendMessage).toHaveBeenCalledWith(
+			12345,
+			"Contact Hottabych created",
+			expect.objectContaining({ parse_mode: "Markdown" }),
+		);
+	});
+
+	it("falls back to plain text when Markdown send fails", async () => {
+		const api = createMockBotApi();
+		api.sendMessage
+			.mockRejectedValueOnce(new Error("Bad Request: can't parse entities"))
+			.mockResolvedValueOnce({});
+
+		const intent: OutboundMessageIntent = {
+			userId: "user-uuid",
+			connectorType: "telegram",
+			connectorRoutingId: "12345",
+			correlationId: "corr-abc",
+			content: { type: "text", text: "Some [broken markdown" },
+		};
+
+		await renderOutbound(api as never, intent);
+
+		expect(api.sendMessage).toHaveBeenCalledTimes(2);
+		expect(api.sendMessage).toHaveBeenLastCalledWith(12345, "Some [broken markdown");
+	});
+
 	it("renders error content as plain text", async () => {
 		const api = createMockBotApi();
 		const intent: OutboundMessageIntent = {

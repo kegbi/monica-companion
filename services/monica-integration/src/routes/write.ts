@@ -23,7 +23,21 @@ const CreateContactBody = z.object({
 		.optional(),
 });
 
-const UpdateContactBody = CreateContactBody;
+const UpdateContactBody = z.object({
+	firstName: z.string().max(50).optional(),
+	lastName: z.string().max(100).optional(),
+	nickname: z.string().max(100).optional(),
+	genderId: z.number().int().optional(),
+	birthdate: z
+		.object({
+			day: z.number().int(),
+			month: z.number().int(),
+			year: z.number().int().optional(),
+			isAgeBased: z.boolean().optional(),
+			age: z.number().int().optional(),
+		})
+		.optional(),
+});
 
 const CreateNoteBody = z.object({
 	body: z.string().max(100000),
@@ -140,18 +154,28 @@ export function writeRoutes(config: Config) {
 			const client = await createMonicaClient(config, userId, correlationId);
 			const { firstName, lastName, nickname, genderId, birthdate } = parsed.data;
 
+			// Fetch existing contact to preserve required fields for the Monica PUT API
+			const [existing, genders] = await Promise.all([
+				client.getContact(contactId),
+				client.listGenders(),
+			]);
+
+			const genderMatch = genders.find((g) => g.type === existing.gender_type);
+			const resolvedGenderId = genderId ?? genderMatch?.id ?? genders[0]?.id ?? 3;
+			const existingHasBirthdate = !!existing.information.dates.birthdate.date;
+
 			const contact = await client.updateContact(contactId, {
-				first_name: firstName,
-				last_name: lastName,
-				nickname,
-				gender_id: genderId,
-				is_birthdate_known: !!birthdate,
+				first_name: firstName ?? existing.first_name,
+				last_name: lastName ?? existing.last_name,
+				nickname: nickname ?? existing.nickname,
+				gender_id: resolvedGenderId,
+				is_birthdate_known: birthdate ? true : existingHasBirthdate,
 				birthdate_day: birthdate?.day,
 				birthdate_month: birthdate?.month,
 				birthdate_year: birthdate?.year,
 				birthdate_is_age_based: birthdate?.isAgeBased,
 				birthdate_age: birthdate?.age,
-				is_deceased: false,
+				is_deceased: existing.is_dead,
 				is_deceased_date_known: false,
 			});
 
