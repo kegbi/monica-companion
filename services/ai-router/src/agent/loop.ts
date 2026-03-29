@@ -306,6 +306,7 @@ async function handleConfirm(
 						status: "success",
 						executionId: handlerResult.executionId,
 						message: "Action executed successfully.",
+						...(handlerResult.result ? { result: handlerResult.result } : {}),
 					})
 				: JSON.stringify({
 						status: "error",
@@ -325,13 +326,16 @@ async function handleConfirm(
 		toolResult,
 	];
 
-	// Post-confirm agent loop: auto-execute follow-up tool calls (both read-only
-	// and mutating) so multi-step user requests complete in a single confirmation.
+	// Post-confirm agent loop: execute read-only follow-ups, intercept mutating
+	// tools for confirmation. If a new confirmation is returned, the loop already
+	// saved history with the new pendingToolCall — don't overwrite it.
 	const result = await runPostConfirmLoop(deps, messages, userId, correlationId);
 
-	// Save history (without system prompt, with cleared pendingToolCall)
-	const historyToSave = messages.slice(1);
-	await deps.saveHistory(deps.db, userId, historyToSave, null);
+	if (result.type !== "confirmation_prompt") {
+		// Final text response — save history with cleared pendingToolCall
+		const historyToSave = messages.slice(1);
+		await deps.saveHistory(deps.db, userId, historyToSave, null);
+	}
 
 	return result;
 }
@@ -444,9 +448,8 @@ const MAX_POST_CONFIRM_ITERATIONS = 3;
 
 /**
  * Post-confirm agent loop: after the user-confirmed tool is executed, the LLM
- * may want to make follow-up tool calls (e.g., set birthday after creating a
- * contact). This loop auto-executes them without requiring additional user
- * confirmation, then returns the final text response.
+ * may want to make follow-up tool calls. Read-only tools are auto-executed;
+ * mutating tools are intercepted for a new confirmation prompt.
  *
  * Mutates `messages` in place (appends assistant + tool result messages).
  */
@@ -540,7 +543,9 @@ async function runPostConfirmLoop(
 			const { toolCall, parsedArgs } = interceptedMutating;
 			const pendingCommandId = crypto.randomUUID();
 
-			const contactName = resolveContactNameFromHistory(messages, parsedArgs);
+			// Include toolResults when resolving contact name — search_contacts results
+			// from the same LLM turn are in toolResults, not yet in messages.
+			const contactName = resolveContactNameFromHistory([...messages, ...toolResults], parsedArgs);
 			const enrichedArgs = contactName ? { ...parsedArgs, contactName } : parsedArgs;
 			const actionDescription = generateActionDescription(toolCall.function.name, enrichedArgs);
 

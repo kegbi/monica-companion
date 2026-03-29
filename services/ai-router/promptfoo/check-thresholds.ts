@@ -16,8 +16,8 @@
  * Uses Zod schema validation for promptfoo's JSON output
  * to detect format changes early rather than failing silently.
  *
- * Total expected cases: ~225 (102 write + 60 read + 33 clarification
- * + 25 guardrails + 5 multi-turn).
+ * Total expected cases: ~229 (102 write + 60 read + 33 clarification
+ * + 25 guardrails + 9 multi-turn).
  *
  * Pinned to promptfoo 0.121.2 output format.
  */

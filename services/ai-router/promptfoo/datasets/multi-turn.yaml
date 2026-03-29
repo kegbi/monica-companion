@@ -1,7 +1,7 @@
 # ALL DATA IN THIS FILE IS SYNTHETIC. No real user data, API keys,
 # credentials, or PII is used.
 #
-# Multi-turn eval cases: 5 cases (mt-001 to mt-005)
+# Multi-turn eval cases: 9 cases (mt-001 to mt-009)
 # These cases use the conversationHistory var to inject prior conversation
 # context and validate the LLM's behavior across turns.
 
@@ -125,3 +125,104 @@
         const parsed = JSON.parse(output);
         const calls = parsed.tool_calls || [];
         return calls.length > 0
+
+# ========================================================================
+# Single-call create_contact with birthday/phone
+# The LLM should include birthday_date in create_contact when the user
+# provides both name and birthday in the same request.
+# ========================================================================
+
+# ========================================================================
+# mt-006: create_contact includes birthday_date
+# ========================================================================
+- description: "Create contact with birthday — single call with birthday_date"
+  vars:
+    utterance: "Create contact Hottabych with birthday on 14.09.1994"
+  metadata:
+    id: "mt-006"
+    category: "multi_turn"
+    expectedTool: "create_contact"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const create = calls.find(c => c.function?.name === 'create_contact');
+        if (!create) return { pass: false, reason: 'Expected create_contact tool call' };
+        const args = JSON.parse(create.function.arguments || '{}');
+        if (!args.birthday_date) return { pass: false, reason: 'Expected birthday_date in create_contact args' };
+        if (!args.birthday_date.includes('1994')) return { pass: false, reason: 'Expected year 1994 in birthday_date, got ' + args.birthday_date };
+        return true
+      metric: multiStepChaining
+
+# ========================================================================
+# mt-007: create_contact includes birthday_date (different date format)
+# ========================================================================
+- description: "Create contact with birthday — handles natural language date"
+  vars:
+    utterance: "Create contact Oleg born March 22 1990"
+  metadata:
+    id: "mt-007"
+    category: "multi_turn"
+    expectedTool: "create_contact"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const create = calls.find(c => c.function?.name === 'create_contact');
+        if (!create) return { pass: false, reason: 'Expected create_contact tool call' };
+        const args = JSON.parse(create.function.arguments || '{}');
+        if (!args.birthday_date) return { pass: false, reason: 'Expected birthday_date in create_contact args' };
+        if (!args.birthday_date.includes('1990')) return { pass: false, reason: 'Expected year 1990, got ' + args.birthday_date };
+        return true
+      metric: multiStepChaining
+
+# ========================================================================
+# mt-008: create_contact with nickname and birthday in one call
+# ========================================================================
+- description: "Create contact with nickname and birthday — single call"
+  vars:
+    utterance: "Add new contact Katya, nickname Katyusha, born January 15 1988"
+  metadata:
+    id: "mt-008"
+    category: "multi_turn"
+    expectedTool: "create_contact"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const create = calls.find(c => c.function?.name === 'create_contact');
+        if (!create) return { pass: false, reason: 'Expected create_contact tool call' };
+        const args = JSON.parse(create.function.arguments || '{}');
+        if (!args.birthday_date) return { pass: false, reason: 'Expected birthday_date' };
+        if (!args.birthday_date.includes('1988')) return { pass: false, reason: 'Expected year 1988' };
+        if (!args.nickname) return { pass: false, reason: 'Expected nickname' };
+        return true
+      metric: multiStepChaining
+
+# ========================================================================
+# mt-009: create_contact without birthday (no birthday mentioned)
+# ========================================================================
+- description: "Create contact without birthday — should NOT include birthday_date"
+  vars:
+    utterance: "Create a new contact John Smith"
+  metadata:
+    id: "mt-009"
+    category: "multi_turn"
+    expectedTool: "create_contact"
+  assert:
+    - type: is-json
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const calls = parsed.tool_calls || [];
+        const create = calls.find(c => c.function?.name === 'create_contact');
+        if (!create) return { pass: false, reason: 'Expected create_contact tool call' };
+        const args = JSON.parse(create.function.arguments || '{}');
+        if (args.birthday_date) return { pass: false, reason: 'Should NOT include birthday_date when not mentioned' };
+        return true

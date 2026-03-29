@@ -2,7 +2,9 @@ import type { ServiceClient } from "@monica-companion/auth";
 import type { ConfirmedCommandPayload } from "@monica-companion/types";
 
 export interface SchedulerClient {
-	execute(payload: ConfirmedCommandPayload): Promise<{ executionId: string; status: string }>;
+	execute(
+		payload: ConfirmedCommandPayload,
+	): Promise<{ executionId: string; status: string; result?: unknown }>;
 }
 
 export function createSchedulerClient(serviceClient: ServiceClient): SchedulerClient {
@@ -23,7 +25,7 @@ export function createSchedulerClient(serviceClient: ServiceClient): SchedulerCl
 				throw new Error(`scheduler returned ${res.status}: ${text}`);
 			}
 
-			return (await res.json()) as { executionId: string; status: string };
+			return (await res.json()) as { executionId: string; status: string; result?: unknown };
 		},
 	};
 }

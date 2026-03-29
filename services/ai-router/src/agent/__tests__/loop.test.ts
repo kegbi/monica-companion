@@ -2083,4 +2083,78 @@ describe("post-confirm follow-up tool execution", () => {
 		// search_contacts should have been called as read-only follow-up
 		expect(mockedHandleSearchContacts).toHaveBeenCalled();
 	});
+
+	it("create_contact with birthday_date passes birthdate to scheduler in a single call", async () => {
+		mockedExecuteMutatingTool.mockResolvedValueOnce({
+			status: "success",
+			executionId: "exec-create",
+			result: { contactId: 42, displayName: "Hottabych" },
+		});
+
+		const pending = makePendingToolCall({
+			name: "create_contact",
+			arguments: '{"first_name": "Hottabych", "birthday_date": "1994-09-14"}',
+			assistantMessage: {
+				role: "assistant",
+				content: null,
+				tool_calls: [
+					{
+						id: "call_abc123",
+						type: "function",
+						function: {
+							name: "create_contact",
+							arguments: '{"first_name": "Hottabych", "birthday_date": "1994-09-14"}',
+						},
+					},
+				],
+			},
+		});
+
+		const chatCompletion = vi.fn().mockResolvedValueOnce({
+			choices: [
+				{
+					message: {
+						role: "assistant",
+						content: "Created contact Hottabych with birthday September 14, 1994.",
+						tool_calls: undefined,
+					},
+					finish_reason: "stop",
+				},
+			],
+		});
+
+		const deps = createMockDeps({
+			llmClient: { chatCompletion },
+			getHistory: vi.fn().mockResolvedValue({
+				id: "hist-1",
+				userId,
+				messages: [{ role: "user", content: "Create contact Hottabych with birthday 14.09.1994" }],
+				pendingToolCall: pending,
+				updatedAt: new Date(),
+			}),
+		});
+
+		const event = {
+			type: "callback_action" as const,
+			userId,
+			sourceRef: "telegram:msg:92",
+			correlationId,
+			action: "confirm",
+			data: "cmd-aaa-bbb-ccc:1",
+		};
+
+		const result = await runAgentLoop(deps, userId, event, correlationId);
+
+		expect(result.type).toBe("text");
+		expect(result.text).toContain("Hottabych");
+
+		// executeMutatingTool called once with birthday_date in args
+		expect(mockedExecuteMutatingTool).toHaveBeenCalledTimes(1);
+		expect(mockedExecuteMutatingTool).toHaveBeenCalledWith(
+			expect.objectContaining({
+				toolName: "create_contact",
+				args: expect.objectContaining({ birthday_date: "1994-09-14" }),
+			}),
+		);
+	});
 });

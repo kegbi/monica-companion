@@ -22,7 +22,7 @@ export interface ExecuteMutatingToolParams {
 }
 
 export type ExecuteMutatingToolResult =
-	| { status: "success"; executionId: string }
+	| { status: "success"; executionId: string; result?: unknown }
 	| { status: "error"; message: string };
 
 /**
@@ -71,7 +71,7 @@ export async function executeMutatingTool(
 			executionId: result.executionId,
 		});
 
-		return { status: "success", executionId: result.executionId };
+		return { status: "success", executionId: result.executionId, result: result.result };
 	} catch (err) {
 		const errMsg = err instanceof Error ? err.message : String(err);
 		logger.warn("Mutating tool execution failed", {
@@ -107,14 +107,18 @@ async function buildPayload(
 				body: args.body as string,
 			};
 
-		case "create_contact":
+		case "create_contact": {
+			const birthdayDate = args.birthday_date as string | undefined;
+			const birthdate = birthdayDate ? parseDateString(birthdayDate) : undefined;
 			return {
 				type: "create_contact",
 				firstName: args.first_name as string,
 				lastName: args.last_name as string | undefined,
 				nickname: args.nickname as string | undefined,
 				genderId: (args.gender_id as number | undefined) ?? 3,
+				...(birthdate ? { birthdate } : {}),
 			};
+		}
 
 		case "create_activity": {
 			const happenedAt =

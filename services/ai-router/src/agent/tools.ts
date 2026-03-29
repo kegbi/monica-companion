@@ -153,7 +153,8 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
 		type: "function",
 		function: {
 			name: "create_contact",
-			description: "Create a new contact with basic information.",
+			description:
+				"Create a new contact. Include birthday_date when the user provides a date of birth.",
 			parameters: {
 				type: "object",
 				properties: {
@@ -172,6 +173,10 @@ export const TOOL_DEFINITIONS: ChatCompletionTool[] = [
 					gender_id: {
 						type: "number",
 						description: "Gender ID (1=Male, 2=Female, 3=Other). Default 3 if unknown.",
+					},
+					birthday_date: {
+						type: "string",
+						description: "Birthday in YYYY-MM-DD format (optional)",
 					},
 				},
 				required: ["first_name"],
@@ -389,6 +394,7 @@ const CreateContactArgsSchema = z.object({
 	last_name: z.string().optional(),
 	nickname: z.string().optional(),
 	gender_id: z.number().int().optional(),
+	birthday_date: z.string().optional(),
 });
 
 const CreateActivityArgsSchema = z.object({
@@ -488,7 +494,11 @@ export function generateActionDescription(toolName: string, args: Record<string,
 				typeof args.nickname === "string" && args.nickname.length > 0
 					? ` (nickname: "${args.nickname}")`
 					: "";
-			return `Create a new contact: ${name}${nick}`;
+			const bday =
+				typeof args.birthday_date === "string" && args.birthday_date.length > 0
+					? `, birthday ${args.birthday_date}`
+					: "";
+			return `Create a new contact: ${name}${nick}${bday}`;
 		}
 		case "create_activity": {
 			const ids = Array.isArray(args.contact_ids) ? args.contact_ids.join(", ") : "unknown";

@@ -64,11 +64,21 @@ async function main() {
 	const reminderQueue = new Queue("reminder-execute", { connection: redis });
 	const reminderPollQueue = new Queue("reminder-poll", { connection: redis });
 
+	// Synchronous command processor for ai-router calls (bypasses BullMQ queue)
+	const workerDeps = {
+		monicaClient,
+		deliveryClient,
+		userManagementClient,
+		idempotencyStore,
+		db: db as never,
+	};
+
 	// Create the HTTP app
 	const app = createApp(config, {
 		idempotencyStore,
 		db,
 		commandQueue,
+		processSync: (data) => processCommandJob(data as never, workerDeps),
 	});
 
 	/**

@@ -20,6 +20,12 @@ interface ExecuteDeps {
 	idempotencyStore: IdempotencyStore;
 	db: { insert: (table: unknown) => InsertChain };
 	commandQueue: { add: (name: string, data: unknown) => Promise<unknown> };
+	/** When provided, commands with suppressDelivery are processed synchronously. */
+	processSync?: (data: {
+		executionId: string;
+		command: unknown;
+		correlationId: string;
+	}) => Promise<void>;
 }
 
 export function executeRoutes(deps: ExecuteDeps) {
@@ -95,12 +101,43 @@ export function executeRoutes(deps: ExecuteDeps) {
 
 			const executionId = insertResult[0].id;
 
-			// Enqueue to BullMQ
-			await commandQueue.add("execute-command", {
-				executionId,
-				command,
-				correlationId,
-			});
+			const jobData = { executionId, command, correlationId };
+
+			// When suppressDelivery is set (ai-router calls), process synchronously
+			// so the caller gets the result before making follow-up tool calls.
+			if (command.suppressDelivery && deps.processSync) {
+				try {
+					await deps.processSync(jobData);
+					const completed = await idempotencyStore.check(command.idempotencyKey);
+
+					logger.info("Command executed synchronously", {
+						executionId,
+						commandType: command.commandType,
+						correlationId,
+					});
+
+					span.setAttribute("scheduler.execution_id", executionId);
+					span.end();
+					return c.json(
+						{ executionId, status: "completed", result: completed?.result ?? null },
+						200,
+					);
+				} catch (err) {
+					const errMsg = err instanceof Error ? err.message : String(err);
+					logger.error("Synchronous command execution failed", {
+						executionId,
+						commandType: command.commandType,
+						correlationId,
+						error: errMsg,
+					});
+					span.setAttribute("scheduler.error", errMsg);
+					span.end();
+					return c.json({ executionId, status: "failed", error: errMsg }, 500);
+				}
+			}
+
+			// Otherwise, enqueue to BullMQ for async processing
+			await commandQueue.add("execute-command", jobData);
 
 			logger.info("Command queued for execution", {
 				executionId,

@@ -9,6 +9,12 @@ export interface AppDeps {
 	idempotencyStore: IdempotencyStore;
 	db: unknown;
 	commandQueue: { add: (name: string, data: unknown) => Promise<unknown> };
+	/** Process a command synchronously (bypassing BullMQ). Used for ai-router calls. */
+	processSync?: (data: {
+		executionId: string;
+		command: unknown;
+		correlationId: string;
+	}) => Promise<void>;
 }
 
 export function createApp(config: Config, deps: AppDeps) {
@@ -23,6 +29,7 @@ export function createApp(config: Config, deps: AppDeps) {
 		idempotencyStore: deps.idempotencyStore,
 		db: deps.db,
 		commandQueue: deps.commandQueue,
+		processSync: deps.processSync,
 	});
 	app.route("/internal", execute);
 

@@ -104,7 +104,7 @@ export async function processCommandJob(
 			await deps.idempotencyStore.complete(command.idempotencyKey, result);
 
 			// Send delivery notification unless suppressed (ai-router handles its own responses)
-			if (!command.suppressDelivery) {
+			if (command.suppressDelivery !== true) {
 				const routing = await resolveConnectorRouting(command, deps);
 
 				// Send success delivery intent (best-effort, don't block on failure)

@@ -162,6 +162,43 @@ describe("executeMutatingTool", () => {
 		expect(payload.payload).toMatchObject({ genderId: 1 });
 	});
 
+	it("create_contact passes birthdate when birthday_date is provided", async () => {
+		await executeMutatingTool({
+			toolName: "create_contact",
+			args: { first_name: "Hottabych", birthday_date: "1994-09-14" },
+			userId,
+			correlationId,
+			pendingCommandId,
+			schedulerClient,
+			monicaServiceClient,
+		});
+
+		const payload = (schedulerClient.execute as ReturnType<typeof vi.fn>).mock
+			.calls[0][0] as ConfirmedCommandPayload;
+		expect(payload.payload).toMatchObject({
+			type: "create_contact",
+			firstName: "Hottabych",
+			genderId: 3,
+			birthdate: { day: 14, month: 9, year: 1994 },
+		});
+	});
+
+	it("create_contact omits birthdate when birthday_date is absent", async () => {
+		await executeMutatingTool({
+			toolName: "create_contact",
+			args: { first_name: "Jane" },
+			userId,
+			correlationId,
+			pendingCommandId,
+			schedulerClient,
+			monicaServiceClient,
+		});
+
+		const payload = (schedulerClient.execute as ReturnType<typeof vi.fn>).mock
+			.calls[0][0] as ConfirmedCommandPayload;
+		expect((payload.payload as Record<string, unknown>).birthdate).toBeUndefined();
+	});
+
 	it("executes create_activity with description mapped to summary", async () => {
 		await executeMutatingTool({
 			toolName: "create_activity",
